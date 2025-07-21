@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -220,7 +220,19 @@ export function CreatorAnalyzer() {
                     <div className="text-sm text-muted-foreground">Posts</div>
                   </div>
                 )}
-
+              </div>
+              
+              {/* Profile Link at bottom */}
+              <div className="pt-4 border-t border-border">
+                <a
+                  href={`https://www.${result.profile.platform}.com/${result.profile.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Profile Link
+                </a>
               </div>
             </CardContent>
           </Card>
