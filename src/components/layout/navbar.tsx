@@ -30,7 +30,7 @@ export function Navbar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "text-sm font-medium transition-all duration-200 px-4 py-2 rounded-full relative",
+                "text-base font-medium transition-all duration-200 px-4 py-2 rounded-full relative",
                 pathname === item.href
                   ? "gabooja-accent bg-primary/8 shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-primary/4"
