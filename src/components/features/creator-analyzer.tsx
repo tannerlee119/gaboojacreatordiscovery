@@ -32,6 +32,11 @@ interface AnalysisResult {
       followingCount?: number;
       postCount?: number;
       engagementRate?: number;
+      // TikTok-specific metrics
+      likeCount?: number;
+      videoCount?: number;
+      averageViews?: number;
+      averageLikes?: number;
     };
     aiAnalysis?: {
       creator_score: string;
@@ -242,7 +247,11 @@ export function CreatorAnalyzer() {
                   </div>
                   <div className="text-sm text-muted-foreground">Following</div>
                 </div>
-                {result.profile.metrics && typeof result.profile.metrics.postCount === 'number' && (
+                
+                {/* Platform-specific third metric */}
+                {result.profile.platform === 'instagram' && 
+                 result.profile.metrics && 
+                 typeof result.profile.metrics.postCount === 'number' && (
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       {formatNumber(result.profile.metrics.postCount)}
@@ -250,12 +259,27 @@ export function CreatorAnalyzer() {
                     <div className="text-sm text-muted-foreground">Posts</div>
                   </div>
                 )}
+                
+                {result.profile.platform === 'tiktok' && 
+                 result.profile.metrics && 
+                 typeof result.profile.metrics.likeCount === 'number' && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">
+                      {formatNumber(result.profile.metrics.likeCount)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Likes</div>
+                  </div>
+                )}
               </div>
               
               {/* Profile Link at bottom */}
               <div className="pt-4 border-t border-border">
                 <a
-                  href={`https://www.${result.profile.platform}.com/${result.profile.username}`}
+                  href={
+                    result.profile.platform === 'tiktok' 
+                      ? `https://www.tiktok.com/@${result.profile.username}`
+                      : `https://www.${result.profile.platform}.com/${result.profile.username}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm"

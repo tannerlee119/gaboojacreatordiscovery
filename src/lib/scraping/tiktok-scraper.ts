@@ -153,14 +153,39 @@ async function scrapeTikTokProfileData(page: Page, username: string) {
       console.log('Could not extract bio');
     }
 
-    // Profile image
+    // Profile image - try multiple selectors and methods
     try {
-      const imgElement = await page.$('[data-e2e="user-avatar"]') ||
-                         await page.$('img[data-e2e="user-avatar"]') ||
-                         await page.$('.tiktok-1zpj2q-ImgAvatar');
+      let imgElement = await page.$('[data-e2e="user-avatar"]') ||
+                       await page.$('img[data-e2e="user-avatar"]') ||
+                       await page.$('.tiktok-1zpj2q-ImgAvatar') ||
+                       await page.$('img[alt*="avatar"]') ||
+                       await page.$('header img') ||
+                       await page.$('span[data-e2e="user-avatar"] img');
+      
       if (imgElement) {
         profileImageUrl = await page.evaluate(el => (el as HTMLImageElement).src || '', imgElement);
       }
+      
+      // Alternative: try to find avatar in spans or divs with background images
+      if (!profileImageUrl) {
+        const avatarElements = await page.$$('[data-e2e="user-avatar"], .avatar, [class*="avatar"]');
+        for (const element of avatarElements) {
+          const backgroundImage = await page.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.backgroundImage;
+          }, element);
+          
+          if (backgroundImage && backgroundImage.includes('url(')) {
+            const match = backgroundImage.match(/url\("?([^"]+)"?\)/);
+            if (match) {
+              profileImageUrl = match[1];
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Profile image URL found:', profileImageUrl);
     } catch {
       console.log('Could not extract profile image');
     }
@@ -177,51 +202,96 @@ async function scrapeTikTokProfileData(page: Page, username: string) {
 
     // Follower/Following/Likes counts
     try {
+      console.log('Attempting to extract TikTok stats...');
+      
+      // Try primary method with data-e2e attributes
       const statsElements = await page.$$('[data-e2e="followers-count"], [data-e2e="following-count"], [data-e2e="likes-count"]');
+      console.log(`Found ${statsElements.length} stat elements with data-e2e`);
       
       for (const statElement of statsElements) {
         const text = await page.evaluate(el => el.textContent?.trim() || '', statElement);
         const dataE2e = await page.evaluate(el => el.getAttribute('data-e2e') || '', statElement);
         
+        console.log(`Processing stat element: ${dataE2e} = "${text}"`);
         const number = parseNumberWithSuffix(text);
         
         if (dataE2e.includes('followers') && number > 0) {
           followerCount = number;
+          console.log(`✓ Followers set to: ${followerCount}`);
         } else if (dataE2e.includes('following') && number > 0) {
           followingCount = number;
+          console.log(`✓ Following set to: ${followingCount}`);
         } else if (dataE2e.includes('likes') && number > 0) {
           likeCount = number;
+          console.log(`✓ Likes set to: ${likeCount}`);
         }
       }
       
-      console.log(`TikTok stats - Followers: ${followerCount}, Following: ${followingCount}, Likes: ${likeCount}`);
-    } catch {
-      console.log('Could not extract follower counts from data-e2e');
+      console.log(`TikTok stats after data-e2e - Followers: ${followerCount}, Following: ${followingCount}, Likes: ${likeCount}`);
+    } catch (error) {
+      console.log('Could not extract follower counts from data-e2e:', error);
     }
 
-    // Try alternative method for stats using text content
-    if (followerCount === 0) {
+    // Try alternative method for stats using text content and broader selectors
+    if (followerCount === 0 || followingCount === 0 || likeCount === 0) {
       try {
+        console.log('Trying alternative methods for TikTok stats...');
+        
+        // Method 1: Look for numbers near specific text patterns
         const allText = await page.evaluate(() => document.body.textContent || '');
+        console.log('Page text sample:', allText.substring(0, 500) + '...');
         
         // Look for follower patterns in the text
         const followerMatch = allText.match(/(\d+(?:\.\d+)?[KM]?)\s*(?:Followers|followers)/i);
         const followingMatch = allText.match(/(\d+(?:\.\d+)?[KM]?)\s*(?:Following|following)/i);
         const likeMatch = allText.match(/(\d+(?:\.\d+)?[KM]?)\s*(?:Likes|likes)/i);
         
-        if (followerMatch) {
+        if (followerMatch && followerCount === 0) {
           followerCount = parseNumberWithSuffix(followerMatch[1]);
+          console.log(`✓ Followers from text: ${followerCount}`);
         }
-        if (followingMatch) {
+        if (followingMatch && followingCount === 0) {
           followingCount = parseNumberWithSuffix(followingMatch[1]);
+          console.log(`✓ Following from text: ${followingCount}`);
         }
-        if (likeMatch) {
+        if (likeMatch && likeCount === 0) {
           likeCount = parseNumberWithSuffix(likeMatch[1]);
+          console.log(`✓ Likes from text: ${likeCount}`);
         }
         
-        console.log(`TikTok alternative stats - Followers: ${followerCount}, Following: ${followingCount}, Likes: ${likeCount}`);
-      } catch {
-        console.log('Could not extract stats from text content');
+        // Method 2: Try to find stats by looking at strong/span elements
+        const strongElements = await page.$$('strong, span[title], [data-e2e] strong, [data-e2e] span');
+        console.log(`Found ${strongElements.length} potential stat elements`);
+        
+        for (const element of strongElements) {
+          const text = await page.evaluate(el => el.textContent?.trim() || '', element);
+          const title = await page.evaluate(el => el.title || '', element);
+          
+          if (text && text.match(/^\d+(\.\d+)?[KM]?$/)) {
+            const number = parseNumberWithSuffix(text);
+            
+            // Look at parent or sibling elements for context
+            const context = await page.evaluate(el => {
+              const parent = el.parentElement;
+              return parent ? parent.textContent?.toLowerCase() || '' : '';
+            }, element);
+            
+            if (context.includes('follower') && followerCount === 0) {
+              followerCount = number;
+              console.log(`✓ Followers from context: ${followerCount}`);
+            } else if (context.includes('following') && followingCount === 0) {
+              followingCount = number;
+              console.log(`✓ Following from context: ${followingCount}`);
+            } else if (context.includes('like') && likeCount === 0) {
+              likeCount = number;
+              console.log(`✓ Likes from context: ${likeCount}`);
+            }
+          }
+        }
+        
+        console.log(`TikTok final alternative stats - Followers: ${followerCount}, Following: ${followingCount}, Likes: ${likeCount}`);
+      } catch (error) {
+        console.log('Could not extract stats from alternative methods:', error);
       }
     }
 
