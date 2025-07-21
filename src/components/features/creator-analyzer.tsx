@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import Image from 'next/image';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -58,6 +59,8 @@ export function CreatorAnalyzer() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleAnalyze = async () => {
     if (!username.trim()) return;
@@ -378,43 +381,70 @@ export function CreatorAnalyzer() {
              </Card>
            )}
 
-          {/* Screenshot */}
-          {result.profile.profileImageBase64 && (
-            <Card className="gabooja-card">
-              <CardHeader>
-                <CardTitle>Profile Screenshot</CardTitle>
-                <CardDescription>
-                  Screenshot captured during analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Image
-                  src={`data:image/png;base64,${result.profile.profileImageBase64}`}
-                  alt="Profile screenshot"
-                  width={800}
-                  height={600}
-                  className="w-full rounded-lg border"
-                />
-              </CardContent>
-            </Card>
-          )}
+                     {/* Screenshot - Collapsible */}
+           {result.profile.profileImageBase64 && (
+             <Card className="gabooja-card">
+               <CardHeader 
+                 className="cursor-pointer hover:bg-muted/50 transition-colors" 
+                 onClick={() => setIsScreenshotOpen(!isScreenshotOpen)}
+               >
+                 <CardTitle className="flex items-center justify-between">
+                   <span>Profile Screenshot</span>
+                   {isScreenshotOpen ? (
+                     <ChevronDown className="h-4 w-4" />
+                   ) : (
+                     <ChevronRight className="h-4 w-4" />
+                   )}
+                 </CardTitle>
+                 <CardDescription>
+                   Screenshot captured during analysis
+                 </CardDescription>
+               </CardHeader>
+               {isScreenshotOpen && (
+                 <CardContent>
+                   <Image
+                     src={`data:image/png;base64,${result.profile.profileImageBase64}`}
+                     alt="Profile screenshot"
+                     width={800}
+                     height={600}
+                     className="w-full rounded-lg border"
+                   />
+                 </CardContent>
+               )}
+             </Card>
+           )}
 
-          {/* Analysis Details */}
-          <Card className="gabooja-card">
-            <CardHeader>
-              <CardTitle>Analysis Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Method:</strong> {result.scrapingDetails.method}
-                </div>
-                <div>
-                  <strong>Analyzed:</strong> {new Date(result.scrapingDetails.timestamp).toLocaleString()}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+           {/* Analysis Details - Collapsible */}
+           <Card className="gabooja-card">
+             <CardHeader 
+               className="cursor-pointer hover:bg-muted/50 transition-colors" 
+               onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+             >
+               <CardTitle className="flex items-center justify-between">
+                 <span>Analysis Details</span>
+                 {isDetailsOpen ? (
+                   <ChevronDown className="h-4 w-4" />
+                 ) : (
+                   <ChevronRight className="h-4 w-4" />
+                 )}
+               </CardTitle>
+               <CardDescription>
+                 Technical details about the analysis process
+               </CardDescription>
+             </CardHeader>
+             {isDetailsOpen && (
+               <CardContent>
+                 <div className="grid md:grid-cols-2 gap-4 text-sm">
+                   <div>
+                     <strong>Method:</strong> {result.scrapingDetails.method}
+                   </div>
+                   <div>
+                     <strong>Analyzed:</strong> {new Date(result.scrapingDetails.timestamp).toLocaleString()}
+                   </div>
+                 </div>
+               </CardContent>
+             )}
+           </Card>
         </div>
       )}
     </div>
