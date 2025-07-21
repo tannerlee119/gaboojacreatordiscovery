@@ -60,6 +60,11 @@ export function CreatorAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
+  // Cache for storing last results per platform
+  const [resultCache, setResultCache] = useState<{
+    [key in Platform]?: AnalysisResult
+  }>({});
 
   const handleAnalyze = async () => {
     if (!username.trim()) return;
@@ -85,14 +90,40 @@ export function CreatorAnalyzer() {
         throw new Error(data.error || 'Analysis failed');
       }
 
-      setResult(data.data);
-      console.log('Analysis completed:', data.data);
+      const newResult = data.data;
+      setResult(newResult);
+      
+      // Cache the result for this platform
+      setResultCache(prev => ({
+        ...prev,
+        [platform]: newResult
+      }));
+      
+      console.log('Analysis completed:', newResult);
       
     } catch (error) {
       console.error('Analysis failed:', error);
       setError(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Handle platform switching - restore cached result if available
+  const handlePlatformChange = (newPlatform: Platform) => {
+    setPlatform(newPlatform);
+    setError(null);
+    
+    // Check if we have a cached result for this platform
+    const cachedResult = resultCache[newPlatform];
+    if (cachedResult) {
+      setResult(cachedResult);
+      // Update username to match the cached result
+      setUsername(cachedResult.profile.username);
+    } else {
+      // Clear result if no cached data
+      setResult(null);
+      setUsername('');
     }
   };
 
@@ -115,6 +146,11 @@ export function CreatorAnalyzer() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                 disabled={isAnalyzing}
               />
+              {result && resultCache[platform] === result && (
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  💾 Showing cached result
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               {platforms.map((p) => (
@@ -122,7 +158,7 @@ export function CreatorAnalyzer() {
                   key={p.value}
                   variant={platform === p.value ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setPlatform(p.value)}
+                  onClick={() => handlePlatformChange(p.value)}
                   className="flex-1"
                   disabled={isAnalyzing}
                 >
