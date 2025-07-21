@@ -18,7 +18,7 @@ interface TikTokScrapingResult {
   error?: string;
 }
 
-export async function analyzeTikTokProfile(username: string): Promise<TikTokScrapingResult> {
+export async function analyzeTikTokProfile(_username: string): Promise<TikTokScrapingResult> {
   // Placeholder implementation - TikTok scraping is more complex due to anti-bot measures
   return {
     success: false,

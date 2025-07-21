@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
     switch (platform) {
       case 'instagram':
         scrapingResult = await analyzeInstagramProfile(username);
-        screenshotBuffer = scrapingResult.screenshot;
+        screenshotBuffer = scrapingResult.screenshot || null;
         break;
       case 'tiktok':
         scrapingResult = await analyzeTikTokProfile(username);
-        screenshotBuffer = scrapingResult.screenshot;
+        screenshotBuffer = scrapingResult.screenshot || null;
         break;
       default:
         return NextResponse.json(
@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    if (!scrapingResult.success) {
+    if (!scrapingResult.success || !scrapingResult.data) {
       return NextResponse.json(
-        { success: false, error: scrapingResult.error },
+        { success: false, error: scrapingResult.error || 'No data returned from scraping' },
         { status: 500 }
       );
     }

@@ -145,7 +145,7 @@ async function handleInstagramLogin(page: Page, username: string, password: stri
         await notNowButton.click();
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } catch (e) {
+    } catch {
       // Ignore if button not found
     }
     
@@ -156,7 +156,7 @@ async function handleInstagramLogin(page: Page, username: string, password: stri
         await notNowNotifications.click();
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } catch (e) {
+    } catch {
       // Ignore if button not found
     }
     
@@ -176,8 +176,8 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
   let followerCount = 0;
   let followingCount = 0;
   let postCount = 0;
-  let location = '';
-  let website = '';
+  const location = '';
+  const website = '';
 
   try {
     // Extract profile data using multiple selectors as fallbacks
@@ -188,7 +188,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       if (nameElement) {
         displayName = await page.evaluate(el => el.textContent?.trim() || '', nameElement) || username;
       }
-    } catch (e) {
+    } catch {
       console.log('Could not extract display name');
     }
 
@@ -198,7 +198,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       if (bioElement) {
         bio = await page.evaluate(el => el.getAttribute('content') || '', bioElement);
       }
-    } catch (e) {
+    } catch {
       console.log('Could not extract bio');
     }
 
@@ -208,7 +208,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       if (imgElement) {
         profileImageUrl = await page.evaluate(el => el.src || '', imgElement);
       }
-    } catch (e) {
+    } catch {
       console.log('Could not extract profile image');
     }
 
@@ -216,7 +216,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
     try {
       const verifiedElement = await page.$('[title="Verified"]') || await page.$('svg[aria-label="Verified"]');
       isVerified = !!verifiedElement;
-    } catch (e) {
+    } catch {
       console.log('Could not check verification status');
     }
 
@@ -241,7 +241,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
           postCount = parseInt(postMatch[1].replace(/,/g, ''));
         }
       }
-    } catch (e) {
+    } catch {
       console.log('Could not extract follower counts from meta');
     }
 
@@ -260,7 +260,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
             followingCount = number;
           }
         }
-      } catch (e) {
+      } catch {
         console.log('Could not extract stats from links');
       }
     }

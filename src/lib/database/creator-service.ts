@@ -1,7 +1,27 @@
 import { createServerClient } from '@/lib/supabase';
-import { CreatorProfile, Platform } from '@/lib/types';
 
-export async function saveCreatorProfile(profile: any): Promise<void> {
+interface CreatorProfileData {
+  username: string;
+  platform: string;
+  displayName: string;
+  bio?: string;
+  profileImageUrl?: string;
+  isVerified: boolean;
+  followerCount?: number;
+  followingCount?: number;
+  location?: string;
+  website?: string;
+  metrics?: {
+    followerCount?: number;
+    followingCount?: number;
+    postCount?: number;
+    engagementRate?: number;
+    averageLikes?: number;
+    averageComments?: number;
+  };
+}
+
+export async function saveCreatorProfile(profile: CreatorProfileData): Promise<void> {
   try {
     const supabase = createServerClient();
     

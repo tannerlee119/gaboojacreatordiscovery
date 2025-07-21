@@ -26,7 +26,12 @@ interface AnalysisResult {
     followingCount: number;
     location?: string;
     website?: string;
-    metrics: any;
+    metrics: {
+      followerCount?: number;
+      followingCount?: number;
+      postCount?: number;
+      engagementRate?: number;
+    };
     aiAnalysis?: {
       creator_score: string;
       niche: string;
@@ -94,7 +99,7 @@ export function CreatorAnalyzer() {
         <CardHeader>
           <CardTitle className="text-2xl">Creator Analyzer</CardTitle>
           <CardDescription>
-            Enter a creator's username to analyze their profile with AI-powered insights
+            Enter a creator&apos;s username to analyze their profile with AI-powered insights
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -139,7 +144,7 @@ export function CreatorAnalyzer() {
                 🤖 Launching browser and taking screenshot...
               </div>
               <div className="text-sm text-muted-foreground">
-                We're using Puppeteer to scrape the profile and OpenAI to analyze the content
+                We&apos;re using Puppeteer to scrape the profile and OpenAI to analyze the content
               </div>
             </div>
           )}

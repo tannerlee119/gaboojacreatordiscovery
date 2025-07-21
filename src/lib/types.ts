@@ -110,7 +110,7 @@ export interface CreatorProfile {
   youtubeMetrics?: YouTubeMetrics;
   
   // AI Analysis fields
-  aiAnalysis?: any; // Will contain the full AI analysis data
+  aiAnalysis?: Record<string, unknown>; // Will contain the full AI analysis data
   aiSummary?: {
     creator_score: string;
     niche: string;
