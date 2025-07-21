@@ -195,7 +195,7 @@ export function CreatorAnalyzer() {
                 <p className="text-sm">{result.profile.bio}</p>
               )}
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold gabooja-accent">
                     {formatNumber(result.profile.followerCount)}
@@ -216,14 +216,7 @@ export function CreatorAnalyzer() {
                     <div className="text-sm text-muted-foreground">Posts</div>
                   </div>
                 )}
-                {result.profile.metrics && typeof result.profile.metrics.engagementRate === 'number' && result.profile.metrics.engagementRate > 0 && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {result.profile.metrics.engagementRate.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">Engagement</div>
-                  </div>
-                )}
+
               </div>
             </CardContent>
           </Card>

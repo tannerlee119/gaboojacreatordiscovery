@@ -14,28 +14,32 @@ export function Navbar() {
   ];
 
   return (
-    <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg gabooja-accent-bg">
-            <span className="text-lg font-bold">G</span>
-          </div>
-          <span className="text-xl font-bold gabooja-gradient">Gabooja</span>
+    <header className="sticky top-0 z-50 border-b border-border/30 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-20 items-center justify-between px-6">
+        <Link href="/" className="flex items-center space-x-3">
+          <img 
+            src="/gaboojalogo.png" 
+            alt="Gabooja" 
+            className="h-10 w-auto transition-transform hover:scale-105 duration-200"
+          />
         </Link>
 
-        <nav className="flex items-center space-x-6">
+        <nav className="flex items-center space-x-8">
           {navigation.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
+                "text-sm font-medium transition-all duration-200 px-4 py-2 rounded-full relative",
                 pathname === item.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                  ? "gabooja-accent bg-primary/8 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-primary/4"
               )}
             >
               {item.name}
+              {pathname === item.href && (
+                <div className="absolute inset-x-0 -bottom-3 h-0.5 gabooja-accent-bg rounded-full" />
+              )}
             </Link>
           ))}
         </nav>
