@@ -240,10 +240,10 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
         const descContent = await page.evaluate(el => el.getAttribute('content') || '', statsElements[0]);
         console.log('Instagram description content:', descContent);
         
-        // Parse numbers from description using regex - handle M, K suffixes
-        const followerMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Followers/i);
-        const followingMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Following/i);
-        const postMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Posts/i);
+        // Parse numbers from description using regex - handle M, K suffixes and comma-separated numbers
+        const followerMatch = descContent.match(/([\d,]+(?:\.\d+)?[MK]?)\s+Followers/i);
+        const followingMatch = descContent.match(/([\d,]+(?:\.\d+)?[MK]?)\s+Following/i);
+        const postMatch = descContent.match(/([\d,]+(?:\.\d+)?[MK]?)\s+Posts/i);
         
         console.log('Follower match:', followerMatch);
         console.log('Following match:', followingMatch);
