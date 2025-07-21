@@ -205,54 +205,14 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       console.log('Could not extract display name');
     }
 
-    // Bio - extract actual bio text, not meta description
+        // Bio
     try {
-      // Try multiple selectors for bio
-      let bioElement = await page.$('header section div:last-child div') ||
-                       await page.$('[data-testid="user-bio"]') ||
-                       await page.$('header section > div:nth-child(2) > div') ||
-                       await page.$('header div[dir="auto"]');
-      
+      const bioElement = await page.$('meta[property="og:description"]');
       if (bioElement) {
-        const bioText = await page.evaluate(el => {
-          // Get text content but exclude follower count section
-          const text = el.textContent?.trim() || '';
-          // Filter out lines that look like follower counts (contain "Followers", "Following", "Posts")
-          const lines = text.split('\n').filter(line => 
-            !line.includes('Followers') && 
-            !line.includes('Following') && 
-            !line.includes('Posts') &&
-            !line.match(/^\d+[\d,KM]*\s*(Followers|Following|Posts)/i) &&
-            line.trim().length > 0
-          );
-          return lines.join('\n').trim();
-        }, bioElement);
-        
-        if (bioText && !bioText.includes('Followers') && !bioText.includes('Following')) {
-          bio = bioText;
-        }
+        bio = await page.evaluate(el => el.getAttribute('content') || '', bioElement);
       }
-      
-      // Alternative method: look for bio in specific Instagram structure
-      if (!bio) {
-        const bioElements = await page.$$('header section span, header section div[dir="auto"]');
-        for (const element of bioElements) {
-          const text = await page.evaluate(el => el.textContent?.trim() || '', element);
-          if (text && 
-              !text.includes('Followers') && 
-              !text.includes('Following') && 
-              !text.includes('Posts') &&
-              !text.match(/^\d+[\d,KM]*$/) && // Not just numbers
-              text.length > 10) { // Reasonable bio length
-            bio = text;
-            break;
-          }
-        }
-      }
-      
-      console.log('Extracted bio:', bio);
-    } catch (error) {
-      console.log('Could not extract bio:', error);
+    } catch {
+      console.log('Could not extract bio');
     }
 
     // Profile image
@@ -267,15 +227,76 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
 
     // Website link
     try {
-      // Look for external links in the profile
-      const linkElement = await page.$('header a[href^="http"]') ||
-                          await page.$('header a[target="_blank"]') ||
-                          await page.$('a[role="link"][href^="http"]');
+      console.log('Attempting to extract website link...');
       
-      if (linkElement) {
-        website = await page.evaluate(el => el.href || '', linkElement);
-        console.log('Extracted website:', website);
+      // Look for external links in the profile, but exclude Facebook help and Instagram links
+      const linkElements = await page.$$('header a[href^="http"]');
+      
+      for (const linkElement of linkElements) {
+        const href = await page.evaluate(el => (el as HTMLAnchorElement).href || '', linkElement);
+        const linkText = await page.evaluate(el => el.textContent?.trim() || '', linkElement);
+        
+        console.log('Found link:', href, 'with text:', linkText);
+        
+                 // Skip social media links, help links, and button-like text
+         if (href && 
+             !href.includes('facebook.com/help') &&
+             !href.includes('instagram.com') &&
+             !href.includes('help.instagram.com') &&
+             !href.includes('threads.com') &&
+             !href.includes('facebook.com') &&
+             !href.includes('twitter.com') &&
+             !href.includes('x.com') &&
+             linkText !== 'Follow' &&
+             linkText !== 'Following' &&
+             linkText !== 'Message' &&
+             !linkText.includes('Followers') &&
+             !linkText.includes('posts')) {
+          
+          website = href;
+          console.log('Valid website found:', website);
+          break;
+        }
       }
+      
+      // Alternative: Look for links in bio section specifically
+      if (!website) {
+        console.log('Trying alternative website extraction...');
+                 const bioLinks = await page.evaluate(() => {
+           const header = document.querySelector('header');
+           if (!header) return [];
+           
+           const links = Array.from(header.querySelectorAll('a[href^="http"]')) as HTMLAnchorElement[];
+           return links
+             .map(link => ({
+               href: link.href,
+               text: link.textContent?.trim() || '',
+               parent: link.parentElement?.textContent?.trim() || ''
+             }))
+                         .filter(link => 
+               link.href &&
+               !link.href.includes('facebook.com/help') &&
+               !link.href.includes('instagram.com') &&
+               !link.href.includes('help.instagram.com') &&
+               !link.href.includes('threads.com') &&
+               !link.href.includes('facebook.com') &&
+               !link.href.includes('twitter.com') &&
+               !link.href.includes('x.com') &&
+               link.text !== 'Follow' &&
+               link.text !== 'Following' &&
+               link.text !== 'Message' &&
+               !link.text.includes('posts') &&
+               !link.parent.includes('Follow')
+             );
+        });
+        
+        if (bioLinks.length > 0) {
+          website = bioLinks[0].href;
+          console.log('Found website via alternative method:', website);
+        }
+      }
+      
+      console.log('Final extracted website:', website);
     } catch (error) {
       console.log('Could not extract website:', error);
     }
