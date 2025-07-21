@@ -263,7 +263,7 @@ export function CreatorAnalyzer() {
                      <div className="grid md:grid-cols-2 gap-6 items-stretch">
                        {/* Creator Score */}
                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
-                         <div className="text-sm font-medium gabooja-accent mb-2">Creator Score</div>
+                         <div className="text-med font-medium gabooja-accent mb-2">Creator Score</div>
                          <div className="text-4xl font-bold gabooja-accent mb-2">
                            {(() => {
                              const scoreText = result.profile.aiAnalysis.creator_score;
@@ -274,10 +274,10 @@ export function CreatorAnalyzer() {
                          <div className="text-xs text-muted-foreground">Overall Rating</div>
                        </div>
                        
-                       {/* Category - Now horizontal layout */}
+                       {/* Category */}
                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
-                         <div className="text-xl font-semibold text-blue-700 dark:text-blue-300">
+                         <div className="text-med font-medium gabooja-accent mb-2">Category</div>
+                         <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
                            {result.profile.aiAnalysis.category}
                          </div>
                        </div>
