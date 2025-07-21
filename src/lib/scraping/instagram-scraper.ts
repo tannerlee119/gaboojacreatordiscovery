@@ -18,7 +18,6 @@ interface InstagramScrapingResult {
   success: boolean;
   data?: {
     displayName: string;
-    bio: string;
     profileImageUrl: string;
     isVerified: boolean;
     followerCount: number;
@@ -183,7 +182,6 @@ async function handleInstagramLogin(page: Page, username: string, password: stri
 async function scrapeInstagramProfileData(page: Page, username: string) {
   // Default values
   let displayName = username;
-  let bio = '';
   let profileImageUrl = '';
   let isVerified = false;
   let followerCount = 0;
@@ -205,15 +203,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       console.log('Could not extract display name');
     }
 
-        // Bio
-    try {
-      const bioElement = await page.$('meta[property="og:description"]');
-      if (bioElement) {
-        bio = await page.evaluate(el => el.getAttribute('content') || '', bioElement);
-      }
-    } catch {
-      console.log('Could not extract bio');
-    }
+    
 
     // Profile image
     try {
@@ -376,7 +366,6 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
 
   return {
     displayName,
-    bio,
     profileImageUrl,
     isVerified,
     followerCount,

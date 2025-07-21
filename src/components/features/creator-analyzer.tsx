@@ -20,7 +20,6 @@ interface AnalysisResult {
     username: string;
     platform: Platform;
     displayName: string;
-    bio: string;
     profileImageUrl: string;
     isVerified: boolean;
     followerCount: number;
@@ -230,20 +229,17 @@ export function CreatorAnalyzer() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {result.profile.bio && (
+              {result.profile.website && (
                 <div className="space-y-2">
-                  <p className="text-sm leading-relaxed">{result.profile.bio}</p>
-                  {result.profile.website && (
-                    <a
-                      href={result.profile.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
-                    >
-                      <Link className="h-3 w-3" />
-                      {result.profile.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  )}
+                  <a
+                    href={result.profile.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Link className="h-3 w-3" />
+                    {result.profile.website.replace(/^https?:\/\//, '')}
+                  </a>
                 </div>
               )}
               
