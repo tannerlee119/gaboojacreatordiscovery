@@ -246,37 +246,50 @@ export function CreatorAnalyzer() {
                    </TabsList>
                    
                    <TabsContent value="overview" className="space-y-6">
-                     {/* Creator Score Hero */}
-                     <div className="text-center py-8">
-                       <div className="text-lg mb-3 gabooja-accent">Creator Score</div>
-                       <div className="text-5xl font-bold gabooja-accent bg-gradient-to-r from-primary/20 to-accent/20 px-8 py-4 rounded-xl inline-block">
-                         {result.profile.aiAnalysis.creator_score}
+                     <div className="grid md:grid-cols-3 gap-6 items-start">
+                       {/* Creator Score */}
+                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
+                         <div className="text-sm font-medium gabooja-accent mb-2">Creator Score</div>
+                         <div className="text-4xl font-bold gabooja-accent mb-2">
+                           {(() => {
+                             const scoreText = result.profile.aiAnalysis.creator_score;
+                             const scoreMatch = scoreText.match(/^(\d+(?:\.\d+)?(?:\/\d+)?)/);
+                             return scoreMatch ? scoreMatch[1] : scoreText;
+                           })()}
+                         </div>
+                         <div className="text-xs text-muted-foreground">Overall Rating</div>
+                       </div>
+                       
+                       {/* Niche */}
+                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
+                         <div className="text-sm font-medium gabooja-accent mb-2">Niche</div>
+                         <div className="text-lg font-semibold text-blue-700 dark:text-blue-300 line-clamp-2">
+                           {result.profile.aiAnalysis.niche}
+                         </div>
+                       </div>
+                       
+                       {/* Key Insight */}
+                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800">
+                         <div className="text-sm font-medium gabooja-accent mb-2">Brand Potential</div>
+                         <div className="text-lg font-semibold text-green-700 dark:text-green-300">
+                           {result.profile.aiAnalysis.brand_potential}
+                         </div>
                        </div>
                      </div>
                      
-                     {/* Quick Stats Grid */}
-                     <div className="grid md:grid-cols-3 gap-4">
-                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30">
-                         <div className="text-2xl mb-2">🎯</div>
-                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Brand Potential</h4>
-                         <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                           {result.profile.aiAnalysis.brand_potential}
-                         </p>
-                       </div>
-                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30">
-                         <div className="text-2xl mb-2">💬</div>
-                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Engagement Quality</h4>
-                         <p className="text-lg font-bold text-green-700 dark:text-green-300">
-                           {result.profile.aiAnalysis.engagement_quality}
-                         </p>
-                       </div>
-                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30">
-                         <div className="text-2xl mb-2">🤝</div>
-                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Collaboration Potential</h4>
-                         <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
-                           {result.profile.aiAnalysis.collaboration_potential}
-                         </p>
-                       </div>
+                     {/* Score Explanation */}
+                     <div className="p-6 rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30 border border-slate-200 dark:border-slate-700">
+                       <h4 className="font-semibold gabooja-accent mb-3 flex items-center gap-2">
+                         <span>💡</span>
+                         Analysis Summary
+                       </h4>
+                       <p className="text-base leading-relaxed text-muted-foreground">
+                         {(() => {
+                           const scoreText = result.profile.aiAnalysis.creator_score;
+                           const explanationMatch = scoreText.match(/^(?:\d+(?:\.\d+)?(?:\/\d+)?\s*-?\s*)(.+)$/);
+                           return explanationMatch ? explanationMatch[1].trim() : 'Detailed analysis of creator performance and potential.';
+                         })()}
+                       </p>
                      </div>
                    </TabsContent>
                    
