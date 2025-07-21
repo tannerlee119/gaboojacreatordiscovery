@@ -275,12 +275,10 @@ export function CreatorAnalyzer() {
                        </div>
                        
                        {/* Category - Now horizontal layout */}
-                       <div className="flex items-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <div className="flex-1">
-                           <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
-                           <div className="text-xl font-semibold text-blue-700 dark:text-blue-300">
-                             {result.profile.aiAnalysis.category}
-                           </div>
+                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
+                         <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
+                         <div className="text-xl font-semibold text-blue-700 dark:text-blue-300">
+                           {result.profile.aiAnalysis.category}
                          </div>
                        </div>
                      </div>
