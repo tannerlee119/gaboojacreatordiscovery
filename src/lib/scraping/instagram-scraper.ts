@@ -1,6 +1,19 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { InstagramMetrics } from '@/lib/types';
 
+// Helper function to parse numbers with K/M suffixes
+function parseNumberWithSuffix(numberStr: string): number {
+  const cleanStr = numberStr.replace(/,/g, '');
+  
+  if (cleanStr.includes('M')) {
+    return Math.round(parseFloat(cleanStr.replace('M', '')) * 1000000);
+  } else if (cleanStr.includes('K')) {
+    return Math.round(parseFloat(cleanStr.replace('K', '')) * 1000);
+  } else {
+    return parseInt(cleanStr) || 0;
+  }
+}
+
 interface InstagramScrapingResult {
   success: boolean;
   data?: {
@@ -225,20 +238,25 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       const statsElements = await page.$$('meta[property="og:description"]');
       if (statsElements.length > 0) {
         const descContent = await page.evaluate(el => el.getAttribute('content') || '', statsElements[0]);
+        console.log('Instagram description content:', descContent);
         
-        // Parse numbers from description using regex
-        const followerMatch = descContent.match(/(\d+(?:,\d+)*)\s+Followers/i);
-        const followingMatch = descContent.match(/(\d+(?:,\d+)*)\s+Following/i);
-        const postMatch = descContent.match(/(\d+(?:,\d+)*)\s+Posts/i);
+        // Parse numbers from description using regex - handle M, K suffixes
+        const followerMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Followers/i);
+        const followingMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Following/i);
+        const postMatch = descContent.match(/(\d+(?:\.\d+)?[MK]?)\s+Posts/i);
+        
+        console.log('Follower match:', followerMatch);
+        console.log('Following match:', followingMatch);
+        console.log('Post match:', postMatch);
         
         if (followerMatch) {
-          followerCount = parseInt(followerMatch[1].replace(/,/g, ''));
+          followerCount = parseNumberWithSuffix(followerMatch[1]);
         }
         if (followingMatch) {
-          followingCount = parseInt(followingMatch[1].replace(/,/g, ''));
+          followingCount = parseNumberWithSuffix(followingMatch[1]);
         }
         if (postMatch) {
-          postCount = parseInt(postMatch[1].replace(/,/g, ''));
+          postCount = parseNumberWithSuffix(postMatch[1]);
         }
       }
     } catch {

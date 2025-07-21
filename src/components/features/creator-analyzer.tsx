@@ -208,7 +208,7 @@ export function CreatorAnalyzer() {
                   </div>
                   <div className="text-sm text-muted-foreground">Following</div>
                 </div>
-                {result.profile.metrics?.postCount && (
+                {result.profile.metrics && typeof result.profile.metrics.postCount === 'number' && (
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       {formatNumber(result.profile.metrics.postCount)}
@@ -216,7 +216,7 @@ export function CreatorAnalyzer() {
                     <div className="text-sm text-muted-foreground">Posts</div>
                   </div>
                 )}
-                {result.profile.metrics?.engagementRate && (
+                {result.profile.metrics && typeof result.profile.metrics.engagementRate === 'number' && result.profile.metrics.engagementRate > 0 && (
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       {result.profile.metrics.engagementRate.toFixed(1)}%
