@@ -260,7 +260,7 @@ export function CreatorAnalyzer() {
                    </TabsList>
                    
                    <TabsContent value="overview" className="space-y-6">
-                     <div className="grid md:grid-cols-3 gap-6 items-start">
+                     <div className="grid md:grid-cols-2 gap-6 items-stretch">
                        {/* Creator Score */}
                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
                          <div className="text-sm font-medium gabooja-accent mb-2">Creator Score</div>
@@ -274,19 +274,13 @@ export function CreatorAnalyzer() {
                          <div className="text-xs text-muted-foreground">Overall Rating</div>
                        </div>
                        
-                       {/* Category */}
-                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
-                         <div className="text-lg font-semibold text-blue-700 dark:text-blue-300 line-clamp-2">
-                           {result.profile.aiAnalysis.category}
-                         </div>
-                       </div>
-                       
-                       {/* Key Insight */}
-                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800">
-                         <div className="text-sm font-medium gabooja-accent mb-2">Brand Potential</div>
-                         <div className="text-lg font-semibold text-green-700 dark:text-green-300">
-                           {result.profile.aiAnalysis.brand_potential}
+                       {/* Category - Now horizontal layout */}
+                       <div className="flex items-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
+                         <div className="flex-1">
+                           <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
+                           <div className="text-xl font-semibold text-blue-700 dark:text-blue-300">
+                             {result.profile.aiAnalysis.category}
+                           </div>
                          </div>
                        </div>
                      </div>
