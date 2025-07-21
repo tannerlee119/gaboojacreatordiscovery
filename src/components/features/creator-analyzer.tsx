@@ -146,11 +146,6 @@ export function CreatorAnalyzer() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                 disabled={isAnalyzing}
               />
-              {result && resultCache[platform] === result && (
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  💾 Showing cached result
-                </div>
-              )}
             </div>
             <div className="flex gap-2">
               {platforms.map((p) => (
