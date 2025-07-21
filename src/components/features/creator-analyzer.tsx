@@ -35,7 +35,7 @@ interface AnalysisResult {
     };
     aiAnalysis?: {
       creator_score: string;
-      niche: string;
+      category: string;
       brand_potential: string;
       key_strengths: string;
       engagement_quality: string;
@@ -274,11 +274,11 @@ export function CreatorAnalyzer() {
                          <div className="text-xs text-muted-foreground">Overall Rating</div>
                        </div>
                        
-                       {/* Niche */}
+                       {/* Category */}
                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <div className="text-sm font-medium gabooja-accent mb-2">Niche</div>
+                         <div className="text-sm font-medium gabooja-accent mb-2">Category</div>
                          <div className="text-lg font-semibold text-blue-700 dark:text-blue-300 line-clamp-2">
-                           {result.profile.aiAnalysis.niche}
+                           {result.profile.aiAnalysis.category}
                          </div>
                        </div>
                        
@@ -347,9 +347,9 @@ export function CreatorAnalyzer() {
                        
                        <div className="p-6 rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800">
                          <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
-                           🏷️ Niche Focus
+                           🏷️ Category
                          </h4>
-                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.niche}</p>
+                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.category}</p>
                        </div>
                      </div>
                    </TabsContent>

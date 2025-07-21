@@ -5,7 +5,7 @@ interface OpenAIAnalysisResult {
   success: boolean;
   analysis?: {
     creator_score: string;
-    niche: string;
+    category: string;
     brand_potential: string;
     key_strengths: string;
     engagement_quality: string;
@@ -46,7 +46,7 @@ Analyze this ${platform} profile screenshot for user @${username}.
 Provide a comprehensive creator analysis including:
 
 1. Creator Score (1-10): Overall rating as a content creator
-2. Niche: Primary content category/theme
+2. Category: Primary content category/theme
 3. Brand Potential: How suitable they are for brand partnerships
 4. Key Strengths: What makes them stand out
 5. Engagement Quality: Assessment of their audience interaction
@@ -60,7 +60,7 @@ Be specific, professional, and provide actionable insights. Focus on what you ca
 Respond in JSON format with these exact keys:
 {
   "creator_score": "X/10 - reason",
-  "niche": "category description",
+  "category": "category description",
   "brand_potential": "assessment",
   "key_strengths": "specific strengths",
   "engagement_quality": "quality assessment",
@@ -115,7 +115,7 @@ Respond in JSON format with these exact keys:
       // Fallback: create structured response from text
       analysis = {
         creator_score: "Analysis available",
-        niche: "See full analysis",
+        category: "See full analysis",
         brand_potential: "See full analysis",
         key_strengths: "See full analysis",
         engagement_quality: "See full analysis",
