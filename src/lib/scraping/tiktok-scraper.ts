@@ -39,7 +39,7 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
   try {
     console.log(`Starting TikTok analysis for: ${username}`);
     
-    // Launch browser with stealth settings
+    // Launch browser with enhanced stealth settings for TikTok
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -53,17 +53,48 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
         '--disable-gpu',
         '--disable-web-security',
         '--disable-features=VizDisplayCompositor',
-        '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        '--disable-blink-features=AutomationControlled',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       ],
     });
 
     page = await browser.newPage();
     
+    // Enhanced stealth measures
+    await page.evaluateOnNewDocument(() => {
+      // Remove webdriver property
+      delete (window as any).navigator.webdriver;
+      
+      // Override plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+      
+      // Override languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+    });
+    
     // Set viewport and additional headers
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
     });
+
+    // Add random delay to appear more human-like
+    const randomDelay = Math.floor(Math.random() * 2000) + 1000; // 1-3 seconds
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
 
     // Navigate to TikTok profile
     const profileUrl = `https://www.tiktok.com/@${username}`;
@@ -74,8 +105,65 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
       timeout: 30000 
     });
 
-    // Wait a bit for the page to load
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait for page to load with random delay
+    const loadDelay = Math.floor(Math.random() * 3000) + 3000; // 3-6 seconds
+    console.log(`Waiting ${loadDelay}ms for TikTok page to load...`);
+    await new Promise(resolve => setTimeout(resolve, loadDelay));
+
+    // Check if we got an error page and try to refresh
+    const errorCheck = await page.evaluate(() => {
+      return document.body.textContent?.includes('Something went wrong') ||
+             document.body.textContent?.includes('Sorry about that') ||
+             document.body.textContent?.includes('try again later');
+    });
+    
+    if (errorCheck) {
+      console.log('TikTok page error detected, attempting refresh...');
+      
+      // Try to find and click refresh button using evaluate
+      const refreshClicked = await page.evaluate(() => {
+        // Look for refresh button by text content
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const refreshButton = buttons.find(btn => 
+          btn.textContent?.toLowerCase().includes('refresh') ||
+          btn.textContent?.toLowerCase().includes('retry') ||
+          btn.getAttribute('data-testid') === 'refresh-button'
+        );
+        
+        if (refreshButton) {
+          refreshButton.click();
+          return true;
+        }
+        return false;
+      });
+      
+      if (refreshClicked) {
+        console.log('Clicked refresh button');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } else {
+        // Manual refresh if no button found
+        console.log('No refresh button found, doing manual page reload...');
+        await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+      
+      // Check again for error
+      const stillError = await page.evaluate(() => {
+        return document.body.textContent?.includes('Something went wrong');
+      });
+      
+      if (stillError) {
+        console.log('Still getting error after refresh, trying different approach...');
+        
+        // Try with different user agent
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1');
+        await page.goto(profileUrl, { 
+          waitUntil: 'networkidle2',
+          timeout: 30000 
+        });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
 
     // Take screenshot before scraping
     const screenshot = Buffer.from(await page.screenshot({ 
@@ -83,8 +171,35 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
       type: 'png'
     }));
 
+    // Check if page loaded successfully by looking for profile elements
+    const profileExists = await page.$('[data-e2e="user-title"]') ||
+                          await page.$('[data-e2e="user-bio"]') ||
+                          await page.$('[data-e2e="user-avatar"]') ||
+                          await page.$('h1') ||
+                          await page.$('.profile-header');
+
+    if (!profileExists) {
+      console.log('TikTok profile elements not found, page may not have loaded correctly');
+      
+      // Check if it's still showing an error
+      const errorCheck = await page.evaluate(() => {
+        return document.body.textContent?.includes('Something went wrong') ||
+               document.body.textContent?.includes('Sorry about that') ||
+               document.body.textContent?.includes('try again later');
+      });
+      
+      if (errorCheck) {
+        throw new Error('TikTok page failed to load - showing error message. This might be due to TikTok\'s anti-bot measures.');
+      }
+    }
+
     // Try to scrape profile data
     const profileData = await scrapeTikTokProfileData(page, username);
+    
+    // Validate that we got some data
+    if (profileData.followerCount === 0 && profileData.followingCount === 0 && !profileData.bio) {
+      console.log('Warning: No meaningful data extracted from TikTok profile');
+    }
     
     await browser.close();
     
