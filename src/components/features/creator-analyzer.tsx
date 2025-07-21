@@ -13,7 +13,6 @@ import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok' },
-  { value: 'youtube', label: 'YouTube' },
 ];
 
 interface AnalysisResult {

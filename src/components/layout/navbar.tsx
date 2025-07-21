@@ -8,7 +8,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   const navigation = [
-    { name: "Analyzer", href: "/" },
+    { name: "Analyze", href: "/" },
     { name: "Discovery", href: "/discovery" },
     { name: "Trending", href: "/trending" },
   ];

@@ -6,11 +6,11 @@ export default function Home() {
       {/* Hero Section */}
       <div className="text-center mb-12 gabooja-hero-bg rounded-2xl py-16 px-8">
         <h1 className="text-4xl md:text-6xl font-bold gabooja-gradient mb-4">
-          Creator Discovery Platform
+          Gabooja Creator Discovery
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Analyze Instagram, TikTok, and YouTube creators with real-time engagement metrics. 
-          Get detailed insights on followers, posts, videos, and engagement rates.
+          Analyze Instagram and TikTok creators with real-time engagement metrics. 
+          Get detailed insights on followers, posts, and videos with AI powered analysis.
         </p>
       </div>
 

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Gabooja - Creator Discovery Platform",
-  description: "Discover and analyze Instagram, TikTok, and YouTube creators with real-time engagement metrics",
+  description: "Discover and analyze Instagram and TikTok creators with real-time engagement metrics",
 };
 
 export default function RootLayout({
