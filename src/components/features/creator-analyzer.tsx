@@ -310,37 +310,37 @@ export function CreatorAnalyzer() {
                    <TabsContent value="metrics" className="space-y-6">
                      <div className="grid md:grid-cols-3 gap-6">
                        <div className="p-6 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
                            🎯 Brand Potential
                          </h4>
                          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
                            {result.profile.aiAnalysis.brand_potential}
                          </p>
-                         <p className="text-sm text-blue-600 dark:text-blue-400">
+                         <p className="text-xs text-blue-600 dark:text-blue-400">
                            Potential for brand partnerships and collaborations
                          </p>
                        </div>
                        
                        <div className="p-6 rounded-lg bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
                            💬 Engagement Quality
                          </h4>
                          <p className="text-2xl font-bold text-green-700 dark:text-green-300 mb-2">
                            {result.profile.aiAnalysis.engagement_quality}
                          </p>
-                         <p className="text-sm text-green-600 dark:text-green-400">
+                         <p className="text-xs text-green-600 dark:text-green-400">
                            Quality and authenticity of audience interactions
                          </p>
                        </div>
                        
                        <div className="p-6 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
                            🤝 Collaboration Potential
                          </h4>
                          <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
                            {result.profile.aiAnalysis.collaboration_potential}
                          </p>
-                         <p className="text-sm text-purple-600 dark:text-purple-400">
+                         <p className="text-xs text-purple-600 dark:text-purple-400">
                            Likelihood of successful partnerships
                          </p>
                        </div>
