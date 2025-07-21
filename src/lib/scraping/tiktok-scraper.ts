@@ -110,36 +110,6 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
     console.log(`Waiting ${loadDelay}ms for TikTok page to load...`);
     await new Promise(resolve => setTimeout(resolve, loadDelay));
 
-    // Check for account issues first
-    const pageContent = await page.evaluate(() => document.body.textContent || '');
-    
-    // Check if account doesn't exist
-    if (pageContent.includes('Couldn\'t find this account') ||
-        pageContent.includes('User not found') ||
-        pageContent.includes('This account doesn\'t exist') ||
-        pageContent.includes('Page not found')) {
-      
-      await browser.close();
-      return {
-        success: false,
-        error: 'This TikTok account does not exist',
-        method: 'scraping'
-      };
-    }
-
-    // Check if account is private
-    if (pageContent.includes('This account is private') ||
-        pageContent.includes('Account is private') ||
-        pageContent.includes('Private account')) {
-      
-      await browser.close();
-      return {
-        success: false,
-        error: 'This TikTok account is private',
-        method: 'scraping'
-      };
-    }
-
     // Check if we got an error page and try to refresh
     const errorCheck = await page.evaluate(() => {
       return document.body.textContent?.includes('Something went wrong') ||
@@ -209,9 +179,13 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
                           await page.$('.profile-header');
 
     if (!profileExists) {
-      console.log('TikTok profile elements not found, page may not have loaded correctly');
+      console.log('TikTok profile elements not found, checking for specific error conditions...');
       
-      // Check if it's still showing an error
+      // Get page content for detailed analysis
+      const pageContent = await page.evaluate(() => document.body.textContent || '');
+      console.log('Page content sample:', pageContent.substring(0, 300) + '...');
+      
+      // Check if it's still showing a generic error
       const errorCheck = await page.evaluate(() => {
         return document.body.textContent?.includes('Something went wrong') ||
                document.body.textContent?.includes('Sorry about that') ||
@@ -220,6 +194,22 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
       
       if (errorCheck) {
         throw new Error('TikTok page failed to load - showing error message. This might be due to TikTok\'s anti-bot measures.');
+      }
+
+      // Check for account-specific issues - only after confirming it's not a loading error
+      if (pageContent.includes('Couldn\'t find this account') ||
+          pageContent.includes('This account doesn\'t exist')) {
+        
+        console.log('TikTok account not found - page content indicates non-existent account');
+        throw new Error('This TikTok account does not exist');
+      }
+
+      // Check if account is private
+      if (pageContent.includes('This account is private') ||
+          (pageContent.includes('Private account') && pageContent.includes('Follow'))) {
+        
+        console.log('TikTok account is private');
+        throw new Error('This TikTok account is private');
       }
     }
 
