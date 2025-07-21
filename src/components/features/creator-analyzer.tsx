@@ -308,7 +308,7 @@ export function CreatorAnalyzer() {
                    </TabsContent>
                    
                    <TabsContent value="metrics" className="space-y-6">
-                     <div className="grid md:grid-cols-2 gap-6">
+                     <div className="grid md:grid-cols-3 gap-6">
                        <div className="p-6 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
                          <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
                            🎯 Brand Potential
@@ -343,13 +343,6 @@ export function CreatorAnalyzer() {
                          <p className="text-sm text-purple-600 dark:text-purple-400">
                            Likelihood of successful partnerships
                          </p>
-                       </div>
-                       
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
-                           🏷️ Category
-                         </h4>
-                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.category}</p>
                        </div>
                      </div>
                    </TabsContent>
