@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -231,7 +231,20 @@ export function CreatorAnalyzer() {
             </CardHeader>
             <CardContent className="space-y-4">
               {result.profile.bio && (
-                <p className="text-sm">{result.profile.bio}</p>
+                <div className="space-y-2">
+                  <p className="text-sm leading-relaxed">{result.profile.bio}</p>
+                  {result.profile.website && (
+                    <a
+                      href={result.profile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Link className="h-3 w-3" />
+                      {result.profile.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
               )}
               
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -496,7 +509,7 @@ export function CreatorAnalyzer() {
                </CardContent>
              )}
            </Card>
-        </div>
+      </div>
       )}
     </div>
   );

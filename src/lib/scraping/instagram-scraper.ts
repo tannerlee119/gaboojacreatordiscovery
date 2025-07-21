@@ -190,7 +190,7 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
   let followingCount = 0;
   let postCount = 0;
   const location = '';
-  const website = '';
+  let website = '';
 
   try {
     // Extract profile data using multiple selectors as fallbacks
@@ -205,14 +205,54 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       console.log('Could not extract display name');
     }
 
-    // Bio
+    // Bio - extract actual bio text, not meta description
     try {
-      const bioElement = await page.$('meta[property="og:description"]');
+      // Try multiple selectors for bio
+      let bioElement = await page.$('header section div:last-child div') ||
+                       await page.$('[data-testid="user-bio"]') ||
+                       await page.$('header section > div:nth-child(2) > div') ||
+                       await page.$('header div[dir="auto"]');
+      
       if (bioElement) {
-        bio = await page.evaluate(el => el.getAttribute('content') || '', bioElement);
+        const bioText = await page.evaluate(el => {
+          // Get text content but exclude follower count section
+          const text = el.textContent?.trim() || '';
+          // Filter out lines that look like follower counts (contain "Followers", "Following", "Posts")
+          const lines = text.split('\n').filter(line => 
+            !line.includes('Followers') && 
+            !line.includes('Following') && 
+            !line.includes('Posts') &&
+            !line.match(/^\d+[\d,KM]*\s*(Followers|Following|Posts)/i) &&
+            line.trim().length > 0
+          );
+          return lines.join('\n').trim();
+        }, bioElement);
+        
+        if (bioText && !bioText.includes('Followers') && !bioText.includes('Following')) {
+          bio = bioText;
+        }
       }
-    } catch {
-      console.log('Could not extract bio');
+      
+      // Alternative method: look for bio in specific Instagram structure
+      if (!bio) {
+        const bioElements = await page.$$('header section span, header section div[dir="auto"]');
+        for (const element of bioElements) {
+          const text = await page.evaluate(el => el.textContent?.trim() || '', element);
+          if (text && 
+              !text.includes('Followers') && 
+              !text.includes('Following') && 
+              !text.includes('Posts') &&
+              !text.match(/^\d+[\d,KM]*$/) && // Not just numbers
+              text.length > 10) { // Reasonable bio length
+            bio = text;
+            break;
+          }
+        }
+      }
+      
+      console.log('Extracted bio:', bio);
+    } catch (error) {
+      console.log('Could not extract bio:', error);
     }
 
     // Profile image
@@ -223,6 +263,21 @@ async function scrapeInstagramProfileData(page: Page, username: string) {
       }
     } catch {
       console.log('Could not extract profile image');
+    }
+
+    // Website link
+    try {
+      // Look for external links in the profile
+      const linkElement = await page.$('header a[href^="http"]') ||
+                          await page.$('header a[target="_blank"]') ||
+                          await page.$('a[role="link"][href^="http"]');
+      
+      if (linkElement) {
+        website = await page.evaluate(el => el.href || '', linkElement);
+        console.log('Extracted website:', website);
+      }
+    } catch (error) {
+      console.log('Could not extract website:', error);
     }
 
     // Verification status
