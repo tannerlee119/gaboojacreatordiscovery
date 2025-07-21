@@ -228,7 +228,7 @@ export function CreatorAnalyzer() {
                   href={`https://www.${result.profile.platform}.com/${result.profile.username}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
+                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm"
                 >
                   <ExternalLink className="h-4 w-4" />
                   View Profile Link
