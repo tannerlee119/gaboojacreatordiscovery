@@ -20,6 +20,7 @@ interface AnalysisResult {
     username: string;
     platform: Platform;
     displayName: string;
+    bio?: string;
     profileImageUrl: string;
     isVerified: boolean;
     followerCount: number;
@@ -229,6 +230,12 @@ export function CreatorAnalyzer() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {(result.profile.bio && result.profile.platform === 'tiktok') && (
+                <div className="space-y-2">
+                  <p className="text-sm leading-relaxed">{result.profile.bio}</p>
+                </div>
+              )}
+              
               {result.profile.website && (
                 <div className="space-y-2">
                   <a

@@ -38,9 +38,27 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    if (!scrapingResult.success || !scrapingResult.data) {
+    if (!scrapingResult.success) {
+      // Check if it's a user-friendly error (private/non-existent account)
+      if (scrapingResult.error?.includes('private') || 
+          scrapingResult.error?.includes('does not exist') ||
+          scrapingResult.error?.includes('doesn\'t exist')) {
+        return NextResponse.json(
+          { success: false, error: scrapingResult.error },
+          { status: 400 } // Bad request for user issues
+        );
+      }
+      
+      // Technical error
       return NextResponse.json(
         { success: false, error: scrapingResult.error || 'No data returned from scraping' },
+        { status: 500 }
+      );
+    }
+
+    if (!scrapingResult.data) {
+      return NextResponse.json(
+        { success: false, error: 'No data returned from scraping' },
         { status: 500 }
       );
     }
@@ -60,7 +78,7 @@ export async function POST(request: NextRequest) {
       username,
       platform,
       displayName: scrapingResult.data.displayName,
-      bio: scrapingResult.data.bio,
+      bio: 'bio' in scrapingResult.data ? scrapingResult.data.bio : undefined,
       profileImageUrl: scrapingResult.data.profileImageUrl,
       isVerified: scrapingResult.data.isVerified,
       followerCount: scrapingResult.data.followerCount,

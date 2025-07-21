@@ -76,6 +76,34 @@ export async function analyzeInstagramProfile(username: string): Promise<Instagr
     // Wait a bit for the page to load
     await new Promise(resolve => setTimeout(resolve, 3000));
 
+    // Check for account issues first
+    const pageContent = await page.evaluate(() => document.body.textContent || '');
+    
+    // Check if account doesn't exist
+    if (pageContent.includes('Sorry, this page isn\'t available') ||
+        pageContent.includes('The link you followed may be broken') ||
+        pageContent.includes('User not found')) {
+      
+      await browser.close();
+      return {
+        success: false,
+        error: 'This Instagram account does not exist',
+        method: 'scraping'
+      };
+    }
+
+    // Check if account is private
+    if (pageContent.includes('This Account is Private') ||
+        pageContent.includes('This account is private')) {
+      
+      await browser.close();
+      return {
+        success: false,
+        error: 'This Instagram account is private',
+        method: 'scraping'
+      };
+    }
+
     // Check if login is required
     const loginRequired = await page.$('input[name="username"]');
     if (loginRequired) {

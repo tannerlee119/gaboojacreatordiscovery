@@ -110,6 +110,36 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
     console.log(`Waiting ${loadDelay}ms for TikTok page to load...`);
     await new Promise(resolve => setTimeout(resolve, loadDelay));
 
+    // Check for account issues first
+    const pageContent = await page.evaluate(() => document.body.textContent || '');
+    
+    // Check if account doesn't exist
+    if (pageContent.includes('Couldn\'t find this account') ||
+        pageContent.includes('User not found') ||
+        pageContent.includes('This account doesn\'t exist') ||
+        pageContent.includes('Page not found')) {
+      
+      await browser.close();
+      return {
+        success: false,
+        error: 'This TikTok account does not exist',
+        method: 'scraping'
+      };
+    }
+
+    // Check if account is private
+    if (pageContent.includes('This account is private') ||
+        pageContent.includes('Account is private') ||
+        pageContent.includes('Private account')) {
+      
+      await browser.close();
+      return {
+        success: false,
+        error: 'This TikTok account is private',
+        method: 'scraping'
+      };
+    }
+
     // Check if we got an error page and try to refresh
     const errorCheck = await page.evaluate(() => {
       return document.body.textContent?.includes('Something went wrong') ||
@@ -253,7 +283,7 @@ async function scrapeTikTokProfileData(page: Page, username: string) {
       if (nameElement) {
         displayName = await page.evaluate(el => el.textContent?.trim() || '', nameElement) || username;
       }
-    } catch {
+        } catch {
       console.log('Could not extract display name');
     }
 
