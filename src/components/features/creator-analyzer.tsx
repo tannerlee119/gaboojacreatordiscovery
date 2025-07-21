@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import Image from 'next/image';
@@ -221,63 +222,148 @@ export function CreatorAnalyzer() {
             </CardContent>
           </Card>
 
-          {/* AI Analysis */}
-          {result.profile.aiAnalysis && (
-            <Card className="gabooja-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🤖 AI Analysis
-                  <span className="text-sm font-normal text-muted-foreground">
-                    Powered by OpenAI GPT-4 Vision
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Creator Score</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.creator_score}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Niche</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.niche}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Brand Potential</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.brand_potential}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Key Strengths</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.key_strengths}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Engagement Quality</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.engagement_quality}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Content Style</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.content_style}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Audience Demographics</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.audience_demographics}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold gabooja-accent">Collaboration Potential</h4>
-                      <p className="text-sm">{result.profile.aiAnalysis.collaboration_potential}</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold gabooja-accent">Overall Assessment</h4>
-                  <p className="text-sm">{result.profile.aiAnalysis.overall_assessment}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                     {/* AI Analysis */}
+           {result.profile.aiAnalysis && (
+             <Card className="gabooja-card">
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2">
+                   🤖 AI Analysis
+                   <span className="text-sm font-normal text-muted-foreground">
+                     Powered by OpenAI GPT-4 Vision
+                   </span>
+                 </CardTitle>
+                 <CardDescription>
+                   Comprehensive AI-powered insights about this creator
+                 </CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <Tabs defaultValue="overview" className="w-full">
+                   <TabsList className="grid w-full grid-cols-4">
+                     <TabsTrigger value="overview">🏆 Overview</TabsTrigger>
+                     <TabsTrigger value="metrics">📊 Metrics</TabsTrigger>
+                     <TabsTrigger value="content">🎨 Content</TabsTrigger>
+                     <TabsTrigger value="assessment">📝 Assessment</TabsTrigger>
+                   </TabsList>
+                   
+                   <TabsContent value="overview" className="space-y-6">
+                     {/* Creator Score Hero */}
+                     <div className="text-center py-8">
+                       <div className="text-lg mb-3 gabooja-accent">Creator Score</div>
+                       <div className="text-5xl font-bold gabooja-accent bg-gradient-to-r from-primary/20 to-accent/20 px-8 py-4 rounded-xl inline-block">
+                         {result.profile.aiAnalysis.creator_score}
+                       </div>
+                     </div>
+                     
+                     {/* Quick Stats Grid */}
+                     <div className="grid md:grid-cols-3 gap-4">
+                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30">
+                         <div className="text-2xl mb-2">🎯</div>
+                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Brand Potential</h4>
+                         <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                           {result.profile.aiAnalysis.brand_potential}
+                         </p>
+                       </div>
+                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30">
+                         <div className="text-2xl mb-2">💬</div>
+                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Engagement Quality</h4>
+                         <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                           {result.profile.aiAnalysis.engagement_quality}
+                         </p>
+                       </div>
+                       <div className="text-center p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30">
+                         <div className="text-2xl mb-2">🤝</div>
+                         <h4 className="font-semibold text-sm gabooja-accent mb-2">Collaboration Potential</h4>
+                         <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                           {result.profile.aiAnalysis.collaboration_potential}
+                         </p>
+                       </div>
+                     </div>
+                   </TabsContent>
+                   
+                   <TabsContent value="metrics" className="space-y-6">
+                     <div className="grid md:grid-cols-2 gap-6">
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                           🎯 Brand Potential
+                         </h4>
+                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
+                           {result.profile.aiAnalysis.brand_potential}
+                         </p>
+                         <p className="text-sm text-blue-600 dark:text-blue-400">
+                           Potential for brand partnerships and collaborations
+                         </p>
+                       </div>
+                       
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                           💬 Engagement Quality
+                         </h4>
+                         <p className="text-2xl font-bold text-green-700 dark:text-green-300 mb-2">
+                           {result.profile.aiAnalysis.engagement_quality}
+                         </p>
+                         <p className="text-sm text-green-600 dark:text-green-400">
+                           Quality and authenticity of audience interactions
+                         </p>
+                       </div>
+                       
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                           🤝 Collaboration Potential
+                         </h4>
+                         <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
+                           {result.profile.aiAnalysis.collaboration_potential}
+                         </p>
+                         <p className="text-sm text-purple-600 dark:text-purple-400">
+                           Likelihood of successful partnerships
+                         </p>
+                       </div>
+                       
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-lg">
+                           🏷️ Niche Focus
+                         </h4>
+                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.niche}</p>
+                       </div>
+                     </div>
+                   </TabsContent>
+                   
+                   <TabsContent value="content" className="space-y-6">
+                     <div className="grid md:grid-cols-2 gap-6">
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20 border border-rose-200 dark:border-rose-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                           🎭 Content Style
+                         </h4>
+                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.content_style}</p>
+                       </div>
+                       
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                           💪 Key Strengths
+                         </h4>
+                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.key_strengths}</p>
+                       </div>
+                       
+                       <div className="p-6 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-indigo-200 dark:border-indigo-800 md:col-span-2">
+                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                           👥 Audience Demographics
+                         </h4>
+                         <p className="text-base leading-relaxed">{result.profile.aiAnalysis.audience_demographics}</p>
+                       </div>
+                     </div>
+                   </TabsContent>
+                   
+                   <TabsContent value="assessment" className="space-y-6">
+                     <div className="p-8 rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30 border border-slate-200 dark:border-slate-700">
+                       <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-6 text-xl">
+                         📝 Overall Assessment
+                       </h4>
+                       <p className="text-lg leading-relaxed">{result.profile.aiAnalysis.overall_assessment}</p>
+                     </div>
+                   </TabsContent>
+                 </Tabs>
+               </CardContent>
+             </Card>
+           )}
 
           {/* Screenshot */}
           {result.profile.profileImageBase64 && (
