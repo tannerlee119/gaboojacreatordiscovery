@@ -95,14 +95,13 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
           <DialogTitle className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                {analysisData.profile.displayName}
+                {analysisData.profile.platform === 'instagram' ? `@${analysisData.profile.username}` : analysisData.profile.displayName}
                 {analysisData.profile.isVerified && (
                   <span className="text-primary">✓</span>
                 )}
               </div>
               <div className="text-sm text-muted-foreground flex items-center gap-4">
-                {/* @{analysisData.profile.username} */}
-                <span className={`px-2 py-1 text-xs gap-2 font-medium rounded-full ${
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   analysisData.profile.platform === 'instagram' 
                     ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
                     : analysisData.profile.platform === 'tiktok'
