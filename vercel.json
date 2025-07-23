@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "src/app/api/analyze-creator/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0"
+  },
+  "buildCommand": "npm run build && npx playwright install chromium --with-deps"
+} 
