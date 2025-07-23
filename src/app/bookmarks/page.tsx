@@ -5,12 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BookmarkedCreator, getBookmarkedCreators, removeBookmark } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
-import { Trash2, ExternalLink, Link } from 'lucide-react';
+import { Trash2, ExternalLink, Link, Eye } from 'lucide-react';
 import Image from 'next/image';
+import { AnalysisModal } from '@/components/ui/analysis-modal';
 
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Load bookmarks on component mount
   useEffect(() => {
@@ -35,6 +38,32 @@ export default function BookmarksPage() {
     removeBookmark(platform as 'instagram' | 'tiktok', username);
     // Update local state
     setBookmarks(prev => prev.filter(b => !(b.platform === platform && b.username === username)));
+  };
+
+  const handleViewAnalysis = (bookmark: BookmarkedCreator) => {
+    // Convert bookmark data to analysis format
+    const analysisData = {
+      profile: {
+        username: bookmark.username,
+        platform: bookmark.platform,
+        displayName: bookmark.displayName,
+        bio: bookmark.bio,
+        profileImageUrl: bookmark.profileImageUrl || '',
+        isVerified: bookmark.isVerified,
+        followerCount: bookmark.followerCount,
+        followingCount: bookmark.followingCount,
+        website: bookmark.website,
+        metrics: bookmark.metrics || {},
+        aiAnalysis: bookmark.aiAnalysis,
+      },
+      scrapingDetails: {
+        method: 'Bookmarked Creator',
+        timestamp: bookmark.bookmarkedAt,
+      },
+    };
+    
+    setSelectedAnalysis(analysisData);
+    setIsModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -104,7 +133,18 @@ export default function BookmarksPage() {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        @{bookmark.username} on {bookmark.platform}
+                        @{bookmark.username}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          bookmark.platform === 'instagram' 
+                            ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                            : bookmark.platform === 'tiktok'
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                          {bookmark.platform}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -124,11 +164,6 @@ export default function BookmarksPage() {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Bio for TikTok */}
-                {bookmark.bio && bookmark.platform === 'tiktok' && (
-                  <p className="text-sm leading-relaxed">{bookmark.bio}</p>
-                )}
-                
                 {/* Website */}
                 {bookmark.website && (
                   <a
@@ -172,8 +207,22 @@ export default function BookmarksPage() {
                   </div>
                 )}
                 
-                {/* Profile Link */}
-                <div className="pt-2 border-t border-border">
+                {/* Action Buttons */}
+                <div className="pt-2 border-t border-border space-y-2">
+                  {/* View Analysis Button - only show if AI analysis exists */}
+                  {bookmark.aiAnalysis && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewAnalysis(bookmark)}
+                      className="w-full flex items-center gap-2"
+                    >
+                      <Eye className="h-3 w-3" />
+                      View Analysis
+                    </Button>
+                  )}
+                  
+                  {/* Profile Link */}
                   <a
                     href={
                       bookmark.platform === 'tiktok' 
@@ -182,7 +231,7 @@ export default function BookmarksPage() {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm"
+                    className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm w-full justify-center"
                   >
                     <ExternalLink className="h-3 w-3" />
                     View Profile
@@ -192,6 +241,18 @@ export default function BookmarksPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Analysis Modal */}
+      {selectedAnalysis && (
+        <AnalysisModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAnalysis(null);
+          }}
+          analysisData={selectedAnalysis}
+        />
       )}
     </div>
   );

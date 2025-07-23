@@ -1,19 +1,22 @@
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCreator } from '@/lib/creator-context';
 import { formatNumber } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { AnalysisModal } from '@/components/ui/analysis-modal';
 
 export function CreatorDiscovery() {
-  const { analysisHistory, setCurrentAnalysis } = useCreator();
-  const router = useRouter();
+  const { analysisHistory } = useCreator();
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleViewAnalysis = (analysis: typeof analysisHistory[0]) => {
-    setCurrentAnalysis(analysis);
-    router.push('/');
+    setSelectedAnalysis(analysis);
+    setIsModalOpen(true);
   };
 
   return (
@@ -66,8 +69,18 @@ export function CreatorDiscovery() {
                         {analysis.profile.displayName}
                         {analysis.profile.isVerified && <span className="ml-1 text-primary">✓</span>}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        @{analysis.profile.username} • {analysis.profile.platform} • {formatNumber(analysis.profile.followerCount)} followers
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        @{analysis.profile.username}
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          analysis.profile.platform === 'instagram' 
+                            ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                            : analysis.profile.platform === 'tiktok'
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                          {analysis.profile.platform}
+                        </span>
+                        • {formatNumber(analysis.profile.followerCount)} followers
                       </div>
                     </div>
                   </div>
@@ -83,6 +96,18 @@ export function CreatorDiscovery() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Analysis Modal */}
+      {selectedAnalysis && (
+        <AnalysisModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAnalysis(null);
+          }}
+          analysisData={selectedAnalysis}
+        />
       )}
     </div>
   );
