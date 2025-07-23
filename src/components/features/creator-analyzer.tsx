@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { useCreator } from '@/lib/creator-context';
 import Image from 'next/image';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 
@@ -59,10 +60,9 @@ interface AnalysisResult {
 }
 
 export function CreatorAnalyzer() {
+  const { currentAnalysis, setCurrentAnalysis, addToHistory, isLoading, setIsLoading } = useCreator();
   const [username, setUsername] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -73,12 +73,15 @@ export function CreatorAnalyzer() {
     [key in Platform]?: AnalysisResult
   }>({});
 
+  // Use current analysis from context
+  const result = currentAnalysis;
+
   const handleAnalyze = async () => {
     if (!username.trim()) return;
     
-    setIsAnalyzing(true);
+    setIsLoading(true);
     setError(null);
-    setResult(null);
+    setCurrentAnalysis(null);
     
     try {
       console.log('Starting analysis for:', { username, platform });
@@ -98,7 +101,8 @@ export function CreatorAnalyzer() {
       }
 
       const newResult = data.data;
-      setResult(newResult);
+      setCurrentAnalysis(newResult);
+      addToHistory(newResult);
       
       // Cache the result for this platform
       setResultCache(prev => ({
@@ -112,7 +116,7 @@ export function CreatorAnalyzer() {
       console.error('Analysis failed:', error);
       setError(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
-      setIsAnalyzing(false);
+      setIsLoading(false);
     }
   };
 
@@ -133,12 +137,12 @@ export function CreatorAnalyzer() {
     // Check if we have a cached result for this platform
     const cachedResult = resultCache[newPlatform];
     if (cachedResult) {
-      setResult(cachedResult);
+      setCurrentAnalysis(cachedResult);
       // Update username to match the cached result
       setUsername(cachedResult.profile.username);
     } else {
       // Clear result if no cached data
-      setResult(null);
+      setCurrentAnalysis(null);
       setUsername('');
     }
   };
@@ -189,7 +193,7 @@ export function CreatorAnalyzer() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                disabled={isAnalyzing}
+                disabled={isLoading}
               />
             </div>
             <div className="flex gap-2">
@@ -200,7 +204,7 @@ export function CreatorAnalyzer() {
                   size="sm"
                   onClick={() => handlePlatformChange(p.value)}
                   className="flex-1"
-                  disabled={isAnalyzing}
+                  disabled={isLoading}
                 >
                   {p.label}
                 </Button>
@@ -210,14 +214,14 @@ export function CreatorAnalyzer() {
           
           <Button 
             onClick={handleAnalyze}
-            disabled={!username.trim() || isAnalyzing}
+            disabled={!username.trim() || isLoading}
             size="lg"
             className="w-full"
           >
-            {isAnalyzing ? 'Analyzing... (This may take 30-60 seconds)' : 'Analyze Creator'}
+            {isLoading ? 'Analyzing... (This may take 30-60 seconds)' : 'Analyze Creator'}
           </Button>
 
-          {isAnalyzing && (
+          {isLoading && (
             <div className="text-center space-y-2">
               <div className="animate-pulse text-muted-foreground">
                 🤖 Launching browser and taking screenshot...
@@ -248,14 +252,27 @@ export function CreatorAnalyzer() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {result.profile.profileImageUrl && (
+                  {result.profile.profileImageUrl ? (
                     <Image
                       src={result.profile.profileImageUrl}
                       alt={`${result.profile.displayName} profile`}
                       width={60}
                       height={60}
-                      className="rounded-full"
+                      className="rounded-full object-cover"
+                      onError={(e) => {
+                        console.log('Profile image failed to load:', result.profile.profileImageUrl);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('Profile image loaded successfully:', result.profile.profileImageUrl);
+                      }}
                     />
+                  ) : (
+                    <div className="w-[60px] h-[60px] rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-lg font-semibold text-muted-foreground">
+                        {result.profile.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   )}
                   <div>
                     <div className="flex items-center gap-2">

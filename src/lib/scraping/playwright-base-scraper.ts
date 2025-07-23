@@ -139,10 +139,20 @@ export class PlaywrightBaseScraper {
 
       this.page = await this.context.newPage();
 
-      // Block unnecessary resources for faster loading
+      // Block unnecessary resources for faster loading but allow profile images
       await this.page.route('**/*', (route) => {
         const resourceType = route.request().resourceType();
-        if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+        const url = route.request().url();
+        
+        // Allow profile images and avatars but block other images
+        if (resourceType === 'image') {
+          if (url.includes('profile') || url.includes('avatar') || url.includes('user')) {
+            console.log('Allowing profile image:', url);
+            route.continue();
+          } else {
+            route.abort();
+          }
+        } else if (['stylesheet', 'font', 'media'].includes(resourceType)) {
           route.abort();
         } else {
           route.continue();
