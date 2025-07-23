@@ -44,9 +44,10 @@ export async function analyzeInstagramProfile(username: string): Promise<Instagr
       timeout: 30000
     });
 
-    // Check for errors first
+    // Check for specific errors first (more targeted detection)
     const errorCheck = await scraper.checkForErrors();
     if (errorCheck.hasError) {
+      console.log('Error detected:', errorCheck);
       await scraper.cleanup();
       
       let errorMessage = 'Unknown error occurred';
@@ -60,24 +61,18 @@ export async function analyzeInstagramProfile(username: string): Promise<Instagr
         case 'rate_limited':
           errorMessage = 'Rate limited by Instagram. Please try again later';
           break;
-        case 'blocked':
-          errorMessage = 'Unable to access Instagram profile';
-          break;
-        case 'login_required':
-          console.log('Login required, attempting to handle...');
-          break;
         default:
           errorMessage = errorCheck.message || 'Unknown error occurred';
       }
       
-      if (errorCheck.errorType !== 'login_required') {
-        return {
-          success: false,
-          error: errorMessage,
-          method: 'scraping'
-        };
-      }
+      return {
+        success: false,
+        error: errorMessage,
+        method: 'scraping'
+      };
     }
+
+    console.log('No errors detected, proceeding with scraping...');
 
     const page = scraper.getPage();
     if (!page) {

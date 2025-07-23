@@ -262,26 +262,27 @@ export class PlaywrightBaseScraper {
 
     const pageContent = await this.page.textContent('body') || '';
     const pageTitle = await this.page.title();
+    
+    console.log('Page title:', pageTitle);
+    console.log('Page content sample:', pageContent.substring(0, 200) + '...');
 
-    // Common error patterns
+    // Common error patterns - made more specific to avoid false positives
     const errorPatterns = [
       {
         type: 'not_found',
         patterns: [
-          'Sorry, this page isn\'t available',
-          'The link you followed may be broken',
+          'Sorry, this page isn\'t available.',
+          'The link you followed may be broken, or the page may have been removed.',
           'User not found',
           'Page not found',
-          '404',
-          'doesn\'t exist'
+          'Couldn\'t find this account'
         ]
       },
       {
         type: 'private_account',
         patterns: [
           'This Account is Private',
-          'This account is private',
-          'Account is private'
+          'This account is private'
         ]
       },
       {
@@ -292,31 +293,13 @@ export class PlaywrightBaseScraper {
           'Try again later',
           'Temporary restriction'
         ]
-      },
-      {
-        type: 'blocked',
-        patterns: [
-          'Something went wrong',
-          'Access denied',
-          'Blocked',
-          'Suspended',
-          'Temporarily unavailable'
-        ]
-      },
-      {
-        type: 'login_required',
-        patterns: [
-          'Log in to continue',
-          'Sign up',
-          'Create account',
-          'Login required'
-        ]
       }
     ];
 
     for (const errorCategory of errorPatterns) {
       for (const pattern of errorCategory.patterns) {
         if (pageContent.includes(pattern) || pageTitle.includes(pattern)) {
+          console.log(`Error pattern found: "${pattern}" in ${pageContent.includes(pattern) ? 'content' : 'title'}`);
           return {
             hasError: true,
             errorType: errorCategory.type,
@@ -326,6 +309,7 @@ export class PlaywrightBaseScraper {
       }
     }
 
+    console.log('No error patterns found');
     return { hasError: false };
   }
 
