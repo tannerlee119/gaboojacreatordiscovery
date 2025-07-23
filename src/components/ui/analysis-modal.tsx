@@ -116,7 +116,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                 )}
               </div>
               <div className="text-sm text-muted-foreground flex items-center gap-2">
-                @{analysisData.profile.username}
+                {/* @{analysisData.profile.username} */}
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   analysisData.profile.platform === 'instagram' 
                     ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
