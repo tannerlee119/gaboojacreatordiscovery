@@ -7,5 +7,5 @@
   "env": {
     "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0"
   },
-  "buildCommand": "npm run build && npx playwright install chromium --with-deps"
+  "buildCommand": "npm run build && npx playwright install chromium"
 } 
