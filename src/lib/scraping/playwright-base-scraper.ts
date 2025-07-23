@@ -265,7 +265,50 @@ export class PlaywrightBaseScraper {
     
     console.log('Page title:', pageTitle);
     console.log('Page content sample:', pageContent.substring(0, 200) + '...');
+    
+    // Skip error detection if page content is mostly JSON schema (common on TikTok)
+    if (pageContent.trim().startsWith('{') || pageContent.includes('"@context":"https://schema.org/"')) {
+      console.log('Page contains JSON schema, checking visible content only...');
+      
+      // Get visible text content instead of all text content
+      const visibleContent = await this.page.evaluate(() => {
+        // Get only visible text, excluding script tags and hidden elements
+        const walker = document.createTreeWalker(
+          document.body,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode: function(node) {
+              const parent = node.parentElement;
+              if (!parent) return NodeFilter.FILTER_REJECT;
+              
+              const style = window.getComputedStyle(parent);
+              if (style.display === 'none' || style.visibility === 'hidden' || 
+                  parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+                return NodeFilter.FILTER_REJECT;
+              }
+              
+              return NodeFilter.FILTER_ACCEPT;
+            }
+          }
+        );
+        
+        let visibleText = '';
+        let node;
+        while (node = walker.nextNode()) {
+          visibleText += node.textContent + ' ';
+        }
+        
+        return visibleText.trim();
+      });
+      
+      console.log('Visible content sample:', visibleContent.substring(0, 200) + '...');
+      return this.checkErrorPatterns(visibleContent, pageTitle);
+    }
+    
+    return this.checkErrorPatterns(pageContent, pageTitle);
+  }
 
+  private checkErrorPatterns(content: string, title: string): { hasError: boolean; errorType?: string; message?: string } {
     // Common error patterns - made more specific to avoid false positives
     const errorPatterns = [
       {
@@ -298,8 +341,8 @@ export class PlaywrightBaseScraper {
 
     for (const errorCategory of errorPatterns) {
       for (const pattern of errorCategory.patterns) {
-        if (pageContent.includes(pattern) || pageTitle.includes(pattern)) {
-          console.log(`Error pattern found: "${pattern}" in ${pageContent.includes(pattern) ? 'content' : 'title'}`);
+        if (content.includes(pattern) || title.includes(pattern)) {
+          console.log(`Error pattern found: "${pattern}" in ${content.includes(pattern) ? 'content' : 'title'}`);
           return {
             hasError: true,
             errorType: errorCategory.type,

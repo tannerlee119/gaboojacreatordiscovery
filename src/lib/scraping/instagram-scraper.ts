@@ -200,14 +200,64 @@ async function scrapeInstagramProfileData(page: Page, username: string, scraper:
       console.log('Could not extract display name');
     }
 
-    // Profile image
+    // Profile image - try multiple selectors and approaches
     try {
-      const imgElement = page.locator('img[alt*="profile picture"], header img').first();
-      if (await imgElement.isVisible({ timeout: 5000 })) {
-        profileImageUrl = await imgElement.getAttribute('src') || '';
+      console.log('Attempting to extract Instagram profile image...');
+      
+      const imageSelectors = [
+        'img[alt*="profile picture"]',
+        'header img',
+        'img[data-testid="user-avatar"]',
+        'div[data-testid="user-avatar"] img',
+        'span[data-testid="user-avatar"] img',
+        'img[alt*="\'s profile picture"]',
+        'img[src*="profile_pic"]'
+      ];
+      
+      for (const selector of imageSelectors) {
+        try {
+          const imgElement = page.locator(selector).first();
+          if (await imgElement.isVisible({ timeout: 3000 })) {
+            const src = await imgElement.getAttribute('src');
+            if (src && src.trim() && !src.includes('data:image')) {
+              profileImageUrl = src.trim();
+              console.log('Found Instagram profile image:', profileImageUrl);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`Image selector ${selector} failed:`, error);
+        }
       }
-    } catch {
-      console.log('Could not extract profile image');
+      
+      // Alternative: Look for profile images in style attributes or background images
+      if (!profileImageUrl) {
+        console.log('Trying alternative profile image extraction...');
+        const avatarElements = page.locator('[class*="avatar"], [class*="profile"], [data-testid*="avatar"]');
+        const count = await avatarElements.count();
+        
+        for (let i = 0; i < count; i++) {
+          const element = avatarElements.nth(i);
+          
+          // Check for background image
+          const backgroundImage = await element.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.backgroundImage;
+          });
+          
+          if (backgroundImage && backgroundImage.includes('url(')) {
+            const match = backgroundImage.match(/url\("?([^"]+)"?\)/);
+            if (match && match[1] && !match[1].includes('data:image')) {
+              profileImageUrl = match[1];
+              console.log('Found profile image in background:', profileImageUrl);
+              break;
+            }
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.log('Error extracting Instagram profile image:', error);
     }
 
     // Verification status
@@ -362,13 +412,15 @@ async function scrapeInstagramProfileData(page: Page, username: string, scraper:
       console.error('Error extracting metrics:', error);
     }
 
-    console.log('Final extracted data:', {
+    console.log('Final Instagram extracted data:', {
       displayName,
       followerCount,
       followingCount,
       postCount,
       isVerified,
-      website
+      website,
+      profileImageUrl: profileImageUrl ? 'Found' : 'Not found',
+      profileImageUrlActual: profileImageUrl
     });
 
     const metrics: InstagramMetrics = {

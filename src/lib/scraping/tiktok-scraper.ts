@@ -186,25 +186,28 @@ async function scrapeTikTokProfileData(page: Page, username: string, scraper: Pl
       console.log('Could not extract bio:', error);
     }
 
-    // Profile image
+    // Profile image - enhanced extraction
     try {
-      console.log('Extracting profile image...');
+      console.log('Extracting TikTok profile image...');
       const avatarSelectors = [
         '[data-e2e="user-avatar"] img',
         'img[data-e2e="user-avatar"]',
         '.user-avatar img',
         'span[data-e2e="user-avatar"] img',
-        'div[data-e2e="user-avatar"] img'
+        'div[data-e2e="user-avatar"] img',
+        'img[alt*="avatar"]',
+        'img[src*="avatar"]',
+        'header img'
       ];
       
       for (const selector of avatarSelectors) {
         try {
           const element = page.locator(selector).first();
-          if (await element.isVisible({ timeout: 5000 })) {
+          if (await element.isVisible({ timeout: 3000 })) {
             const src = await element.getAttribute('src');
-            if (src && src.trim()) {
+            if (src && src.trim() && !src.includes('data:image') && src.startsWith('http')) {
               profileImageUrl = src.trim();
-              console.log('Found profile image:', profileImageUrl);
+              console.log('Found TikTok profile image:', profileImageUrl);
               break;
             }
           }
@@ -212,8 +215,46 @@ async function scrapeTikTokProfileData(page: Page, username: string, scraper: Pl
           console.log(`Avatar selector ${selector} failed:`, error);
         }
       }
+      
+      // Alternative: Look for avatar in background images or CSS
+      if (!profileImageUrl) {
+        console.log('Trying alternative TikTok avatar extraction...');
+        const avatarContainers = page.locator('[data-e2e="user-avatar"], [class*="avatar"], [class*="Avatar"]');
+        const count = await avatarContainers.count();
+        
+        for (let i = 0; i < count; i++) {
+          const container = avatarContainers.nth(i);
+          
+          // Check for background image
+          const backgroundImage = await container.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.backgroundImage;
+          });
+          
+          if (backgroundImage && backgroundImage.includes('url(')) {
+            const match = backgroundImage.match(/url\("?([^"]+)"?\)/);
+            if (match && match[1] && !match[1].includes('data:image') && match[1].startsWith('http')) {
+              profileImageUrl = match[1];
+              console.log('Found TikTok profile image in background:', profileImageUrl);
+              break;
+            }
+          }
+          
+          // Check for img elements inside the container
+          const imgInside = container.locator('img').first();
+          if (await imgInside.isVisible({ timeout: 1000 })) {
+            const src = await imgInside.getAttribute('src');
+            if (src && src.trim() && !src.includes('data:image') && src.startsWith('http')) {
+              profileImageUrl = src.trim();
+              console.log('Found TikTok profile image inside container:', profileImageUrl);
+              break;
+            }
+          }
+        }
+      }
+      
     } catch (error) {
-      console.log('Could not extract profile image:', error);
+      console.log('Error extracting TikTok profile image:', error);
     }
 
     // Verification status
@@ -391,7 +432,8 @@ async function scrapeTikTokProfileData(page: Page, username: string, scraper: Pl
       likeCount,
       videoCount,
       isVerified,
-      profileImageUrl: profileImageUrl ? 'Found' : 'Not found'
+      profileImageUrl: profileImageUrl ? 'Found' : 'Not found',
+      profileImageUrlActual: profileImageUrl
     });
 
     const metrics: TikTokMetrics = {
