@@ -259,8 +259,17 @@ export function CreatorAnalyzer() {
                         <span className="text-primary">✓</span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      @{result.profile.username} on {result.profile.platform}
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      {result.profile.username}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        result.profile.platform === 'instagram' 
+                          ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                          : result.profile.platform === 'tiktok'
+                          ? 'bg-black text-white dark:bg-white dark:text-black'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                      }`}>
+                        {result.profile.platform}
+                      </span>
                     </div>
                   </div>
                 </div>

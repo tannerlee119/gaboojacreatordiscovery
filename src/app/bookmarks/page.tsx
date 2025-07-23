@@ -123,9 +123,6 @@ export default function BookmarksPage() {
                           <span className="text-primary">✓</span>
                         )}
                       </div>
-                       {/* <div className="text-sm text-muted-foreground">
-                          @{bookmark.username}
-                       </div> */}
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           bookmark.platform === 'instagram' 

@@ -55,7 +55,7 @@ export function CreatorDiscovery() {
                         {analysis.profile.isVerified && <span className="ml-1 text-primary">✓</span>}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        @{analysis.profile.username}
+                        {/* @{analysis.profile.username} */}
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           analysis.profile.platform === 'instagram' 
                             ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
