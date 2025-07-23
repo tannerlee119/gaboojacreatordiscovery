@@ -49,21 +49,6 @@ export function CreatorDiscovery() {
                 <div key={`${analysis.profile.username}-${analysis.profile.platform}`} 
                      className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    {analysis.profile.profileImageUrl ? (
-                      <Image
-                        src={analysis.profile.profileImageUrl}
-                        alt={`${analysis.profile.displayName} profile`}
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-[40px] h-[40px] rounded-full bg-muted flex items-center justify-center">
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          {analysis.profile.displayName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
                     <div>
                       <div className="font-medium">
                         {analysis.profile.displayName}

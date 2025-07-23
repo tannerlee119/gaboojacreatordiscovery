@@ -116,15 +116,6 @@ export default function BookmarksPage() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {bookmark.profileImageUrl && (
-                      <Image
-                        src={bookmark.profileImageUrl}
-                        alt={`${bookmark.displayName} profile`}
-                        width={50}
-                        height={50}
-                        className="rounded-full"
-                      />
-                    )}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-base font-semibold">{bookmark.displayName}</span>
@@ -132,9 +123,9 @@ export default function BookmarksPage() {
                           <span className="text-primary">✓</span>
                         )}
                       </div>
-                      {/* <div className="text-sm text-muted-foreground">
-                        @{bookmark.username}
-                      </div> */}
+                       {/* <div className="text-sm text-muted-foreground">
+                          @{bookmark.username}
+                       </div> */}
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           bookmark.platform === 'instagram' 

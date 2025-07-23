@@ -252,28 +252,6 @@ export function CreatorAnalyzer() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {result.profile.profileImageUrl ? (
-                    <Image
-                      src={result.profile.profileImageUrl}
-                      alt={`${result.profile.displayName} profile`}
-                      width={60}
-                      height={60}
-                      className="rounded-full object-cover"
-                      onError={(e) => {
-                        console.log('Profile image failed to load:', result.profile.profileImageUrl);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                      onLoad={() => {
-                        console.log('Profile image loaded successfully:', result.profile.profileImageUrl);
-                      }}
-                    />
-                  ) : (
-                    <div className="w-[60px] h-[60px] rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-lg font-semibold text-muted-foreground">
-                        {result.profile.displayName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
                   <div>
                     <div className="flex items-center gap-2">
                       {result.profile.displayName}

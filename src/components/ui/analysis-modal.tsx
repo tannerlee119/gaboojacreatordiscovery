@@ -93,21 +93,6 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            {analysisData.profile.profileImageUrl ? (
-              <Image
-                src={analysisData.profile.profileImageUrl}
-                alt={`${analysisData.profile.displayName} profile`}
-                width={50}
-                height={50}
-                className="rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center">
-                <span className="text-lg font-semibold text-muted-foreground">
-                  {analysisData.profile.displayName.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
             <div>
               <div className="flex items-center gap-2">
                 {analysisData.profile.displayName}
@@ -115,7 +100,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                   <span className="text-primary">✓</span>
                 )}
               </div>
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <div className="text-sm text-muted-foreground flex items-center gap-4">
                 {/* @{analysisData.profile.username} */}
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   analysisData.profile.platform === 'instagram' 
