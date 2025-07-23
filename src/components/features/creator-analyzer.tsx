@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
+import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink, Link } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -65,6 +66,7 @@ export function CreatorAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
   
   // Cache for storing last results per platform
   const [resultCache, setResultCache] = useState<{
@@ -114,6 +116,15 @@ export function CreatorAnalyzer() {
     }
   };
 
+  // Check bookmark status when result changes
+  useEffect(() => {
+    if (result) {
+      setBookmarkedStatus(isBookmarked(result.profile.platform, result.profile.username));
+    } else {
+      setBookmarkedStatus(false);
+    }
+  }, [result]);
+
   // Handle platform switching - restore cached result if available
   const handlePlatformChange = (newPlatform: Platform) => {
     setPlatform(newPlatform);
@@ -129,6 +140,35 @@ export function CreatorAnalyzer() {
       // Clear result if no cached data
       setResult(null);
       setUsername('');
+    }
+  };
+
+  // Handle bookmark toggle
+  const handleBookmarkToggle = () => {
+    if (!result) return;
+
+    if (bookmarkedStatus) {
+      // Remove bookmark
+      removeBookmark(result.profile.platform, result.profile.username);
+      setBookmarkedStatus(false);
+    } else {
+      // Add bookmark
+      const bookmarkData: Omit<BookmarkedCreator, 'id' | 'bookmarkedAt'> = {
+        username: result.profile.username,
+        platform: result.profile.platform,
+        displayName: result.profile.displayName,
+        profileImageUrl: result.profile.profileImageUrl,
+        isVerified: result.profile.isVerified,
+        followerCount: result.profile.followerCount,
+        followingCount: result.profile.followingCount,
+        website: result.profile.website,
+        bio: result.profile.bio,
+        metrics: result.profile.metrics,
+        aiAnalysis: result.profile.aiAnalysis,
+      };
+      
+      addBookmark(bookmarkData);
+      setBookmarkedStatus(true);
     }
   };
 
@@ -206,27 +246,49 @@ export function CreatorAnalyzer() {
           {/* Profile Overview */}
           <Card className="gabooja-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                {result.profile.profileImageUrl && (
-                  <Image
-                    src={result.profile.profileImageUrl}
-                    alt={`${result.profile.displayName} profile`}
-                    width={60}
-                    height={60}
-                    className="rounded-full"
-                  />
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    {result.profile.displayName}
-                    {result.profile.isVerified && (
-                      <span className="text-primary">✓</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    @{result.profile.username} on {result.profile.platform}
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {result.profile.profileImageUrl && (
+                    <Image
+                      src={result.profile.profileImageUrl}
+                      alt={`${result.profile.displayName} profile`}
+                      width={60}
+                      height={60}
+                      className="rounded-full"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      {result.profile.displayName}
+                      {result.profile.isVerified && (
+                        <span className="text-primary">✓</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      @{result.profile.username} on {result.profile.platform}
+                    </div>
                   </div>
                 </div>
+                
+                {/* Bookmark Button */}
+                <Button
+                  variant={bookmarkedStatus ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleBookmarkToggle}
+                  className="flex items-center gap-2"
+                >
+                  {bookmarkedStatus ? (
+                    <>
+                      <BookmarkCheck className="h-4 w-4" />
+                      Bookmarked
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="h-4 w-4" />
+                      Bookmark
+                    </>
+                  )}
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

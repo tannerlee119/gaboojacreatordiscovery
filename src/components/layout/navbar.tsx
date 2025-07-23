@@ -10,7 +10,7 @@ export function Navbar() {
   const navigation = [
     { name: "Analyze", href: "/" },
     { name: "Discovery", href: "/discovery" },
-    { name: "Trending", href: "/trending" },
+    { name: "Bookmarks", href: "/bookmarks" },
   ];
 
   return (
