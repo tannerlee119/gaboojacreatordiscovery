@@ -32,7 +32,7 @@ export default function BookmarksPage() {
   }, []);
 
   const handleRemoveBookmark = (platform: string, username: string) => {
-    removeBookmark(platform as any, username);
+    removeBookmark(platform as 'instagram' | 'tiktok', username);
     // Update local state
     setBookmarks(prev => prev.filter(b => !(b.platform === platform && b.username === username)));
   };
@@ -65,7 +65,7 @@ export default function BookmarksPage() {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold gabooja-gradient">Your Bookmarked Creators</h1>
         <p className="text-muted-foreground">
-          Creators you've analyzed and saved for future reference
+          Creators you&apos;ve analyzed and saved for future reference
         </p>
       </div>
 

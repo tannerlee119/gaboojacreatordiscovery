@@ -68,7 +68,7 @@ export async function analyzeTikTokProfile(username: string): Promise<TikTokScra
     // Enhanced stealth measures
     await page.evaluateOnNewDocument(() => {
       // Remove webdriver property
-      delete (window as any).navigator.webdriver;
+      delete (window as unknown as { navigator: { webdriver?: unknown } }).navigator.webdriver;
       
       // Override plugins
       Object.defineProperty(navigator, 'plugins', {
@@ -290,7 +290,7 @@ async function scrapeTikTokProfileData(page: Page, username: string) {
 
     // Profile image - try multiple selectors and methods
     try {
-      let imgElement = await page.$('[data-e2e="user-avatar"]') ||
+      const imgElement = await page.$('[data-e2e="user-avatar"]') ||
                        await page.$('img[data-e2e="user-avatar"]') ||
                        await page.$('.tiktok-1zpj2q-ImgAvatar') ||
                        await page.$('img[alt*="avatar"]') ||
@@ -400,7 +400,6 @@ async function scrapeTikTokProfileData(page: Page, username: string) {
         
         for (const element of strongElements) {
           const text = await page.evaluate(el => el.textContent?.trim() || '', element);
-          const title = await page.evaluate(el => el.title || '', element);
           
           if (text && text.match(/^\d+(\.\d+)?[KM]?$/)) {
             const number = parseNumberWithSuffix(text);
