@@ -5,16 +5,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useCreator } from '@/lib/creator-context';
 import { formatNumber } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+
+interface AnalysisData {
+  profile: {
+    username: string;
+    platform: 'instagram' | 'tiktok' | 'youtube';
+    displayName: string;
+    bio?: string;
+    profileImageUrl: string;
+    isVerified: boolean;
+    followerCount: number;
+    followingCount: number;
+    location?: string;
+    website?: string;
+    metrics: {
+      followerCount?: number;
+      followingCount?: number;
+      postCount?: number;
+      engagementRate?: number;
+      likeCount?: number;
+      videoCount?: number;
+      averageViews?: number;
+      averageLikes?: number;
+    };
+    aiAnalysis?: {
+      creator_score: string;
+      category: string;
+      brand_potential: string;
+      key_strengths: string;
+      engagement_quality: string;
+      content_style: string;
+      audience_demographics: string;
+      collaboration_potential: string;
+      overall_assessment: string;
+    };
+    profileImageBase64?: string;
+  };
+  scrapingDetails: {
+    method: string;
+    timestamp: string;
+  };
+}
 
 export function CreatorDiscovery() {
   const { analysisHistory } = useCreator();
-  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleViewAnalysis = (analysis: typeof analysisHistory[0]) => {
+  const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
     setIsModalOpen(true);
   };

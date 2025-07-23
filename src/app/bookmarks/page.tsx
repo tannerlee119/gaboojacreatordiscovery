@@ -6,13 +6,53 @@ import { Button } from '@/components/ui/button';
 import { BookmarkedCreator, getBookmarkedCreators, removeBookmark } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
 import { Trash2, ExternalLink, Link, Eye } from 'lucide-react';
-import Image from 'next/image';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+
+interface AnalysisData {
+  profile: {
+    username: string;
+    platform: 'instagram' | 'tiktok' | 'youtube';
+    displayName: string;
+    bio?: string;
+    profileImageUrl: string;
+    isVerified: boolean;
+    followerCount: number;
+    followingCount: number;
+    location?: string;
+    website?: string;
+    metrics: {
+      followerCount?: number;
+      followingCount?: number;
+      postCount?: number;
+      engagementRate?: number;
+      likeCount?: number;
+      videoCount?: number;
+      averageViews?: number;
+      averageLikes?: number;
+    };
+    aiAnalysis?: {
+      creator_score: string;
+      category: string;
+      brand_potential: string;
+      key_strengths: string;
+      engagement_quality: string;
+      content_style: string;
+      audience_demographics: string;
+      collaboration_potential: string;
+      overall_assessment: string;
+    };
+    profileImageBase64?: string;
+  };
+  scrapingDetails: {
+    method: string;
+    timestamp: string;
+  };
+}
 
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Load bookmarks on component mount
@@ -42,10 +82,10 @@ export default function BookmarksPage() {
 
   const handleViewAnalysis = (bookmark: BookmarkedCreator) => {
     // Convert bookmark data to analysis format
-    const analysisData = {
+    const analysisData: AnalysisData = {
       profile: {
         username: bookmark.username,
-        platform: bookmark.platform,
+        platform: bookmark.platform as 'instagram' | 'tiktok' | 'youtube',
         displayName: bookmark.displayName,
         bio: bookmark.bio,
         profileImageUrl: bookmark.profileImageUrl || '',
