@@ -257,7 +257,7 @@ export function CreatorAnalyzer() {
                 🤖 Launching browser and taking screenshot...
               </div>
               <div className="text-sm text-muted-foreground">
-                We&apos;re using Puppeteer to scrape the profile and OpenAI to analyze the content
+                We&apos;re using Playwright to scrape the profile and OpenAI to analyze the content
               </div>
             </div>
           )}
