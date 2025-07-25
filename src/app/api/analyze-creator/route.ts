@@ -156,12 +156,26 @@ export async function POST(request: NextRequest) {
 
     // Analyze with OpenAI if we have a screenshot
     let aiAnalysis = null;
+    let aiCost = 0;
+    let aiModel = 'none';
     if (screenshotBuffer) {
       console.log('Analyzing screenshot with OpenAI...');
       try {
-        const aiResult = await analyzeWithOpenAI(screenshotBuffer, platform, username);
+        const profileDataForAI = {
+          followerCount: Number(sanitizedData.followerCount) || 0,
+          isVerified: Boolean(sanitizedData.isVerified),
+          website: (sanitizedData.website as string) || undefined
+        };
+        
+        const aiResult = await analyzeWithOpenAI(screenshotBuffer, platform, username, profileDataForAI);
         if (aiResult.success) {
           aiAnalysis = aiResult.analysis;
+          aiCost = aiResult.cost || 0;
+          aiModel = aiResult.model || 'unknown';
+          
+          if (aiResult.cached) {
+            console.log('💰 Cost saved through caching!');
+          }
         }
       } catch (aiError) {
         console.error('AI analysis failed:', aiError);
@@ -203,6 +217,11 @@ export async function POST(request: NextRequest) {
         scrapingDetails: {
           method: scrapingResult.method,
           timestamp: new Date().toISOString(),
+        },
+        aiMetrics: {
+          model: aiModel,
+          cost: aiCost,
+          cached: aiModel === 'cached'
         }
       }
     });
@@ -212,6 +231,11 @@ export async function POST(request: NextRequest) {
     response.headers.set('X-RateLimit-Remaining', (rateLimitResult.remainingRequests || 0).toString());
     response.headers.set('X-RateLimit-Reset', (rateLimitResult.resetTime || 0).toString());
     response.headers.set('X-Processing-Time', `${processingTime}ms`);
+    
+    // Add AI cost tracking headers
+    response.headers.set('X-AI-Cost', aiCost.toFixed(6));
+    response.headers.set('X-AI-Model', aiModel);
+    response.headers.set('X-AI-Cached', aiModel === 'cached' ? 'true' : 'false');
 
     return setCorsHeaders(response);
 
