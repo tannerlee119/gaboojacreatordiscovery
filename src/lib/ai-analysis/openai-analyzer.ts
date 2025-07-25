@@ -183,54 +183,58 @@ export async function analyzeWithOpenAI(
  * Generate tailored prompt based on complexity level
  */
 function generatePrompt(level: AnalysisComplexity['level'], platform: Platform, username: string): string {
-  const basePrompt = `Analyze this ${platform} profile screenshot for user @${username}.`;
+  const basePrompt = `Analyze this ${platform} profile screenshot for user @${username}. Based on what you can observe in the screenshot, provide insights about this creator.`;
   
   switch (level) {
     case 'basic':
       return `${basePrompt}
       
-Provide a basic creator analysis including:
-1. Creator Score (1-10): Overall rating
-2. Category: Primary content category  
-3. Brand Potential: Basic partnership assessment
-4. Key Strengths: Main strengths
+Provide a basic creator analysis based on the visual information available:
+1. Creator Score (1-10): Overall rating based on profile presentation
+2. Category: Primary content category based on bio/visuals
+3. Brand Potential: Partnership potential assessment
+4. Key Strengths: Observable strengths from the profile
 5. Overall Assessment: Brief summary
 
+Focus only on what's clearly visible in the screenshot. Make confident assessments based on profile aesthetics, follower counts, verification status, bio content, and overall presentation quality.
+
 Respond in JSON format with these keys:
-{"creator_score": "X/10 - reason", "category": "category", "brand_potential": "assessment", "key_strengths": "strengths", "engagement_quality": "basic", "content_style": "basic", "audience_demographics": "general", "collaboration_potential": "basic", "overall_assessment": "summary"}`;
+{"creator_score": "X/10 - reason", "category": "category", "brand_potential": "assessment", "key_strengths": "strengths", "engagement_quality": "based on profile quality", "content_style": "visual style assessment", "audience_demographics": "inferred from profile", "collaboration_potential": "potential assessment", "overall_assessment": "summary"}`;
 
     case 'standard':
       return `${basePrompt}
       
-Provide a comprehensive creator analysis including:
-1. Creator Score (1-10): Overall rating with reasoning
-2. Category: Primary content category/theme
-3. Brand Potential: Partnership suitability assessment
-4. Key Strengths: What makes them stand out
-5. Engagement Quality: Audience interaction assessment
-6. Content Style: Visual/content approach description
-7. Audience Demographics: Likely audience characteristics
-8. Collaboration Potential: Collaboration assessment
+Provide a comprehensive creator analysis based on the visible profile information:
+1. Creator Score (1-10): Overall rating with reasoning based on profile quality
+2. Category: Primary content category/theme from bio and visuals
+3. Brand Potential: Partnership suitability based on follower count, verification, presentation
+4. Key Strengths: What makes them stand out from the profile
+5. Engagement Quality: Assessment based on follower count, verification, and profile professionalism
+6. Content Style: Visual/aesthetic approach observed in the profile
+7. Audience Demographics: Likely audience characteristics inferred from profile elements
+8. Collaboration Potential: Assessment based on profile professionalism and metrics
 9. Overall Assessment: Summary and recommendations
 
-Be specific and professional. Respond in JSON format with exact keys:
+Analyze the profile presentation, follower counts, verification status, bio quality, profile aesthetics, and overall brand consistency. Provide confident insights based on these observable elements.
+
+Respond in JSON format with exact keys:
 {"creator_score": "X/10 - reason", "category": "category description", "brand_potential": "assessment", "key_strengths": "specific strengths", "engagement_quality": "quality assessment", "content_style": "style description", "audience_demographics": "demographic insights", "collaboration_potential": "collaboration assessment", "overall_assessment": "summary and recommendations"}`;
 
     case 'premium':
       return `${basePrompt}
       
-Provide an in-depth, premium creator analysis including:
+Provide an in-depth, premium creator analysis based on comprehensive observation of the profile:
 1. Creator Score (1-10): Detailed rating with comprehensive reasoning
 2. Category: Primary content category with subcategories
 3. Brand Potential: Detailed partnership suitability with specific recommendations
 4. Key Strengths: Comprehensive analysis of unique value propositions
-5. Engagement Quality: Deep assessment of audience interaction patterns
-6. Content Style: Detailed visual/content approach analysis
-7. Audience Demographics: Comprehensive audience profiling
+5. Engagement Quality: Deep assessment based on follower metrics, verification, and profile quality
+6. Content Style: Detailed visual/aesthetic approach analysis
+7. Audience Demographics: Comprehensive audience profiling based on profile elements
 8. Collaboration Potential: Detailed collaboration assessment with specific opportunities
 9. Overall Assessment: In-depth summary with actionable recommendations
 
-Focus on actionable insights, specific metrics observable in the profile, and strategic recommendations. Analyze aesthetics, post quality, follower engagement patterns, and overall brand presentation.
+Conduct a thorough analysis of all visible elements: follower counts, verification badges, bio content, profile aesthetics, username professionalism, link presence, and overall brand presentation. Provide strategic insights and actionable recommendations for brand partnerships based on these observable factors.
 
 Respond in JSON format with these exact keys:
 {"creator_score": "X/10 - detailed reason", "category": "detailed category description", "brand_potential": "comprehensive assessment", "key_strengths": "detailed strengths analysis", "engagement_quality": "detailed quality assessment", "content_style": "comprehensive style analysis", "audience_demographics": "detailed demographic insights", "collaboration_potential": "detailed collaboration assessment", "overall_assessment": "comprehensive summary and strategic recommendations"}`;

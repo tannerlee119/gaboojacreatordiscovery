@@ -143,7 +143,7 @@ export const scrapedDataSchema = z.object({
   followingCount: z.number().optional(),
   location: z.string().optional(),
   website: z.string().optional(),
-  metrics: z.record(z.unknown()).optional(),
+  metrics: z.record(z.string(), z.unknown()).optional(),
   screenshot: z.instanceof(Buffer).optional()
 });
 

@@ -57,6 +57,36 @@ interface AnalysisResult {
     method: string;
     timestamp: string;
   };
+  aiMetrics?: {
+    model: string;
+    cost: number;
+    cached: boolean;
+  };
+  dataQuality?: {
+    score: number;
+    isValid: boolean;
+    breakdown: {
+      completeness: number;
+      consistency: number;
+      reliability: number;
+    };
+    issues: Array<{
+      field: string;
+      message: string;
+      severity: 'critical' | 'warning' | 'info';
+    }>;
+    transformations: number;
+    recommendations: string[];
+  };
+}
+
+// Type guard functions
+function hasAiMetrics(result: AnalysisResult): result is AnalysisResult & { aiMetrics: NonNullable<AnalysisResult['aiMetrics']> } {
+  return 'aiMetrics' in result && result.aiMetrics !== undefined;
+}
+
+function hasDataQuality(result: AnalysisResult): result is AnalysisResult & { dataQuality: NonNullable<AnalysisResult['dataQuality']> } {
+  return 'dataQuality' in result && result.dataQuality !== undefined;
 }
 
 export function CreatorAnalyzer() {
@@ -566,13 +596,139 @@ export function CreatorAnalyzer() {
              </CardHeader>
              {isDetailsOpen && (
                <CardContent>
-                 <div className="grid md:grid-cols-2 gap-4 text-sm">
-                   <div>
-                     <strong>Method:</strong> {result.scrapingDetails.method}
+                 <div className="space-y-6">
+                   {/* Basic Analysis Info */}
+                   <div className="grid md:grid-cols-2 gap-4 text-sm">
+                     <div>
+                       <strong>Method:</strong> {result.scrapingDetails.method}
+                     </div>
+                     <div>
+                       <strong>Analyzed:</strong> {new Date(result.scrapingDetails.timestamp).toLocaleString()}
+                     </div>
                    </div>
-                   <div>
-                     <strong>Analyzed:</strong> {new Date(result.scrapingDetails.timestamp).toLocaleString()}
-                   </div>
+
+                   {/* AI Metrics */}
+                   {hasAiMetrics(result) && (
+                     <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                       <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                         🤖 AI Analysis Metrics
+                       </h4>
+                       <div className="grid md:grid-cols-3 gap-4 text-sm">
+                         <div>
+                           <span className="text-muted-foreground">Model:</span>
+                           <div className="font-medium">{result.aiMetrics.model}</div>
+                         </div>
+                         <div>
+                           <span className="text-muted-foreground">Cost:</span>
+                           <div className="font-medium">${result.aiMetrics.cost.toFixed(4)}</div>
+                         </div>
+                         <div>
+                           <span className="text-muted-foreground">Cached:</span>
+                           <div className="font-medium">{result.aiMetrics.cached ? 'Yes' : 'No'}</div>
+                         </div>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Data Quality Metrics */}
+                   {hasDataQuality(result) && (
+                     <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                       <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+                         🔍 Data Quality Analysis
+                       </h4>
+                       
+                       {/* Overall Score */}
+                       <div className="mb-4">
+                         <div className="flex items-center gap-3 mb-2">
+                           <span className="text-sm text-muted-foreground">Overall Score:</span>
+                           <div className="flex items-center gap-2">
+                             <div className={`text-2xl font-bold ${
+                               result.dataQuality.score >= 90 ? 'text-green-600' :
+                               result.dataQuality.score >= 70 ? 'text-blue-600' :
+                               result.dataQuality.score >= 50 ? 'text-yellow-600' : 'text-red-600'
+                             }`}>
+                               {result.dataQuality.score}
+                             </div>
+                             <div className="text-sm text-muted-foreground">/100</div>
+                             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                               result.dataQuality.isValid 
+                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                             }`}>
+                               {result.dataQuality.isValid ? 'Valid' : 'Needs Review'}
+                             </div>
+                           </div>
+                         </div>
+                         
+                         {/* Quality Breakdown */}
+                         <div className="grid md:grid-cols-3 gap-3 text-sm">
+                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                             <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                               {result.dataQuality.breakdown.completeness}
+                             </div>
+                             <div className="text-xs text-muted-foreground">Completeness</div>
+                           </div>
+                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                             <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                               {result.dataQuality.breakdown.consistency}
+                             </div>
+                             <div className="text-xs text-muted-foreground">Consistency</div>
+                           </div>
+                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                             <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                               {result.dataQuality.breakdown.reliability}
+                             </div>
+                             <div className="text-xs text-muted-foreground">Reliability</div>
+                           </div>
+                         </div>
+                       </div>
+
+                       {/* Transformations */}
+                       {result.dataQuality.transformations > 0 && (
+                         <div className="mb-3">
+                           <span className="text-sm text-muted-foreground">Data Transformations:</span>
+                           <div className="text-sm font-medium">{result.dataQuality.transformations} applied</div>
+                         </div>
+                       )}
+
+                       {/* Issues */}
+                       {result.dataQuality.issues.length > 0 && (
+                         <div className="mb-3">
+                           <span className="text-sm text-muted-foreground mb-2 block">Quality Issues:</span>
+                           <div className="space-y-1">
+                             {result.dataQuality.issues.slice(0, 3).map((issue, index) => (
+                               <div key={index} className={`text-xs px-2 py-1 rounded ${
+                                 issue.severity === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                 issue.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                               }`}>
+                                 {issue.field}: {issue.message}
+                               </div>
+                             ))}
+                             {result.dataQuality.issues.length > 3 && (
+                               <div className="text-xs text-muted-foreground">
+                                 +{result.dataQuality.issues.length - 3} more issues
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Top Recommendations */}
+                       {result.dataQuality.recommendations.length > 0 && (
+                         <div>
+                           <span className="text-sm text-muted-foreground mb-2 block">Top Recommendations:</span>
+                           <div className="space-y-1">
+                             {result.dataQuality.recommendations.slice(0, 2).map((rec, index) => (
+                               <div key={index} className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded">
+                                 {rec}
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   )}
                  </div>
                </CardContent>
              )}
