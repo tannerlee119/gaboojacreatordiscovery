@@ -154,6 +154,25 @@ export async function POST(request: NextRequest) {
     // Sanitize scraped data to prevent XSS attacks
     const sanitizedData = InputSanitizer.sanitizeProfileData(scrapingResult.data);
 
+    // Validate data quality
+    console.log('🔍 Validating data quality...');
+    const { DataQualityValidator } = await import('@/lib/data-quality/validator');
+    const qualityReport = await DataQualityValidator.validateCreatorProfile(
+      sanitizedData,
+      platform,
+      [] // No existing profiles for duplicate check in this context
+    );
+
+    console.log(`📊 Data quality score: ${qualityReport.quality.overall}/100 (${qualityReport.isValid ? 'VALID' : 'INVALID'})`);
+
+    // Log quality issues if any
+    if (qualityReport.quality.issues.length > 0) {
+      console.log('⚠️ Data quality issues:', qualityReport.quality.issues.map(i => `${i.field}: ${i.message}`));
+    }
+
+    // Use normalized data instead of sanitized data
+    const finalData = qualityReport.normalizedData;
+
     // Analyze with OpenAI if we have a screenshot
     let aiAnalysis = null;
     let aiCost = 0;
@@ -162,9 +181,9 @@ export async function POST(request: NextRequest) {
       console.log('Analyzing screenshot with OpenAI...');
       try {
         const profileDataForAI = {
-          followerCount: Number(sanitizedData.followerCount) || 0,
-          isVerified: Boolean(sanitizedData.isVerified),
-          website: (sanitizedData.website as string) || undefined
+          followerCount: Number(finalData.followerCount) || 0,
+          isVerified: Boolean(finalData.isVerified),
+          website: (finalData.website as string) || undefined
         };
         
         const aiResult = await analyzeWithOpenAI(screenshotBuffer, platform, username, profileDataForAI);
@@ -187,15 +206,15 @@ export async function POST(request: NextRequest) {
     const creatorProfile = {
       username,
       platform,
-      displayName: (sanitizedData.displayName as string) || '',
-      bio: (sanitizedData.bio as string) || undefined,
-      profileImageUrl: (sanitizedData.profileImageUrl as string) || undefined,
-      isVerified: Boolean(sanitizedData.isVerified),
-      followerCount: Number(sanitizedData.followerCount) || 0,
-      followingCount: Number(sanitizedData.followingCount) || 0,
-      location: (sanitizedData.location as string) || undefined,
-      website: (sanitizedData.website as string) || undefined,
-      metrics: sanitizedData.metrics || {},
+      displayName: (finalData.displayName as string) || '',
+      bio: (finalData.bio as string) || undefined,
+      profileImageUrl: (finalData.profileImageUrl as string) || undefined,
+      isVerified: Boolean(finalData.isVerified),
+      followerCount: Number(finalData.followerCount) || 0,
+      followingCount: Number(finalData.followingCount) || 0,
+      location: (finalData.location as string) || undefined,
+      website: (finalData.website as string) || undefined,
+      metrics: finalData.metrics || {},
       aiAnalysis,
       profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
     };
@@ -222,6 +241,18 @@ export async function POST(request: NextRequest) {
           model: aiModel,
           cost: aiCost,
           cached: aiModel === 'cached'
+        },
+        dataQuality: {
+          score: qualityReport.quality.overall,
+          isValid: qualityReport.isValid,
+          breakdown: {
+            completeness: qualityReport.quality.completeness,
+            consistency: qualityReport.quality.consistency,
+            reliability: qualityReport.quality.reliability
+          },
+          issues: qualityReport.quality.issues.filter(i => i.severity === 'critical' || i.severity === 'warning'),
+          transformations: qualityReport.normalization.transformations.length,
+          recommendations: qualityReport.recommendations.slice(0, 3) // Top 3 recommendations
         }
       }
     });
@@ -236,6 +267,12 @@ export async function POST(request: NextRequest) {
     response.headers.set('X-AI-Cost', aiCost.toFixed(6));
     response.headers.set('X-AI-Model', aiModel);
     response.headers.set('X-AI-Cached', aiModel === 'cached' ? 'true' : 'false');
+    
+    // Add data quality tracking headers
+    response.headers.set('X-Data-Quality-Score', qualityReport.quality.overall.toString());
+    response.headers.set('X-Data-Quality-Valid', qualityReport.isValid ? 'true' : 'false');
+    response.headers.set('X-Data-Transformations', qualityReport.normalization.transformations.length.toString());
+    response.headers.set('X-Data-Issues', qualityReport.quality.issues.length.toString());
 
     return setCorsHeaders(response);
 
