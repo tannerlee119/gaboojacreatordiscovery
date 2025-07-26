@@ -23,12 +23,15 @@ class InstagramScraper extends PlaywrightBaseScraper {
       // Initialize browser with Sparticuz chromium if available
       await this.initBrowser();
       
-      const profileUrl = `https://www.instagram.com/${username}/`;
-      console.log(`📱 Navigating to: ${profileUrl}`);
-      
       if (!this.page) {
         throw new Error('Browser page not initialized');
       }
+
+      // Enhanced stealth setup
+      await this.setupStealth();
+      
+      const profileUrl = `https://www.instagram.com/${username}/`;
+      console.log(`📱 Navigating to: ${profileUrl}`);
 
       // Navigate with extended timeout for serverless
       await this.page.goto(profileUrl, { 
@@ -36,42 +39,43 @@ class InstagramScraper extends PlaywrightBaseScraper {
         timeout: 45000 // 45 seconds for serverless
       });
 
+      // Add random delay to appear more human
+      await this.page.waitForTimeout(2000 + Math.random() * 3000);
+
       // Wait for page to load - try multiple selectors with extended timeout
       console.log('⏳ Waiting for page elements to load...');
       
+      let contentLoaded = false;
       try {
         // Try to find main content area with multiple possible selectors
         await this.page.waitForSelector('main, [role="main"], article, section', { 
           timeout: 20000 // 20 seconds for element detection
         });
+        contentLoaded = true;
       } catch {
         // If main selectors fail, try profile-specific selectors
         try {
           await this.page.waitForSelector('h2, [data-testid], img[alt*="profile"]', { 
             timeout: 15000 
           });
+          contentLoaded = true;
         } catch {
-          console.log('⚠️ Standard selectors failed, checking for login or error states...');
+          console.log('⚠️ Standard selectors failed, checking for access restrictions...');
         }
       }
 
-      // Check for login prompt or access restrictions
-      const loginPrompt = await this.page.$('input[name="username"], [data-testid="loginForm"]');
-      if (loginPrompt) {
-        console.log('🔒 Login required - Instagram is blocking access');
-        return {
-          success: false,
-          error: 'Instagram requires login to access this profile',
-          method: 'Playwright with Sparticuz Chromium'
-        };
+      // Check for various Instagram blocking scenarios
+      const accessCheck = await this.checkAccessRestrictions(username);
+      if (!accessCheck.success) {
+        return accessCheck;
       }
 
-      // Check if profile exists
-      const pageText = await this.page.textContent('body') || '';
-      if (pageText.includes('Sorry, this page isn\'t available')) {
+      // If we couldn't load content and no specific error, it might be blocked
+      if (!contentLoaded) {
+        console.log('⚠️ Content not loading, likely access restricted');
         return {
           success: false,
-          error: 'Profile not found',
+          error: 'Instagram profile access restricted - try again later or use a different profile',
           method: 'Playwright with Sparticuz Chromium'
         };
       }
@@ -103,12 +107,156 @@ class InstagramScraper extends PlaywrightBaseScraper {
       console.error('❌ Instagram scraping failed:', error);
       return {
         success: false,
-        error: `Instagram scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Note: Instagram may require login for some profiles.`,
         method: 'Playwright with Sparticuz Chromium'
       };
     } finally {
       await this.cleanup();
     }
+  }
+
+  private async setupStealth() {
+    if (!this.page) return;
+
+    console.log('🥷 Setting up stealth techniques...');
+
+    // Set realistic viewport with some variation
+    const viewportOptions = [
+      { width: 1366, height: 768 },
+      { width: 1920, height: 1080 },
+      { width: 1440, height: 900 },
+      { width: 1536, height: 864 }
+    ];
+    
+    const randomViewport = viewportOptions[Math.floor(Math.random() * viewportOptions.length)];
+    await this.page.setViewportSize(randomViewport);
+
+    // Set additional headers to appear more legitimate
+    await this.page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    });
+
+    // Override navigator properties to reduce detection
+    await this.page.addInitScript(() => {
+      // Override webdriver property
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      // Override plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // Override languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+    });
+  }
+
+  private async checkAccessRestrictions(username: string): Promise<InstagramScrapingResult> {
+    if (!this.page) {
+      throw new Error('Page not available');
+    }
+
+    // Get page content for analysis
+    const pageText = await this.page.textContent('body') || '';
+    const pageTitle = await this.page.title();
+
+    // Check for login requirement (most common)
+    const loginSelectors = [
+      'input[name="username"]', 
+      '[data-testid="loginForm"]',
+      'form[id="loginForm"]',
+      'a[href*="login"]'
+    ];
+
+    for (const selector of loginSelectors) {
+      if (await this.page.$(selector)) {
+        console.log('🔒 Login required - Instagram is blocking automated access');
+        return {
+          success: false,
+          error: 'Instagram requires login for this profile. This is common for automated access from serverless environments. Try accessing popular public profiles like @instagram or @natgeo.',
+          method: 'Playwright with Sparticuz Chromium'
+        };
+      }
+    }
+
+    // Check for profile not found
+    const notFoundMessages = [
+      'Sorry, this page isn\'t available',
+      'The link you followed may be broken',
+      'User not found',
+      'Page Not Found'
+    ];
+
+    for (const message of notFoundMessages) {
+      if (pageText.includes(message) || pageTitle.includes(message)) {
+        return {
+          success: false,
+          error: `Instagram profile @${username} not found or may be private`,
+          method: 'Playwright with Sparticuz Chromium'
+        };
+      }
+    }
+
+    // Check for rate limiting
+    const rateLimitMessages = [
+      'Try again later',
+      'Please wait a few minutes',
+      'Too many requests',
+      'Rate limit'
+    ];
+
+    for (const message of rateLimitMessages) {
+      if (pageText.includes(message)) {
+        return {
+          success: false,
+          error: 'Instagram rate limiting detected. Please try again in a few minutes.',
+          method: 'Playwright with Sparticuz Chromium'
+        };
+      }
+    }
+
+    // Check for private account
+    if (pageText.includes('This Account is Private')) {
+      return {
+        success: false,
+        error: `Instagram account @${username} is private and cannot be analyzed`,
+        method: 'Playwright with Sparticuz Chromium'
+      };
+    }
+
+    // Check for suspicious activity detection
+    const suspiciousMessages = [
+      'Suspicious Login Attempt',
+      'We suspect automated behavior',
+      'unusual activity'
+    ];
+
+    for (const message of suspiciousMessages) {
+      if (pageText.includes(message)) {
+        return {
+          success: false,
+          error: 'Instagram detected automated behavior. This is common with serverless environments.',
+          method: 'Playwright with Sparticuz Chromium'
+        };
+      }
+    }
+
+    // If we get here, no restrictions detected
+    return { success: true, method: 'Playwright with Sparticuz Chromium' };
   }
 
   private async extractProfileData(username: string) {
