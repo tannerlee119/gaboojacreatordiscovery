@@ -148,74 +148,133 @@ class InstagramScraper extends PlaywrightBaseScraper {
       // Wait for login form to load
       await this.page.waitForSelector('input[name="username"]', { timeout: 15000 });
       
-      // Fill in credentials
+      // Fill in credentials with human-like delays
       await this.page.fill('input[name="username"]', username);
-      await this.page.waitForTimeout(1000); // Small delay between inputs
+      await this.page.waitForTimeout(1500 + Math.random() * 1000); // 1.5-2.5s delay
       await this.page.fill('input[name="password"]', password);
+      await this.page.waitForTimeout(1000 + Math.random() * 1000); // 1-2s delay
       
       // Submit login form
       await this.page.click('button[type="submit"]');
       console.log('📤 Login form submitted');
 
-      // Wait for navigation after login
-      await this.page.waitForTimeout(5000);
+      // Wait longer for navigation after login
+      await this.page.waitForTimeout(8000);
 
-      // Check if login was successful
+      // Check current URL and page state
       const currentUrl = this.page.url();
+      console.log(`🔍 Current URL after login attempt: ${currentUrl}`);
       
+      // Check for 2FA requirement first (most common issue)
+      if (currentUrl.includes('/challenge/') || 
+          await this.page.$('input[name="verificationCode"]') ||
+          await this.page.$('[data-testid="challenge-form"]')) {
+        
+        console.log('🔐 Two-factor authentication detected');
+        console.log('💡 To fix this: Either disable 2FA temporarily on your Instagram account, or use an account without 2FA for scraping');
+        
+        // Try to continue anyway by navigating directly to the profile
+        // Sometimes Instagram allows some access even with partial login
+        return false; // Don't set isLoggedIn to true, but continue
+      }
+
       // Check for common login success indicators
       if (currentUrl.includes('/accounts/onetap/') || 
           currentUrl === 'https://www.instagram.com/' ||
-          await this.page.$('[aria-label*="Home"]')) {
+          currentUrl.includes('/accounts/welcomeback/') ||
+          await this.page.$('[aria-label*="Home"]') ||
+          await this.page.$('[data-testid="mobile-nav-logged-in"]')) {
         
         console.log('✅ Instagram login successful');
         this.isLoggedIn = true;
 
-        // Handle potential "Save Login Info" prompt
-        try {
-          const saveInfoButton = await this.page.$('button:has-text("Not Now")');
-          if (saveInfoButton) {
-            await saveInfoButton.click();
-            console.log('📱 Dismissed save login info prompt');
-          }
-        } catch {
-          // Ignore if prompt doesn't appear
-        }
-
-        // Handle potential "Turn on Notifications" prompt  
-        try {
-          const notificationButton = await this.page.$('button:has-text("Not Now")');
-          if (notificationButton) {
-            await notificationButton.click();
-            console.log('🔕 Dismissed notification prompt');
-          }
-        } catch {
-          // Ignore if prompt doesn't appear
-        }
+        // Handle potential prompts with longer timeouts
+        await this.handlePostLoginPrompts();
 
         return true;
       }
 
       // Check for login errors
-      const errorElement = await this.page.$('div[id*="error"], p[data-testid="login-error-message"]');
-      if (errorElement) {
-        const errorText = await errorElement.textContent();
-        console.error('❌ Instagram login failed:', errorText);
+      const errorSelectors = [
+        'div[id*="error"]', 
+        'p[data-testid="login-error-message"]',
+        '[role="alert"]',
+        '.error-message'
+      ];
+
+      for (const selector of errorSelectors) {
+        const errorElement = await this.page.$(selector);
+        if (errorElement) {
+          const errorText = await errorElement.textContent();
+          console.error('❌ Instagram login failed:', errorText);
+          return false;
+        }
+      }
+
+      // If we're still on login page, login likely failed
+      if (currentUrl.includes('/accounts/login/')) {
+        console.log('⚠️ Still on login page, login likely failed');
         return false;
       }
 
-      // Check for 2FA requirement
-      if (currentUrl.includes('/challenge/') || await this.page.$('input[name="verificationCode"]')) {
-        console.log('🔐 Two-factor authentication required - cannot proceed automatically');
-        return false;
-      }
-
-      console.log('⚠️ Login status unclear, proceeding without authentication');
+      console.log('⚠️ Login status unclear, but proceeding - may have partial access');
       return false;
 
     } catch (error) {
       console.error('❌ Login attempt failed:', error);
       return false;
+    }
+  }
+
+  private async handlePostLoginPrompts() {
+    if (!this.page) return;
+
+    // Handle "Save Login Info" prompt
+    try {
+      await this.page.waitForTimeout(2000);
+      const saveInfoSelectors = [
+        'button:has-text("Not Now")',
+        'button:has-text("Save Info")',
+        '[data-testid="save-login-info"]'
+      ];
+
+      for (const selector of saveInfoSelectors) {
+        const button = await this.page.$(selector);
+        if (button) {
+          const buttonText = await button.textContent();
+          if (buttonText?.includes('Not Now')) {
+            await button.click();
+            console.log('📱 Dismissed save login info prompt');
+            break;
+          }
+        }
+      }
+    } catch {
+      // Ignore if prompt doesn't appear
+    }
+
+    // Handle "Turn on Notifications" prompt  
+    try {
+      await this.page.waitForTimeout(2000);
+      const notificationSelectors = [
+        'button:has-text("Not Now")',
+        'button:has-text("Turn On")',
+        '[data-testid="turn-on-notifications"]'
+      ];
+
+      for (const selector of notificationSelectors) {
+        const button = await this.page.$(selector);
+        if (button) {
+          const buttonText = await button.textContent();
+          if (buttonText?.includes('Not Now')) {
+            await button.click();
+            console.log('🔕 Dismissed notification prompt');
+            break;
+          }
+        }
+      }
+    } catch {
+      // Ignore if prompt doesn't appear
     }
   }
 
@@ -266,6 +325,11 @@ class InstagramScraper extends PlaywrightBaseScraper {
       Object.defineProperty(navigator, 'languages', {
         get: () => ['en-US', 'en'],
       });
+
+      // Override platform
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'MacIntel',
+      });
     });
   }
 
@@ -289,9 +353,16 @@ class InstagramScraper extends PlaywrightBaseScraper {
     for (const selector of loginSelectors) {
       if (await this.page.$(selector)) {
         console.log('🔒 Login required - Instagram is blocking automated access');
+        
+        // Check if user has credentials but they're not working (likely 2FA)
+        const hasCredentials = process.env.INSTAGRAM_USERNAME && process.env.INSTAGRAM_PASSWORD;
+        const errorMessage = hasCredentials 
+          ? 'Instagram login failed (likely due to 2FA). Solutions: 1) Temporarily disable 2FA on your Instagram account, 2) Use an account without 2FA, or 3) Try different profiles like @instagram, @nike, @cocacola which are sometimes accessible.'
+          : 'Instagram requires login for this profile. Add INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to your .env.local file for authenticated access, or try popular public profiles like @instagram, @nike, @cocacola.';
+        
         return {
           success: false,
-          error: 'Instagram requires login for this profile. Consider adding INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to your environment variables for authenticated access.',
+          error: errorMessage,
           method: 'Playwright with Sparticuz Chromium'
         };
       }
