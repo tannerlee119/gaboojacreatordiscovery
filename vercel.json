@@ -1,8 +1,22 @@
 {
   "functions": {
-    "src/app/api/analyze-creator/route.ts": {
+    "app/api/analyze-creator/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/data-quality/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/ai-metrics/route.ts": {
+      "maxDuration": 15
     }
   },
-  "buildCommand": "npm install && npx playwright install chromium && npm run build"
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ],
+  "env": {
+    "VERCEL": "1"
+  }
 } 

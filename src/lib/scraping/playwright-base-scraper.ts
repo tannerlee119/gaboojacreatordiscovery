@@ -1,36 +1,35 @@
-import { chromium, Browser, BrowserContext, Page, BrowserContextOptions } from 'playwright';
+import { chromium, Browser, Page } from 'playwright';
+
+// Import chromium for serverless environments
+let chromiumPkg: any = null;
+try {
+  // Only import in serverless/production environments
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    chromiumPkg = require('@sparticuz/chromium');
+  }
+} catch (error) {
+  console.log('Sparticuz chromium not available, using default Playwright chromium');
+}
 
 export interface ScrapingResult {
   success: boolean;
-  data?: unknown;
+  data?: Record<string, unknown>;
   screenshot?: Buffer;
-  method: 'scraping' | 'manual';
+  method: string;
   error?: string;
 }
 
-export class PlaywrightBaseScraper {
-  private browser: Browser | null = null;
-  private context: BrowserContext | null = null;
-  private page: Page | null = null;
-
-  constructor() {
-    // Initialize with default settings
-  }
-
-  /**
-   * Launch browser with enhanced stealth settings
-   */
-  async launchBrowser(options: {
-    headless?: boolean;
-    mobileDevice?: boolean;
-    proxy?: string;
-  } = {}): Promise<void> {
+export abstract class PlaywrightBaseScraper {
+  protected browser: Browser | null = null;
+  protected page: Page | null = null;
+  
+  protected async initBrowser(): Promise<void> {
     try {
-      console.log('Launching Playwright browser...');
+      console.log('🚀 Launching browser...');
       
-      // Enhanced browser launch arguments for stealth and compatibility
-      const launchOptions = {
-        headless: options.headless !== false, // Default to headless
+      // Configure browser launch options based on environment
+      const launchOptions: any = {
+        headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -38,130 +37,39 @@ export class PlaywrightBaseScraper {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--single-process',
           '--disable-gpu',
           '--disable-web-security',
           '--disable-features=VizDisplayCompositor',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-background-networking',
           '--disable-background-timer-throttling',
-          '--disable-renderer-backgrounding',
           '--disable-backgrounding-occluded-windows',
-          '--disable-client-side-phishing-detection',
-          '--disable-component-extensions-with-background-pages',
-          '--disable-default-apps',
-          '--disable-extensions',
-          '--disable-features=TranslateUI',
-          '--disable-hang-monitor',
-          '--disable-ipc-flooding-protection',
-          '--disable-popup-blocking',
-          '--disable-prompt-on-repost',
-          '--disable-sync',
-          '--force-color-profile=srgb',
-          '--metrics-recording-only',
-          '--no-default-browser-check',
-          '--no-pings',
-          '--password-store=basic',
-          '--use-mock-keychain',
-          '--enable-features=NetworkService,NetworkServiceLogging',
-          '--force-device-scale-factor=1',
-        ],
+          '--disable-renderer-backgrounding'
+        ]
       };
 
-      // Add proxy if provided
-      if (options.proxy) {
-        launchOptions.args.push(`--proxy-server=${options.proxy}`);
+      // Use Sparticuz chromium in production/Vercel environments
+      if (chromiumPkg) {
+        console.log('📦 Using Sparticuz chromium for serverless environment');
+        launchOptions.executablePath = await chromiumPkg.executablePath();
+        launchOptions.args = [
+          ...chromiumPkg.args,
+          ...launchOptions.args
+        ];
+      } else {
+        console.log('🖥️ Using default Playwright chromium for local development');
       }
 
       this.browser = await chromium.launch(launchOptions);
-
-      // Create context with enhanced stealth settings
-      const contextOptions: BrowserContextOptions = {
-        viewport: options.mobileDevice 
-          ? { width: 375, height: 667 } // iPhone dimensions
-          : { width: 1920, height: 1080 },
-        userAgent: options.mobileDevice
-          ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1'
-          : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        locale: 'en-US',
-        timezoneId: 'America/New_York',
-        permissions: [],
-        extraHTTPHeaders: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Upgrade-Insecure-Requests': '1',
-        },
-      };
-
-      // Mobile device simulation
-      if (options.mobileDevice) {
-        contextOptions.deviceScaleFactor = 2;
-        contextOptions.isMobile = true;
-        contextOptions.hasTouch = true;
-      }
-
-      this.context = await this.browser.newContext(contextOptions);
-
-      // Additional stealth measures
-      await this.context.addInitScript(() => {
-        // Remove webdriver property
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => undefined,
-        });
-
-        // Mock languages and plugins to appear more human-like
-        Object.defineProperty(navigator, 'languages', {
-          get: () => ['en-US', 'en'],
-        });
-
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => [1, 2, 3, 4, 5],
-        });
-
-        // Override the `onLine` property
-        Object.defineProperty(navigator, 'onLine', {
-          get: () => true,
-        });
-
-        // Hide automation indicators
-        // @ts-expect-error - Adding chrome property for stealth
-        window.chrome = {
-          runtime: {},
-        };
+      this.page = await this.browser.newPage();
+      
+      // Set viewport and user agent
+      await this.page.setViewportSize({ width: 1920, height: 1080 });
+      await this.page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9'
       });
-
-      this.page = await this.context.newPage();
-
-      // Block unnecessary resources for faster loading but allow profile images
-      await this.page.route('**/*', (route) => {
-        const resourceType = route.request().resourceType();
-        const url = route.request().url();
-        
-        // Allow profile images and avatars but block other images
-        if (resourceType === 'image') {
-          if (url.includes('profile') || url.includes('avatar') || url.includes('user')) {
-            console.log('Allowing profile image:', url);
-            route.continue();
-          } else {
-            route.abort();
-          }
-        } else if (['stylesheet', 'font', 'media'].includes(resourceType)) {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
-
-      console.log('Browser launched successfully');
+      
+      console.log('✅ Browser launched successfully');
     } catch (error) {
-      console.error('Failed to launch browser:', error);
+      console.error('❌ Failed to launch browser:', error);
       throw error;
     }
   }
@@ -405,10 +313,6 @@ export class PlaywrightBaseScraper {
         await this.page.close();
         this.page = null;
       }
-      if (this.context) {
-        await this.context.close();
-        this.context = null;
-      }
       if (this.browser) {
         await this.browser.close();
         this.browser = null;
@@ -431,12 +335,5 @@ export class PlaywrightBaseScraper {
    */
   getBrowser(): Browser | null {
     return this.browser;
-  }
-
-  /**
-   * Get current context reference
-   */
-  getContext(): BrowserContext | null {
-    return this.context;
   }
 } 
