@@ -16,6 +16,8 @@ interface InstagramScrapingResult extends ScrapingResult {
 }
 
 class InstagramScraper extends PlaywrightBaseScraper {
+  private isLoggedIn = false;
+
   async analyzeProfile(username: string): Promise<InstagramScrapingResult> {
     try {
       console.log(`🔍 Starting Instagram analysis for: ${username}`);
@@ -29,6 +31,9 @@ class InstagramScraper extends PlaywrightBaseScraper {
 
       // Enhanced stealth setup
       await this.setupStealth();
+      
+      // Attempt login if credentials are available
+      await this.attemptLogin();
       
       const profileUrl = `https://www.instagram.com/${username}/`;
       console.log(`📱 Navigating to: ${profileUrl}`);
@@ -64,10 +69,12 @@ class InstagramScraper extends PlaywrightBaseScraper {
         }
       }
 
-      // Check for various Instagram blocking scenarios
-      const accessCheck = await this.checkAccessRestrictions(username);
-      if (!accessCheck.success) {
-        return accessCheck;
+      // Only check access restrictions if we're not logged in
+      if (!this.isLoggedIn) {
+        const accessCheck = await this.checkAccessRestrictions(username);
+        if (!accessCheck.success) {
+          return accessCheck;
+        }
       }
 
       // If we couldn't load content and no specific error, it might be blocked
@@ -75,8 +82,10 @@ class InstagramScraper extends PlaywrightBaseScraper {
         console.log('⚠️ Content not loading, likely access restricted');
         return {
           success: false,
-          error: 'Instagram profile access restricted - try again later or use a different profile',
-          method: 'Playwright with Sparticuz Chromium'
+          error: this.isLoggedIn 
+            ? 'Instagram profile access restricted even with login - profile may be private or suspended'
+            : 'Instagram profile access restricted - try again later or use a different profile',
+          method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
         };
       }
 
@@ -100,18 +109,113 @@ class InstagramScraper extends PlaywrightBaseScraper {
         success: true,
         data: profileData,
         screenshot,
-        method: 'Playwright with Sparticuz Chromium'
+        method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
       };
 
     } catch (error) {
       console.error('❌ Instagram scraping failed:', error);
       return {
         success: false,
-        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Note: Instagram may require login for some profiles.`,
-        method: 'Playwright with Sparticuz Chromium'
+        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. ${this.isLoggedIn ? '' : 'Note: Instagram may require login for some profiles.'}`,
+        method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
       };
     } finally {
       await this.cleanup();
+    }
+  }
+
+  private async attemptLogin(): Promise<boolean> {
+    if (!this.page) return false;
+
+    // Check if credentials are available
+    const username = process.env.INSTAGRAM_USERNAME;
+    const password = process.env.INSTAGRAM_PASSWORD;
+
+    if (!username || !password) {
+      console.log('📝 No Instagram credentials found in environment variables, proceeding without login');
+      return false;
+    }
+
+    try {
+      console.log('🔑 Attempting Instagram login...');
+      
+      // Navigate to Instagram login page
+      await this.page.goto('https://www.instagram.com/accounts/login/', {
+        waitUntil: 'networkidle',
+        timeout: 30000
+      });
+
+      // Wait for login form to load
+      await this.page.waitForSelector('input[name="username"]', { timeout: 15000 });
+      
+      // Fill in credentials
+      await this.page.fill('input[name="username"]', username);
+      await this.page.waitForTimeout(1000); // Small delay between inputs
+      await this.page.fill('input[name="password"]', password);
+      
+      // Submit login form
+      await this.page.click('button[type="submit"]');
+      console.log('📤 Login form submitted');
+
+      // Wait for navigation after login
+      await this.page.waitForTimeout(5000);
+
+      // Check if login was successful
+      const currentUrl = this.page.url();
+      
+      // Check for common login success indicators
+      if (currentUrl.includes('/accounts/onetap/') || 
+          currentUrl === 'https://www.instagram.com/' ||
+          await this.page.$('[aria-label*="Home"]')) {
+        
+        console.log('✅ Instagram login successful');
+        this.isLoggedIn = true;
+
+        // Handle potential "Save Login Info" prompt
+        try {
+          const saveInfoButton = await this.page.$('button:has-text("Not Now")');
+          if (saveInfoButton) {
+            await saveInfoButton.click();
+            console.log('📱 Dismissed save login info prompt');
+          }
+        } catch {
+          // Ignore if prompt doesn't appear
+        }
+
+        // Handle potential "Turn on Notifications" prompt  
+        try {
+          const notificationButton = await this.page.$('button:has-text("Not Now")');
+          if (notificationButton) {
+            await notificationButton.click();
+            console.log('🔕 Dismissed notification prompt');
+          }
+        } catch {
+          // Ignore if prompt doesn't appear
+        }
+
+        return true;
+      }
+
+      // Check for login errors
+      const errorElement = await this.page.$('div[id*="error"], p[data-testid="login-error-message"]');
+      if (errorElement) {
+        const errorText = await errorElement.textContent();
+        console.error('❌ Instagram login failed:', errorText);
+        return false;
+      }
+
+      // Check for 2FA requirement
+      if (currentUrl.includes('/challenge/') || await this.page.$('input[name="verificationCode"]')) {
+        console.log('🔐 Two-factor authentication required - cannot proceed automatically');
+        return false;
+      }
+
+      console.log('⚠️ Login status unclear, proceeding without authentication');
+      return false;
+
+    } catch (error) {
+      console.error('❌ Login attempt failed:', error);
+      return false;
     }
   }
 
@@ -174,7 +278,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
     const pageText = await this.page.textContent('body') || '';
     const pageTitle = await this.page.title();
 
-    // Check for login requirement (most common)
+    // Check for login requirement (only relevant when not logged in)
     const loginSelectors = [
       'input[name="username"]', 
       '[data-testid="loginForm"]',
@@ -187,7 +291,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
         console.log('🔒 Login required - Instagram is blocking automated access');
         return {
           success: false,
-          error: 'Instagram requires login for this profile. This is common for automated access from serverless environments. Try accessing popular public profiles like @instagram or @natgeo.',
+          error: 'Instagram requires login for this profile. Consider adding INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to your environment variables for authenticated access.',
           method: 'Playwright with Sparticuz Chromium'
         };
       }
