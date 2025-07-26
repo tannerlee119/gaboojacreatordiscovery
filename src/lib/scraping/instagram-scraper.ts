@@ -50,65 +50,130 @@ class InstagramScraper extends PlaywrightBaseScraper {
       console.log('⏳ Waiting for page elements to load...');
       
       let contentLoaded = false;
-      try {
-        // Try to find main content area with multiple possible selectors
-        await this.page.waitForSelector('main, [role="main"], article, section', { 
-          timeout: 20000 // 20 seconds for element detection
-        });
-        contentLoaded = true;
-        console.log('✅ Profile content loaded successfully without login');
-      } catch {
-        // If main selectors fail, try profile-specific selectors
+      let onLoginPage = false;
+      
+      // First check if we got redirected to login page
+      const currentUrl = this.page.url();
+      if (currentUrl.includes('/accounts/login/') || currentUrl.includes('/login/')) {
+        console.log('🔍 Detected redirect to login page');
+        onLoginPage = true;
+      }
+      
+      // Check for login page elements
+      const loginElements = await Promise.all([
+        this.page.$('input[name="username"]').catch(() => null),
+        this.page.$('input[name="password"]').catch(() => null),
+        this.page.$('button:has-text("Log in")').catch(() => null),
+        this.page.$('button:has-text("Log In")').catch(() => null)
+      ]);
+      
+      if (loginElements.some(el => el !== null)) {
+        console.log('🔍 Login form detected on page');
+        onLoginPage = true;
+      }
+      
+      if (!onLoginPage) {
         try {
-          await this.page.waitForSelector('h2, [data-testid], img[alt*="profile"]', { 
-            timeout: 15000 
-          });
-          contentLoaded = true;
-          console.log('✅ Profile elements found without login');
-        } catch {
-          console.log('⚠️ Direct access failed, checking if login is required...');
+          // Look for SPECIFIC profile elements, not generic page elements
+          const profileSelectors = [
+            `h2:has-text("${username}")`, // Profile username
+            'img[alt*="profile picture"]', // Profile picture
+            '[data-testid*="user-avatar"]', // Avatar container
+            'section header', // Profile header section
+            'article header', // Profile header article
+            'div[data-testid="user-info"]', // User info container
+            'span:has-text("posts")', // Posts count
+            'span:has-text("followers")', // Followers count
+            'span:has-text("following")', // Following count
+            'h1, h2', // Any heading that might contain username
+            'header img' // Header image (profile pic)
+          ];
+          
+          // Try to find any profile-specific element
+          let profileElementFound = false;
+          for (const selector of profileSelectors) {
+            try {
+              await this.page.waitForSelector(selector, { timeout: 3000 });
+              console.log(`✅ Found profile element: ${selector}`);
+              profileElementFound = true;
+              break;
+            } catch {
+              // Continue to next selector
+            }
+          }
+          
+          if (profileElementFound) {
+            // Double-check we're actually on a profile page, not login
+            const pageText = await this.page.textContent('body') || '';
+            const hasProfileIndicators = 
+              pageText.includes('posts') || 
+              pageText.includes('followers') || 
+              pageText.includes('following') ||
+              pageText.includes(username);
+              
+            const hasLoginIndicators = 
+              pageText.includes('Log in') ||
+              pageText.includes('Sign up') ||
+              pageText.includes('Forgot password');
+            
+            if (hasProfileIndicators && !hasLoginIndicators) {
+              contentLoaded = true;
+              console.log('✅ Profile content loaded successfully without login');
+            } else {
+              console.log('⚠️ Page has mixed signals - treating as login required');
+              onLoginPage = true;
+            }
+          } else {
+            console.log('⚠️ No profile-specific elements found');
+          }
+        } catch (error) {
+          console.log('⚠️ Profile element detection failed:', error);
         }
       }
 
-      // If direct access failed, check what kind of restriction we're dealing with
-      if (!contentLoaded) {
-        const accessCheck = await this.checkAccessRestrictions(username);
+      // If we're on login page or no profile content found, try authentication
+      if (onLoginPage || !contentLoaded) {
+        console.log('🔑 Profile requires login - attempting authentication...');
         
-        // If it's just a login requirement, try authenticating
-        if (!accessCheck.success && accessCheck.error?.includes('login')) {
-          console.log('🔑 Direct access blocked, attempting login...');
+        const loginResult = await this.attemptLogin();
+        if (loginResult) {
+          console.log('🎉 Login successful, retrying profile access...');
           
-          const loginResult = await this.attemptLogin();
-          if (loginResult) {
-            console.log('🎉 Login successful, retrying profile access...');
-            
-            // Navigate to profile again after successful login
-            await this.page.goto(profileUrl, { 
-              waitUntil: 'networkidle',
-              timeout: 45000 
+          // Navigate to profile again after successful login
+          await this.page.goto(profileUrl, { 
+            waitUntil: 'networkidle',
+            timeout: 45000 
+          });
+          
+          // Wait for profile content after login
+          try {
+            await this.page.waitForSelector('section header, article header, h1, h2', { 
+              timeout: 20000 
             });
             
-            // Try loading content again
-            try {
-              await this.page.waitForSelector('main, [role="main"], article, section', { 
-                timeout: 20000 
-              });
+            // Verify we're actually on the profile now
+            const postLoginText = await this.page.textContent('body') || '';
+            const hasProfileContent = 
+              postLoginText.includes('posts') || 
+              postLoginText.includes('followers') || 
+              postLoginText.includes('following');
+              
+            if (hasProfileContent) {
               contentLoaded = true;
               console.log('✅ Profile accessible after authentication');
-            } catch {
-              console.log('❌ Profile still not accessible even after login');
+            } else {
+              console.log('❌ Still not showing profile content after login');
             }
-          } else {
-            console.log('❌ Login failed, Instagram challenge/verification required');
-            return {
-              success: false,
-              error: 'Instagram requires identity verification for this login attempt. This happens when logging in from new locations (like Vercel servers). Solutions: 1) Access Instagram manually first to complete verification, 2) Try different public profiles like @instagram, @nike, @cocacola, or 3) Use a different Instagram account.',
-              method: 'Playwright with Sparticuz Chromium'
-            };
+          } catch {
+            console.log('❌ Profile still not accessible even after login');
           }
         } else {
-          // Return the original access restriction error
-          return accessCheck;
+          console.log('❌ Login failed, Instagram challenge/verification required');
+          return {
+            success: false,
+            error: 'Instagram requires identity verification for this login attempt. This happens when logging in from new locations (like Vercel servers). Solutions: 1) Access Instagram manually first to complete verification, 2) Try different public profiles like @instagram, @nike, @cocacola, or 3) Use a different Instagram account.',
+            method: 'Playwright with Sparticuz Chromium'
+          };
         }
       }
 
@@ -454,107 +519,6 @@ class InstagramScraper extends PlaywrightBaseScraper {
         get: () => 'MacIntel',
       });
     });
-  }
-
-  private async checkAccessRestrictions(username: string): Promise<InstagramScrapingResult> {
-    if (!this.page) {
-      throw new Error('Page not available');
-    }
-
-    // Get page content for analysis
-    const pageText = await this.page.textContent('body') || '';
-    const pageTitle = await this.page.title();
-
-    // Check for login requirement (only relevant when not logged in)
-    const loginSelectors = [
-      'input[name="username"]', 
-      '[data-testid="loginForm"]',
-      'form[id="loginForm"]',
-      'a[href*="login"]'
-    ];
-
-    for (const selector of loginSelectors) {
-      if (await this.page.$(selector)) {
-        console.log('🔒 Login required - Instagram is blocking automated access');
-        
-        // Check if user has credentials but they're not working (likely 2FA)
-        const hasCredentials = process.env.INSTAGRAM_USERNAME && process.env.INSTAGRAM_PASSWORD;
-        const errorMessage = hasCredentials 
-          ? 'Instagram login failed (likely due to 2FA). Solutions: 1) Temporarily disable 2FA on your Instagram account, 2) Use an account without 2FA, or 3) Try different profiles like @instagram, @nike, @cocacola which are sometimes accessible.'
-          : 'Instagram requires login for this profile. Add INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to your .env.local file for authenticated access, or try popular public profiles like @instagram, @nike, @cocacola.';
-        
-        return {
-          success: false,
-          error: errorMessage,
-          method: 'Playwright with Sparticuz Chromium'
-        };
-      }
-    }
-
-    // Check for profile not found
-    const notFoundMessages = [
-      'Sorry, this page isn\'t available',
-      'The link you followed may be broken',
-      'User not found',
-      'Page Not Found'
-    ];
-
-    for (const message of notFoundMessages) {
-      if (pageText.includes(message) || pageTitle.includes(message)) {
-        return {
-          success: false,
-          error: `Instagram profile @${username} not found or may be private`,
-          method: 'Playwright with Sparticuz Chromium'
-        };
-      }
-    }
-
-    // Check for rate limiting
-    const rateLimitMessages = [
-      'Try again later',
-      'Please wait a few minutes',
-      'Too many requests',
-      'Rate limit'
-    ];
-
-    for (const message of rateLimitMessages) {
-      if (pageText.includes(message)) {
-        return {
-          success: false,
-          error: 'Instagram rate limiting detected. Please try again in a few minutes.',
-          method: 'Playwright with Sparticuz Chromium'
-        };
-      }
-    }
-
-    // Check for private account
-    if (pageText.includes('This Account is Private')) {
-      return {
-        success: false,
-        error: `Instagram account @${username} is private and cannot be analyzed`,
-        method: 'Playwright with Sparticuz Chromium'
-      };
-    }
-
-    // Check for suspicious activity detection
-    const suspiciousMessages = [
-      'Suspicious Login Attempt',
-      'We suspect automated behavior',
-      'unusual activity'
-    ];
-
-    for (const message of suspiciousMessages) {
-      if (pageText.includes(message)) {
-        return {
-          success: false,
-          error: 'Instagram detected automated behavior. This is common with serverless environments.',
-          method: 'Playwright with Sparticuz Chromium'
-        };
-      }
-    }
-
-    // If we get here, no restrictions detected
-    return { success: true, method: 'Playwright with Sparticuz Chromium' };
   }
 
   private async extractProfileData(username: string) {
