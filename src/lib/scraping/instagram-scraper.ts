@@ -284,4 +284,9 @@ class InstagramScraper extends PlaywrightBaseScraper {
   }
 }
 
-export const instagramScraper = new InstagramScraper(); 
+export const instagramScraper = new InstagramScraper();
+
+export async function analyzeInstagramProfile(username: string): Promise<InstagramScrapingResult> {
+  const scraper = new InstagramScraper();
+  return scraper.analyzeProfile(username);
+} 
