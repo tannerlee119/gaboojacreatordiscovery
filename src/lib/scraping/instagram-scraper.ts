@@ -32,20 +32,12 @@ class InstagramScraper extends PlaywrightBaseScraper {
       // Enhanced stealth setup
       await this.setupStealth();
       
-      // Attempt login if credentials are available
-      await this.attemptLogin();
-      
-      if (this.isLoggedIn) {
-        console.log('🎉 Proceeding with authenticated access');
-      } else {
-        console.log('⚠️ Proceeding without authentication - using enhanced stealth mode');
-        console.log('💡 Check the logs above to see why login failed');
-      }
+      console.log('🎯 Strategy: Try anonymous access first, login as fallback');
       
       const profileUrl = `https://www.instagram.com/${username}/`;
       console.log(`📱 Navigating to: ${profileUrl}`);
 
-      // Navigate with extended timeout for serverless
+      // Try direct profile access first (often works for public profiles)
       await this.page.goto(profileUrl, { 
         waitUntil: 'networkidle',
         timeout: 45000 // 45 seconds for serverless
@@ -64,6 +56,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
           timeout: 20000 // 20 seconds for element detection
         });
         contentLoaded = true;
+        console.log('✅ Profile content loaded successfully without login');
       } catch {
         // If main selectors fail, try profile-specific selectors
         try {
@@ -71,27 +64,62 @@ class InstagramScraper extends PlaywrightBaseScraper {
             timeout: 15000 
           });
           contentLoaded = true;
+          console.log('✅ Profile elements found without login');
         } catch {
-          console.log('⚠️ Standard selectors failed, checking for access restrictions...');
+          console.log('⚠️ Direct access failed, checking if login is required...');
         }
       }
 
-      // Only check access restrictions if we're not logged in
-      if (!this.isLoggedIn) {
+      // If direct access failed, check what kind of restriction we're dealing with
+      if (!contentLoaded) {
         const accessCheck = await this.checkAccessRestrictions(username);
-        if (!accessCheck.success) {
+        
+        // If it's just a login requirement, try authenticating
+        if (!accessCheck.success && accessCheck.error?.includes('login')) {
+          console.log('🔑 Direct access blocked, attempting login...');
+          
+          const loginResult = await this.attemptLogin();
+          if (loginResult) {
+            console.log('🎉 Login successful, retrying profile access...');
+            
+            // Navigate to profile again after successful login
+            await this.page.goto(profileUrl, { 
+              waitUntil: 'networkidle',
+              timeout: 45000 
+            });
+            
+            // Try loading content again
+            try {
+              await this.page.waitForSelector('main, [role="main"], article, section', { 
+                timeout: 20000 
+              });
+              contentLoaded = true;
+              console.log('✅ Profile accessible after authentication');
+            } catch {
+              console.log('❌ Profile still not accessible even after login');
+            }
+          } else {
+            console.log('❌ Login failed, Instagram challenge/verification required');
+            return {
+              success: false,
+              error: 'Instagram requires identity verification for this login attempt. This happens when logging in from new locations (like Vercel servers). Solutions: 1) Access Instagram manually first to complete verification, 2) Try different public profiles like @instagram, @nike, @cocacola, or 3) Use a different Instagram account.',
+              method: 'Playwright with Sparticuz Chromium'
+            };
+          }
+        } else {
+          // Return the original access restriction error
           return accessCheck;
         }
       }
 
-      // If we couldn't load content and no specific error, it might be blocked
+      // If we still couldn't load content, it might be blocked
       if (!contentLoaded) {
         console.log('⚠️ Content not loading, likely access restricted');
         return {
           success: false,
           error: this.isLoggedIn 
             ? 'Instagram profile access restricted even with login - profile may be private or suspended'
-            : 'Instagram profile access restricted - try again later or use a different profile',
+            : 'Instagram profile access restricted - try popular public profiles like @instagram, @nike, @cocacola',
           method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
         };
       }
@@ -116,14 +144,14 @@ class InstagramScraper extends PlaywrightBaseScraper {
         success: true,
         data: profileData,
         screenshot,
-        method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
+        method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : ' (Anonymous)')
       };
 
     } catch (error) {
       console.error('❌ Instagram scraping failed:', error);
       return {
         success: false,
-        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. ${this.isLoggedIn ? '' : 'Note: Instagram may require login for some profiles.'}`,
+        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Try popular public profiles like @instagram, @nike, @cocacola.`,
         method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : '')
       };
     } finally {
@@ -262,15 +290,16 @@ class InstagramScraper extends PlaywrightBaseScraper {
       console.log(`- Page contains 'Home': ${hasHomeLink}`);
       console.log(`- Page contains 'Profile': ${hasProfileLink}`);
 
-      // Check for 2FA requirement first
+      // Check for Instagram's identity verification challenge (NOT 2FA)
       if (currentUrl.includes('/challenge/') || 
           await this.page.$('input[name="verificationCode"]') ||
           await this.page.$('[data-testid="challenge-form"]')) {
         
-        console.log('🔐 Two-factor authentication detected');
-        console.log('💡 Even though you think 2FA is off, Instagram may require it for automation');
-        console.log('💡 Try logging into Instagram manually to see if it asks for verification');
-        return false;
+        console.log('🔒 Instagram identity verification required');
+        console.log('💡 This is NOT 2FA - it\'s Instagram\'s "suspicious login" protection');
+        console.log('💡 Instagram blocks logins from new locations (like Vercel servers)');
+        console.log('💡 This is different from your account having 2FA enabled');
+        return false; // Login failed due to challenge
       }
 
       // Look for error messages
