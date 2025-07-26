@@ -35,6 +35,13 @@ class InstagramScraper extends PlaywrightBaseScraper {
       // Attempt login if credentials are available
       await this.attemptLogin();
       
+      if (this.isLoggedIn) {
+        console.log('🎉 Proceeding with authenticated access');
+      } else {
+        console.log('⚠️ Proceeding without authentication - using enhanced stealth mode');
+        console.log('💡 Check the logs above to see why login failed');
+      }
+      
       const profileUrl = `https://www.instagram.com/${username}/`;
       console.log(`📱 Navigating to: ${profileUrl}`);
 
@@ -127,9 +134,15 @@ class InstagramScraper extends PlaywrightBaseScraper {
   private async attemptLogin(): Promise<boolean> {
     if (!this.page) return false;
 
-    // Check if credentials are available
+    // Check if credentials are available with detailed logging
     const username = process.env.INSTAGRAM_USERNAME;
     const password = process.env.INSTAGRAM_PASSWORD;
+
+    console.log('🔍 Environment check:');
+    console.log(`- INSTAGRAM_USERNAME exists: ${!!username}`);
+    console.log(`- INSTAGRAM_PASSWORD exists: ${!!password}`);
+    console.log(`- NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`- VERCEL: ${process.env.VERCEL}`);
 
     if (!username || !password) {
       console.log('📝 No Instagram credentials found in environment variables, proceeding without login');
@@ -138,6 +151,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
 
     try {
       console.log('🔑 Attempting Instagram login...');
+      console.log(`👤 Username: ${username.substring(0, 3)}***`);
       
       // Navigate to Instagram login page
       await this.page.goto('https://www.instagram.com/accounts/login/', {
@@ -145,83 +159,163 @@ class InstagramScraper extends PlaywrightBaseScraper {
         timeout: 30000
       });
 
-      // Wait for login form to load
-      await this.page.waitForSelector('input[name="username"]', { timeout: 15000 });
-      
-      // Fill in credentials with human-like delays
-      await this.page.fill('input[name="username"]', username);
-      await this.page.waitForTimeout(1500 + Math.random() * 1000); // 1.5-2.5s delay
-      await this.page.fill('input[name="password"]', password);
-      await this.page.waitForTimeout(1000 + Math.random() * 1000); // 1-2s delay
-      
-      // Submit login form
-      await this.page.click('button[type="submit"]');
-      console.log('📤 Login form submitted');
+      console.log('📍 Reached login page, waiting for form...');
 
-      // Wait longer for navigation after login
-      await this.page.waitForTimeout(8000);
+      // Wait for login form to load with multiple selector attempts
+      let formFound = false;
+      const formSelectors = [
+        'input[name="username"]',
+        'input[type="text"]',
+        'form input[autocomplete="username"]'
+      ];
 
-      // Check current URL and page state
+      for (const selector of formSelectors) {
+        try {
+          await this.page.waitForSelector(selector, { timeout: 5000 });
+          console.log(`✅ Found login form with selector: ${selector}`);
+          formFound = true;
+          break;
+        } catch {
+          console.log(`❌ Selector failed: ${selector}`);
+        }
+      }
+
+      if (!formFound) {
+        console.log('❌ Could not find login form');
+        return false;
+      }
+
+      // Take a screenshot for debugging
+      try {
+        const debugScreenshot = await this.page.screenshot({ 
+          type: 'png',
+          fullPage: false 
+        });
+        console.log(`📸 Login page screenshot captured (${debugScreenshot.length} bytes)`);
+      } catch {
+        console.log('⚠️ Could not capture debug screenshot');
+      }
+
+      // Fill in credentials with very human-like behavior
+      console.log('✍️ Filling username field...');
+      await this.page.click('input[name="username"]');
+      await this.page.fill('input[name="username"]', ''); // Clear first
+      await this.page.type('input[name="username"]', username, { delay: 100 });
+      
+      // Random delay between fields
+      const delay = 2000 + Math.random() * 2000; // 2-4 seconds
+      console.log(`⏳ Waiting ${Math.round(delay)}ms between fields...`);
+      await this.page.waitForTimeout(delay);
+      
+      console.log('✍️ Filling password field...');
+      await this.page.click('input[name="password"]');
+      await this.page.fill('input[name="password"]', ''); // Clear first
+      await this.page.type('input[name="password"]', password, { delay: 120 });
+      
+      // Wait a bit before submitting
+      await this.page.waitForTimeout(1500 + Math.random() * 1000);
+      
+      // Find and click submit button
+      const submitSelectors = [
+        'button[type="submit"]',
+        'button:has-text("Log in")',
+        'button:has-text("Log In")',
+        'input[type="submit"]'
+      ];
+
+      let submitClicked = false;
+      for (const selector of submitSelectors) {
+        try {
+          const submitButton = await this.page.$(selector);
+          if (submitButton) {
+            await submitButton.click();
+            console.log(`📤 Clicked submit button: ${selector}`);
+            submitClicked = true;
+            break;
+          }
+        } catch {
+          console.log(`❌ Submit selector failed: ${selector}`);
+        }
+      }
+
+      if (!submitClicked) {
+        console.log('❌ Could not find submit button');
+        return false;
+      }
+
+      // Wait for navigation and log the process
+      console.log('⏳ Waiting for login response...');
+      await this.page.waitForTimeout(10000); // Wait longer
+
+      // Check current URL and page state with detailed logging
       const currentUrl = this.page.url();
-      console.log(`🔍 Current URL after login attempt: ${currentUrl}`);
+      const pageTitle = await this.page.title();
+      console.log(`🔍 After login attempt:`);
+      console.log(`- URL: ${currentUrl}`);
+      console.log(`- Title: ${pageTitle}`);
       
-      // Check for 2FA requirement first (most common issue)
+      // Check page content for debugging
+      const bodyText = await this.page.textContent('body') || '';
+      const hasHomeLink = bodyText.includes('Home') || bodyText.includes('home');
+      const hasProfileLink = bodyText.includes('Profile') || bodyText.includes('profile');
+      
+      console.log(`- Page contains 'Home': ${hasHomeLink}`);
+      console.log(`- Page contains 'Profile': ${hasProfileLink}`);
+
+      // Check for 2FA requirement first
       if (currentUrl.includes('/challenge/') || 
           await this.page.$('input[name="verificationCode"]') ||
           await this.page.$('[data-testid="challenge-form"]')) {
         
         console.log('🔐 Two-factor authentication detected');
-        console.log('💡 To fix this: Either disable 2FA temporarily on your Instagram account, or use an account without 2FA for scraping');
-        
-        // Try to continue anyway by navigating directly to the profile
-        // Sometimes Instagram allows some access even with partial login
-        return false; // Don't set isLoggedIn to true, but continue
-      }
-
-      // Check for common login success indicators
-      if (currentUrl.includes('/accounts/onetap/') || 
-          currentUrl === 'https://www.instagram.com/' ||
-          currentUrl.includes('/accounts/welcomeback/') ||
-          await this.page.$('[aria-label*="Home"]') ||
-          await this.page.$('[data-testid="mobile-nav-logged-in"]')) {
-        
-        console.log('✅ Instagram login successful');
-        this.isLoggedIn = true;
-
-        // Handle potential prompts with longer timeouts
-        await this.handlePostLoginPrompts();
-
-        return true;
-      }
-
-      // Check for login errors
-      const errorSelectors = [
-        'div[id*="error"]', 
-        'p[data-testid="login-error-message"]',
-        '[role="alert"]',
-        '.error-message'
-      ];
-
-      for (const selector of errorSelectors) {
-        const errorElement = await this.page.$(selector);
-        if (errorElement) {
-          const errorText = await errorElement.textContent();
-          console.error('❌ Instagram login failed:', errorText);
-          return false;
-        }
-      }
-
-      // If we're still on login page, login likely failed
-      if (currentUrl.includes('/accounts/login/')) {
-        console.log('⚠️ Still on login page, login likely failed');
+        console.log('💡 Even though you think 2FA is off, Instagram may require it for automation');
+        console.log('💡 Try logging into Instagram manually to see if it asks for verification');
         return false;
       }
 
-      console.log('⚠️ Login status unclear, but proceeding - may have partial access');
+      // Look for error messages
+      const errorText = bodyText.toLowerCase();
+      if (errorText.includes('incorrect') || 
+          errorText.includes('wrong') || 
+          errorText.includes('error') ||
+          errorText.includes('try again')) {
+        console.log('❌ Login error detected in page content');
+        console.log(`Error indicators found in: ${errorText.substring(0, 200)}...`);
+        return false;
+      }
+
+      // Check for common login success indicators
+      const successIndicators = [
+        currentUrl.includes('/accounts/onetap/'),
+        currentUrl === 'https://www.instagram.com/',
+        currentUrl.includes('/accounts/welcomeback/'),
+        await this.page.$('[aria-label*="Home"]'),
+        await this.page.$('[data-testid="mobile-nav-logged-in"]'),
+        hasHomeLink && hasProfileLink
+      ];
+
+      const successCount = successIndicators.filter(Boolean).length;
+      console.log(`✅ Success indicators found: ${successCount}/6`);
+
+      if (successCount >= 2) {
+        console.log('✅ Instagram login appears successful');
+        this.isLoggedIn = true;
+        await this.handlePostLoginPrompts();
+        return true;
+      }
+
+      // If we're still on login page, login failed
+      if (currentUrl.includes('/accounts/login/')) {
+        console.log('⚠️ Still on login page after submission');
+        console.log('💡 This might indicate incorrect credentials or Instagram blocking the login');
+        return false;
+      }
+
+      console.log('⚠️ Login status unclear, treating as failed');
       return false;
 
     } catch (error) {
-      console.error('❌ Login attempt failed:', error);
+      console.error('❌ Login attempt crashed:', error);
       return false;
     }
   }
