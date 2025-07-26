@@ -30,32 +30,38 @@ class InstagramScraper extends PlaywrightBaseScraper {
         throw new Error('Page not initialized');
       }
 
+      // Set longer timeout for serverless environments
+      const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+      const navigationTimeout = isServerless ? 45000 : 30000;
+      const selectorTimeout = isServerless ? 20000 : 10000;
+
       // Navigate to profile with retry logic
       let retries = 3;
       while (retries > 0) {
         try {
           await this.page.goto(profileUrl, { 
             waitUntil: 'networkidle', 
-            timeout: 30000 
+            timeout: navigationTimeout 
           });
           break;
         } catch (error) {
           retries--;
           console.log(`⚠️ Navigation attempt failed, ${retries} retries left`);
           if (retries === 0) throw error;
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
 
-      // Wait for page to load
-      await this.page.waitForTimeout(3000);
+      // Wait longer for page to load in serverless environment
+      await this.page.waitForTimeout(isServerless ? 8000 : 3000);
 
-      // Check for error states
+      // Check for error states first
       const errorMessages = [
         'Sorry, this page isn\'t available',
         'The link you followed may be broken',
         'User not found',
-        'This account is private'
+        'This account is private',
+        'Page not found'
       ];
 
       const pageText = await this.page.textContent('body') || '';
@@ -72,12 +78,19 @@ class InstagramScraper extends PlaywrightBaseScraper {
         }
       }
 
-      // Extract profile data
-      const profileData = await this.extractProfileData(username);
+      // Check for login prompt or rate limiting
+      const loginDetected = await this.page.locator('input[name="username"]').count() > 0;
+      if (loginDetected) {
+        console.log('⚠️ Login prompt detected, attempting to continue...');
+        // Try to find profile data anyway, sometimes available
+      }
+
+      // Extract profile data with enhanced error handling
+      const profileData = await this.extractProfileData(username, selectorTimeout);
       
       // Take screenshot
       const screenshot = await this.page.screenshot({ 
-        fullPage: true,
+        fullPage: false, // Smaller screenshot for serverless
         type: 'png'
       });
 
@@ -100,32 +113,175 @@ class InstagramScraper extends PlaywrightBaseScraper {
     }
   }
 
-  private async extractProfileData(username: string) {
+  private async extractProfileData(username: string, timeout: number) {
     if (!this.page) throw new Error('Page not initialized');
 
-    // Wait for profile header to load
-    await this.page.waitForSelector('header', { timeout: 10000 });
+    // Multiple selector strategies for different Instagram layouts
+    const headerSelectors = [
+      'header',
+      '[role="banner"]',
+      'article header',
+      'main header',
+      '[data-testid="user-header"]',
+      'section:first-child'
+    ];
 
-    // Extract basic profile information
-    const displayName = await this.page.textContent('header h2') || 
-                       await this.page.textContent('header h1') || 
-                       username;
+    let headerFound = false;
+    for (const selector of headerSelectors) {
+      try {
+        await this.page.waitForSelector(selector, { timeout: timeout / headerSelectors.length });
+        console.log(`✅ Found header with selector: ${selector}`);
+        headerFound = true;
+        break;
+      } catch (error) {
+        console.log(`⚠️ Header selector ${selector} failed, trying next...`);
+        continue;
+      }
+    }
 
-    const bio = await this.page.textContent('header + div span') || '';
+    if (!headerFound) {
+      console.log('⚠️ No header found, attempting to extract from page content...');
+    }
 
-    // Extract follower/following counts
-    const statsText = await this.page.textContent('header') || '';
-    const followerMatch = statsText.match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*followers?/i);
-    const followingMatch = statsText.match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*following/i);
+    // Extract basic profile information with multiple strategies
+    let displayName = username;
+    try {
+      const nameSelectors = [
+        'header h2',
+        'header h1', 
+        '[data-testid="user-title"]',
+        'h1',
+        'h2'
+      ];
+      
+      for (const selector of nameSelectors) {
+        const element = await this.page.locator(selector).first();
+        if (await element.count() > 0) {
+          const text = await element.textContent();
+          if (text && text.trim()) {
+            displayName = text.trim();
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not extract display name, using username');
+    }
 
-    const followerCount = followerMatch ? this.parseNumber(followerMatch[1]) : 0;
-    const followingCount = followingMatch ? this.parseNumber(followingMatch[1]) : 0;
+    // Extract bio
+    let bio = '';
+    try {
+      const bioSelectors = [
+        'header + div span',
+        '[data-testid="user-bio"]',
+        'header span:not([title])',
+        'article span'
+      ];
+      
+      for (const selector of bioSelectors) {
+        const element = await this.page.locator(selector).first();
+        if (await element.count() > 0) {
+          const text = await element.textContent();
+          if (text && text.trim() && text.length > 10) {
+            bio = text.trim();
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not extract bio');
+    }
 
-    // Check verification
-    const isVerified = await this.page.locator('[aria-label*="Verified"]').count() > 0;
+    // Extract follower/following counts with enhanced parsing
+    let followerCount = 0;
+    let followingCount = 0;
 
-    // Extract profile image
-    const profileImageUrl = await this.page.getAttribute('header img', 'src') || '';
+    try {
+      // Get all text content and parse numbers
+      const pageContent = await this.page.textContent('body') || '';
+      
+      // Look for follower patterns
+      const followerPatterns = [
+        /(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*followers?/gi,
+        /followers?\s*(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)/gi
+      ];
+      
+      for (const pattern of followerPatterns) {
+        const matches = pageContent.match(pattern);
+        if (matches && matches.length > 0) {
+          const numberMatch = matches[0].match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)/);
+          if (numberMatch) {
+            followerCount = this.parseNumber(numberMatch[1]);
+            break;
+          }
+        }
+      }
+
+      // Look for following patterns
+      const followingPatterns = [
+        /(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*following/gi,
+        /following\s*(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)/gi
+      ];
+      
+      for (const pattern of followingPatterns) {
+        const matches = pageContent.match(pattern);
+        if (matches && matches.length > 0) {
+          const numberMatch = matches[0].match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)/);
+          if (numberMatch) {
+            followingCount = this.parseNumber(numberMatch[1]);
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not extract follower counts');
+    }
+
+    // Check verification with multiple selectors
+    let isVerified = false;
+    try {
+      const verifiedSelectors = [
+        '[aria-label*="Verified"]',
+        '[title*="Verified"]',
+        'svg[aria-label*="Verified"]',
+        '.verified'
+      ];
+      
+      for (const selector of verifiedSelectors) {
+        if (await this.page.locator(selector).count() > 0) {
+          isVerified = true;
+          break;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not check verification status');
+    }
+
+    // Extract profile image with multiple strategies
+    let profileImageUrl = '';
+    try {
+      const imageSelectors = [
+        'header img',
+        'img[alt*="profile picture"]',
+        'img[data-testid="user-avatar"]',
+        'img[src*="profile"]'
+      ];
+      
+      for (const selector of imageSelectors) {
+        const element = await this.page.locator(selector).first();
+        if (await element.count() > 0) {
+          const src = await element.getAttribute('src');
+          if (src && src.trim()) {
+            profileImageUrl = src.trim();
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not extract profile image');
+    }
+
+    console.log(`✅ Extracted data - Followers: ${followerCount}, Following: ${followingCount}, Verified: ${isVerified}`);
 
     // Build metrics
     const metrics: InstagramMetrics = {
