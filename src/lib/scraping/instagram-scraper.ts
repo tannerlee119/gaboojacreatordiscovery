@@ -1,11 +1,7 @@
-import { PlaywrightBaseScraper } from './playwright-base-scraper';
+import { PlaywrightBaseScraper, ScrapingResult } from './playwright-base-scraper';
 import { InstagramMetrics } from '@/lib/types';
-import { Page } from 'playwright';
 
-// Note: parseNumberWithSuffix is now handled by PlaywrightBaseScraper.parseNumberWithSuffix
-
-interface InstagramScrapingResult {
-  success: boolean;
+interface InstagramScrapingResult extends ScrapingResult {
   data?: {
     displayName: string;
     bio?: string;
@@ -17,435 +13,155 @@ interface InstagramScrapingResult {
     website?: string;
     metrics: InstagramMetrics;
   };
-  screenshot?: Buffer;
-  method: 'scraping' | 'manual';
-  error?: string;
 }
 
-export async function analyzeInstagramProfile(username: string): Promise<InstagramScrapingResult> {
-  const scraper = new PlaywrightBaseScraper();
-  
-  try {
-    console.log(`Starting Instagram analysis for: ${username}`);
-    
-    // Launch browser with mobile device simulation for better success rate
-    await scraper.launchBrowser({
-      headless: true,
-      mobileDevice: true // Instagram often works better with mobile user agent
-    });
-
-    const profileUrl = `https://www.instagram.com/${username}/`;
-    console.log(`Navigating to: ${profileUrl}`);
-    
-    // Navigate with retry logic
-    await scraper.navigateWithRetry(profileUrl, {
-      maxRetries: 3,
-      waitUntil: 'networkidle',
-      timeout: 30000
-    });
-
-    // Check for specific errors first (more targeted detection)
-    const errorCheck = await scraper.checkForErrors();
-    if (errorCheck.hasError) {
-      console.log('Error detected:', errorCheck);
-      await scraper.cleanup();
+class InstagramScraper extends PlaywrightBaseScraper {
+  async analyzeProfile(username: string): Promise<InstagramScrapingResult> {
+    try {
+      console.log(`🔍 Starting Instagram analysis for: ${username}`);
       
-      let errorMessage = 'Unknown error occurred';
-      switch (errorCheck.errorType) {
-        case 'not_found':
-          errorMessage = 'This Instagram account does not exist';
-          break;
-        case 'private_account':
-          errorMessage = 'This Instagram account is private';
-          break;
-        case 'rate_limited':
-          errorMessage = 'Rate limited by Instagram. Please try again later';
-          break;
-        default:
-          errorMessage = errorCheck.message || 'Unknown error occurred';
+      // Initialize browser with Sparticuz chromium if available
+      await this.initBrowser();
+      
+      const profileUrl = `https://www.instagram.com/${username}/`;
+      console.log(`📱 Navigating to: ${profileUrl}`);
+      
+      if (!this.page) {
+        throw new Error('Page not initialized');
       }
+
+      // Navigate to profile with retry logic
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await this.page.goto(profileUrl, { 
+            waitUntil: 'networkidle', 
+            timeout: 30000 
+          });
+          break;
+        } catch (error) {
+          retries--;
+          console.log(`⚠️ Navigation attempt failed, ${retries} retries left`);
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Wait for page to load
+      await this.page.waitForTimeout(3000);
+
+      // Check for error states
+      const errorMessages = [
+        'Sorry, this page isn\'t available',
+        'The link you followed may be broken',
+        'User not found',
+        'This account is private'
+      ];
+
+      const pageText = await this.page.textContent('body') || '';
       
+      for (const errorMsg of errorMessages) {
+        if (pageText.includes(errorMsg)) {
+          return {
+            success: false,
+            error: errorMsg.includes('private') ? 
+              `Instagram account @${username} is private` : 
+              `Instagram account @${username} does not exist`,
+            method: 'scraping'
+          };
+        }
+      }
+
+      // Extract profile data
+      const profileData = await this.extractProfileData(username);
+      
+      // Take screenshot
+      const screenshot = await this.page.screenshot({ 
+        fullPage: true,
+        type: 'png'
+      });
+
       return {
-        success: false,
-        error: errorMessage,
+        success: true,
+        data: profileData,
+        screenshot,
         method: 'scraping'
       };
+
+    } catch (error) {
+      console.error('❌ Instagram scraping failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        method: 'scraping'
+      };
+    } finally {
+      await this.cleanup();
     }
-
-    console.log('No errors detected, proceeding with scraping...');
-
-    const page = scraper.getPage();
-    if (!page) {
-      throw new Error('Page not available');
-    }
-
-    // Handle login if required
-    const loginRequired = await page.locator('input[name="username"]').first().isVisible().catch(() => false);
-    if (loginRequired) {
-      console.log('Login detected, attempting to handle...');
-      
-      // Try to get Instagram credentials from environment
-      const instagramUsername = process.env.INSTAGRAM_USERNAME;
-      const instagramPassword = process.env.INSTAGRAM_PASSWORD;
-      
-      if (instagramUsername && instagramPassword) {
-        await handleInstagramLogin(page, instagramUsername, instagramPassword, scraper);
-        
-        // Navigate back to profile after login
-        await scraper.navigateWithRetry(profileUrl, {
-          waitUntil: 'networkidle',
-          timeout: 30000
-        });
-      } else {
-        console.log('No Instagram credentials provided, continuing without login...');
-      }
-    }
-
-    // Take screenshot before scraping
-    const screenshot = await scraper.takeScreenshot({ 
-      fullPage: false
-    });
-
-    // Try to scrape profile data
-    const profileData = await scrapeInstagramProfileData(page, username, scraper);
-    
-    await scraper.cleanup();
-    
-    return {
-      success: true,
-      data: profileData,
-      screenshot,
-      method: 'scraping'
-    };
-
-  } catch (error) {
-    console.error('Instagram scraping error:', error);
-    
-    await scraper.cleanup();
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown scraping error',
-      method: 'scraping'
-    };
   }
-}
 
-async function handleInstagramLogin(page: Page, username: string, password: string, scraper: PlaywrightBaseScraper): Promise<void> {
-  try {
-    console.log('Attempting Instagram login...');
-    
-    // Fill in credentials
-    await page.fill('input[name="username"]', username);
-    await scraper.delay(500);
-    await page.fill('input[name="password"]', password);
-    await scraper.delay(500);
-    
-    // Click login button
-    await page.click('button[type="submit"]');
-    
-    // Wait for navigation or error
-    await scraper.delay(5000);
-    
-    // Handle potential "Not Now" buttons for save login info
-    try {
-      const notNowButton = page.locator('button:has-text("Not Now")').first();
-      if (await notNowButton.isVisible({ timeout: 3000 })) {
-        await notNowButton.click();
-        await scraper.delay(2000);
-      }
-    } catch {
-      // Ignore if button not found
-    }
-    
-    // Handle notification dialog
-    try {
-      const notNowNotifications = page.locator('button:has-text("Not Now")').first();
-      if (await notNowNotifications.isVisible({ timeout: 3000 })) {
-        await notNowNotifications.click();
-        await scraper.delay(2000);
-      }
-    } catch {
-      // Ignore if button not found
-    }
-    
-    console.log('Instagram login completed');
-  } catch (error) {
-    console.error('Instagram login error:', error);
-    throw error;
-  }
-}
+  private async extractProfileData(username: string) {
+    if (!this.page) throw new Error('Page not initialized');
 
-async function scrapeInstagramProfileData(page: Page, username: string, scraper: PlaywrightBaseScraper) {
-  // Default values
-  let displayName = username;
-  let profileImageUrl = '';
-  let isVerified = false;
-  let followerCount = 0;
-  let followingCount = 0;
-  let postCount = 0;
-  const location = '';
-  let website = '';
+    // Wait for profile header to load
+    await this.page.waitForSelector('header', { timeout: 10000 });
 
-  try {
-    // Extract profile data using multiple selectors as fallbacks
-    
-    // Display name
-    try {
-      const nameElement = page.locator('h2').first();
-      if (await nameElement.isVisible({ timeout: 5000 })) {
-        displayName = await nameElement.textContent() || username;
-      }
-    } catch {
-      console.log('Could not extract display name');
-    }
+    // Extract basic profile information
+    const displayName = await this.page.textContent('header h2') || 
+                       await this.page.textContent('header h1') || 
+                       username;
 
-    // Profile image - try multiple selectors and approaches
-    try {
-      console.log('Attempting to extract Instagram profile image...');
-      
-      const imageSelectors = [
-        'img[alt*="profile picture"]',
-        'header img',
-        'img[data-testid="user-avatar"]',
-        'div[data-testid="user-avatar"] img',
-        'span[data-testid="user-avatar"] img',
-        'img[alt*="\'s profile picture"]',
-        'img[src*="profile_pic"]'
-      ];
-      
-      for (const selector of imageSelectors) {
-        try {
-          const imgElement = page.locator(selector).first();
-          if (await imgElement.isVisible({ timeout: 3000 })) {
-            const src = await imgElement.getAttribute('src');
-            if (src && src.trim() && !src.includes('data:image')) {
-              profileImageUrl = src.trim();
-              console.log('Found Instagram profile image:', profileImageUrl);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`Image selector ${selector} failed:`, error);
-        }
-      }
-      
-      // Alternative: Look for profile images in style attributes or background images
-      if (!profileImageUrl) {
-        console.log('Trying alternative profile image extraction...');
-        const avatarElements = page.locator('[class*="avatar"], [class*="profile"], [data-testid*="avatar"]');
-        const count = await avatarElements.count();
-        
-        for (let i = 0; i < count; i++) {
-          const element = avatarElements.nth(i);
-          
-          // Check for background image
-          const backgroundImage = await element.evaluate(el => {
-            const style = window.getComputedStyle(el);
-            return style.backgroundImage;
-          });
-          
-          if (backgroundImage && backgroundImage.includes('url(')) {
-            const match = backgroundImage.match(/url\("?([^"]+)"?\)/);
-            if (match && match[1] && !match[1].includes('data:image')) {
-              profileImageUrl = match[1];
-              console.log('Found profile image in background:', profileImageUrl);
-              break;
-            }
-          }
-        }
-      }
-      
-    } catch (error) {
-      console.log('Error extracting Instagram profile image:', error);
-    }
+    const bio = await this.page.textContent('header + div span') || '';
 
-    // Verification status
-    try {
-      const verifiedElement = page.locator('svg[aria-label="Verified"], svg[title="Verified"]').first();
-      isVerified = await verifiedElement.isVisible({ timeout: 3000 });
-    } catch {
-      console.log('Could not check verification status');
-    }
+    // Extract follower/following counts
+    const statsText = await this.page.textContent('header') || '';
+    const followerMatch = statsText.match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*followers?/i);
+    const followingMatch = statsText.match(/(\d+(?:,\d{3})*|\d+\.?\d*[KMB]?)\s*following/i);
 
-    // Website link
-    try {
-      console.log('Attempting to extract website link...');
-      
-      // Look for external links in the profile, but exclude social media and help links
-      const linkElements = page.locator('header a[href^="http"]');
-      const linkCount = await linkElements.count();
-      
-      for (let i = 0; i < linkCount; i++) {
-        const linkElement = linkElements.nth(i);
-        const href = await linkElement.getAttribute('href') || '';
-        const linkText = await linkElement.textContent() || '';
-        
-        console.log('Found link:', href, 'with text:', linkText);
-        
-        // Skip social media links, help links, and button-like text
-        if (href && 
-            !href.includes('facebook.com/help') &&
-            !href.includes('instagram.com') &&
-            !href.includes('help.instagram.com') &&
-            !href.includes('threads.com') &&
-            !href.includes('facebook.com') &&
-            !href.includes('twitter.com') &&
-            !href.includes('x.com') &&
-            linkText !== 'Follow' &&
-            linkText !== 'Following' &&
-            !linkText.includes('Followers') &&
-            !linkText.includes('posts')) {
-          
-          website = href;
-          console.log('Valid website found:', website);
-          break;
-        }
-      }
-    } catch (error) {
-      console.log('Error extracting website:', error);
-    }
+    const followerCount = followerMatch ? this.parseNumber(followerMatch[1]) : 0;
+    const followingCount = followingMatch ? this.parseNumber(followingMatch[1]) : 0;
 
-    // Follower count and other metrics
-    try {
-      console.log('Attempting to extract follower counts...');
-      
-      // Multiple selectors for follower count
-      const followerSelectors = [
-        'a[href*="/followers/"] span',
-        'button:has-text("followers") span',
-        'a:has-text("followers") span',
-        '[data-testid="followers"] span'
-      ];
-      
-      for (const selector of followerSelectors) {
-        try {
-          const elements = page.locator(selector);
-          const count = await elements.count();
-          
-          for (let i = 0; i < count; i++) {
-            const element = elements.nth(i);
-            const text = await element.textContent() || '';
-            const cleanText = text.trim();
-            
-            console.log('Found potential follower count:', cleanText);
-            
-            // Check if this looks like a number
-            if (/^[\d,KM.]+$/.test(cleanText) && cleanText !== '0') {
-              followerCount = scraper.parseNumberWithSuffix(cleanText);
-              console.log('Parsed follower count:', followerCount);
-              break;
-            }
-          }
-          
-          if (followerCount > 0) break;
-        } catch (error) {
-          console.log(`Selector ${selector} failed:`, error);
-        }
-      }
-      
-      // Following count
-      const followingSelectors = [
-        'a[href*="/following/"] span',
-        'button:has-text("following") span',
-        'a:has-text("following") span'
-      ];
-      
-      for (const selector of followingSelectors) {
-        try {
-          const elements = page.locator(selector);
-          const count = await elements.count();
-          
-          for (let i = 0; i < count; i++) {
-            const element = elements.nth(i);
-            const text = await element.textContent() || '';
-            const cleanText = text.trim();
-            
-            console.log('Found potential following count:', cleanText);
-            
-            if (/^[\d,KM.]+$/.test(cleanText) && cleanText !== '0') {
-              followingCount = scraper.parseNumberWithSuffix(cleanText);
-              console.log('Parsed following count:', followingCount);
-              break;
-            }
-          }
-          
-          if (followingCount > 0) break;
-        } catch (error) {
-          console.log(`Following selector ${selector} failed:`, error);
-        }
-      }
-      
-      // Posts count
-      const postSelectors = [
-        'div:has-text("posts") span',
-        'a:has-text("posts") span',
-        'button:has-text("posts") span'
-      ];
-      
-      for (const selector of postSelectors) {
-        try {
-          const elements = page.locator(selector);
-          const count = await elements.count();
-          
-          for (let i = 0; i < count; i++) {
-            const element = elements.nth(i);
-            const text = await element.textContent() || '';
-            const cleanText = text.trim();
-            
-            console.log('Found potential post count:', cleanText);
-            
-            if (/^[\d,KM.]+$/.test(cleanText)) {
-              postCount = scraper.parseNumberWithSuffix(cleanText);
-              console.log('Parsed post count:', postCount);
-              break;
-            }
-          }
-          
-          if (postCount > 0) break;
-        } catch (error) {
-          console.log(`Post selector ${selector} failed:`, error);
-        }
-      }
-      
-    } catch (error) {
-      console.error('Error extracting metrics:', error);
-    }
+    // Check verification
+    const isVerified = await this.page.locator('[aria-label*="Verified"]').count() > 0;
 
-    console.log('Final Instagram extracted data:', {
-      displayName,
-      followerCount,
-      followingCount,
-      postCount,
-      isVerified,
-      website,
-      profileImageUrl: profileImageUrl ? 'Found' : 'Not found',
-      profileImageUrlActual: profileImageUrl
-    });
+    // Extract profile image
+    const profileImageUrl = await this.page.getAttribute('header img', 'src') || '';
 
+    // Build metrics
     const metrics: InstagramMetrics = {
       followerCount,
       followingCount,
-      postCount,
-      engagementRate: 0, // Will be calculated later
+      postCount: 0, // Instagram makes this harder to scrape now
       averageLikes: 0,
       averageComments: 0,
-      recentPosts: [] // Would need additional scraping to populate
+      engagementRate: 0,
+      recentPosts: []
     };
 
     return {
-      displayName,
+      displayName: displayName.trim(),
+      bio: bio.trim(),
       profileImageUrl,
       isVerified,
       followerCount,
       followingCount,
-      location,
-      website,
       metrics
     };
-
-  } catch (error) {
-    console.error('Error in scrapeInstagramProfileData:', error);
-    throw error;
   }
+
+  private parseNumber(str: string): number {
+    const cleaned = str.replace(/,/g, '').toLowerCase();
+    const number = parseFloat(cleaned);
+    
+    if (cleaned.includes('k')) return Math.floor(number * 1000);
+    if (cleaned.includes('m')) return Math.floor(number * 1000000);
+    if (cleaned.includes('b')) return Math.floor(number * 1000000000);
+    
+    return Math.floor(number);
+  }
+}
+
+export async function analyzeInstagramProfile(username: string): Promise<InstagramScrapingResult> {
+  const scraper = new InstagramScraper();
+  return scraper.analyzeProfile(username);
 } 

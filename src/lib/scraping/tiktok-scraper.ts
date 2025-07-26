@@ -1,14 +1,10 @@
-import { PlaywrightBaseScraper } from './playwright-base-scraper';
+import { PlaywrightBaseScraper, ScrapingResult } from './playwright-base-scraper';
 import { TikTokMetrics } from '@/lib/types';
-import { Page } from 'playwright';
 
-// Note: parseNumberWithSuffix is now handled by PlaywrightBaseScraper.parseNumberWithSuffix
-
-interface TikTokScrapingResult {
-  success: boolean;
+interface TikTokScrapingResult extends ScrapingResult {
   data?: {
     displayName: string;
-    bio: string;
+    bio?: string;
     profileImageUrl: string;
     isVerified: boolean;
     followerCount: number;
@@ -17,450 +13,171 @@ interface TikTokScrapingResult {
     website?: string;
     metrics: TikTokMetrics;
   };
-  screenshot?: Buffer;
-  method: 'scraping' | 'manual';
-  error?: string;
 }
 
-export async function analyzeTikTokProfile(username: string): Promise<TikTokScrapingResult> {
-  const scraper = new PlaywrightBaseScraper();
-  
-  try {
-    console.log(`Starting TikTok analysis for: ${username}`);
-    
-    // Launch browser with mobile device simulation - TikTok works better with mobile
-    await scraper.launchBrowser({
-      headless: true,
-      mobileDevice: true
-    });
-
-    const profileUrl = `https://www.tiktok.com/@${username}`;
-    console.log(`Navigating to: ${profileUrl}`);
-    
-    // Navigate with retry logic and longer timeout for TikTok
-    await scraper.navigateWithRetry(profileUrl, {
-      maxRetries: 3,
-      waitUntil: 'networkidle',
-      timeout: 45000, // TikTok can be slow to load
-      delayBetweenRetries: 3000
-    });
-
-    // Additional wait for TikTok to fully load content
-    await scraper.delay(5000);
-
-    // Check for errors first
-    const errorCheck = await scraper.checkForErrors();
-    if (errorCheck.hasError) {
-      await scraper.cleanup();
+class TikTokScraper extends PlaywrightBaseScraper {
+  async analyzeProfile(username: string): Promise<TikTokScrapingResult> {
+    try {
+      console.log(`🔍 Starting TikTok analysis for: ${username}`);
       
-      let errorMessage = 'Unknown error occurred';
-      switch (errorCheck.errorType) {
-        case 'not_found':
-          errorMessage = 'This TikTok account does not exist';
-          break;
-        case 'private_account':
-          errorMessage = 'This TikTok account is private';
-          break;
-        case 'rate_limited':
-          errorMessage = 'Rate limited by TikTok. Please try again later';
-          break;
-        case 'blocked':
-          errorMessage = 'Unable to access TikTok profile - page showing error';
-          break;
-        default:
-          errorMessage = errorCheck.message || 'Unknown error occurred';
+      // Initialize browser with Sparticuz chromium if available
+      await this.initBrowser();
+      
+      const profileUrl = `https://www.tiktok.com/@${username}`;
+      console.log(`📱 Navigating to: ${profileUrl}`);
+      
+      if (!this.page) {
+        throw new Error('Page not initialized');
       }
+
+      // Navigate to profile with retry logic
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await this.page.goto(profileUrl, { 
+            waitUntil: 'networkidle', 
+            timeout: 30000 
+          });
+          break;
+        } catch (error) {
+          retries--;
+          console.log(`⚠️ Navigation attempt failed, ${retries} retries left`);
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Wait for page to load
+      await this.page.waitForTimeout(5000);
+
+      // Check for error states
+      const errorMessages = [
+        'Couldn\'t find this account',
+        'Something went wrong',
+        'This user doesn\'t exist',
+        'User not found'
+      ];
+
+      const pageText = await this.page.textContent('body') || '';
       
+      for (const errorMsg of errorMessages) {
+        if (pageText.includes(errorMsg)) {
+          return {
+            success: false,
+            error: `TikTok account @${username} does not exist`,
+            method: 'scraping'
+          };
+        }
+      }
+
+      // Extract profile data
+      const profileData = await this.extractProfileData(username);
+      
+      // Take screenshot
+      const screenshot = await this.page.screenshot({ 
+        fullPage: true,
+        type: 'png'
+      });
+
       return {
-        success: false,
-        error: errorMessage,
+        success: true,
+        data: profileData,
+        screenshot,
         method: 'scraping'
       };
+
+    } catch (error) {
+      console.error('❌ TikTok scraping failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        method: 'scraping'
+      };
+    } finally {
+      await this.cleanup();
     }
-
-    const page = scraper.getPage();
-    if (!page) {
-      throw new Error('Page not available');
-    }
-
-    // Take screenshot before scraping
-    const screenshot = await scraper.takeScreenshot({ 
-      fullPage: false
-    });
-
-    // Try to scrape profile data
-    const profileData = await scrapeTikTokProfileData(page, username, scraper);
-    
-    await scraper.cleanup();
-    
-    return {
-      success: true,
-      data: profileData,
-      screenshot,
-      method: 'scraping'
-    };
-
-  } catch (error) {
-    console.error('TikTok scraping error:', error);
-    
-    await scraper.cleanup();
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown scraping error',
-      method: 'scraping'
-    };
   }
-}
 
-async function scrapeTikTokProfileData(page: Page, username: string, scraper: PlaywrightBaseScraper) {
-  // Default values
-  let displayName = username;
-  let bio = '';
-  let profileImageUrl = '';
-  let isVerified = false;
-  let followerCount = 0;
-  let followingCount = 0;
-  let likeCount = 0;
-  let videoCount = 0;
-  const location = '';
-  const website = '';
+  private async extractProfileData(username: string) {
+    if (!this.page) throw new Error('Page not initialized');
 
-  try {
-    console.log('Starting TikTok profile data extraction...');
+    // Wait for profile data to load
+    await this.page.waitForTimeout(3000);
+
+    // Extract display name
+    const displayName = await this.page.textContent('[data-e2e="user-title"]') || 
+                       await this.page.textContent('h1') || 
+                       await this.page.textContent('h2') ||
+                       username;
+
+    // Extract bio
+    const bio = await this.page.textContent('[data-e2e="user-bio"]') || '';
+
+    // Extract follower/following counts from stats
+    const statsElements = await this.page.locator('[data-e2e="followers-count"], [data-e2e="following-count"]').all();
     
-    // Display name
-    try {
-      console.log('Extracting display name...');
-      const displayNameSelectors = [
-        '[data-e2e="user-title"]',
-        'h1[data-e2e="user-title"]',
-        'h1',
-        '[data-testid="user-title"]'
-      ];
+    let followerCount = 0;
+    let followingCount = 0;
+    let likeCount = 0;
+
+    // Parse stats from visible elements
+    for (const element of statsElements) {
+      const text = await element.textContent() || '';
+      const number = this.parseNumber(text);
       
-      for (const selector of displayNameSelectors) {
-        try {
-          const element = page.locator(selector).first();
-          if (await element.isVisible({ timeout: 5000 })) {
-            const text = await element.textContent();
-            if (text && text.trim()) {
-              displayName = text.trim();
-              console.log('Found display name:', displayName);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`Display name selector ${selector} failed:`, error);
-        }
+      const parentText = await element.locator('..').textContent() || '';
+      if (parentText.toLowerCase().includes('followers')) {
+        followerCount = number;
+      } else if (parentText.toLowerCase().includes('following')) {
+        followingCount = number;
+      } else if (parentText.toLowerCase().includes('likes')) {
+        likeCount = number;
       }
-    } catch (error) {
-      console.log('Could not extract display name:', error);
     }
 
-    // Bio
-    try {
-      console.log('Extracting bio...');
-      const bioSelectors = [
-        '[data-e2e="user-bio"]',
-        '[data-testid="user-bio"]',
-        '.user-bio'
-      ];
-      
-      for (const selector of bioSelectors) {
-        try {
-          const element = page.locator(selector).first();
-          if (await element.isVisible({ timeout: 5000 })) {
-            const text = await element.textContent();
-            if (text && text.trim()) {
-              bio = text.trim();
-              console.log('Found bio:', bio);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`Bio selector ${selector} failed:`, error);
-        }
-      }
-    } catch (error) {
-      console.log('Could not extract bio:', error);
-    }
+    // Check verification
+    const isVerified = await this.page.locator('[data-e2e="user-verified"]').count() > 0;
 
-    // Profile image - enhanced extraction
-    try {
-      console.log('Extracting TikTok profile image...');
-      const avatarSelectors = [
-        '[data-e2e="user-avatar"] img',
-        'img[data-e2e="user-avatar"]',
-        '.user-avatar img',
-        'span[data-e2e="user-avatar"] img',
-        'div[data-e2e="user-avatar"] img',
-        'img[alt*="avatar"]',
-        'img[src*="avatar"]',
-        'header img'
-      ];
-      
-      for (const selector of avatarSelectors) {
-        try {
-          const element = page.locator(selector).first();
-          if (await element.isVisible({ timeout: 3000 })) {
-            const src = await element.getAttribute('src');
-            if (src && src.trim() && !src.includes('data:image') && src.startsWith('http')) {
-              profileImageUrl = src.trim();
-              console.log('Found TikTok profile image:', profileImageUrl);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`Avatar selector ${selector} failed:`, error);
-        }
-      }
-      
-      // Alternative: Look for avatar in background images or CSS
-      if (!profileImageUrl) {
-        console.log('Trying alternative TikTok avatar extraction...');
-        const avatarContainers = page.locator('[data-e2e="user-avatar"], [class*="avatar"], [class*="Avatar"]');
-        const count = await avatarContainers.count();
-        
-        for (let i = 0; i < count; i++) {
-          const container = avatarContainers.nth(i);
-          
-          // Check for background image
-          const backgroundImage = await container.evaluate(el => {
-            const style = window.getComputedStyle(el);
-            return style.backgroundImage;
-          });
-          
-          if (backgroundImage && backgroundImage.includes('url(')) {
-            const match = backgroundImage.match(/url\("?([^"]+)"?\)/);
-            if (match && match[1] && !match[1].includes('data:image') && match[1].startsWith('http')) {
-              profileImageUrl = match[1];
-              console.log('Found TikTok profile image in background:', profileImageUrl);
-              break;
-            }
-          }
-          
-          // Check for img elements inside the container
-          const imgInside = container.locator('img').first();
-          if (await imgInside.isVisible({ timeout: 1000 })) {
-            const src = await imgInside.getAttribute('src');
-            if (src && src.trim() && !src.includes('data:image') && src.startsWith('http')) {
-              profileImageUrl = src.trim();
-              console.log('Found TikTok profile image inside container:', profileImageUrl);
-              break;
-            }
-          }
-        }
-      }
-      
-    } catch (error) {
-      console.log('Error extracting TikTok profile image:', error);
-    }
+    // Extract profile image
+    const profileImageUrl = await this.page.getAttribute('[data-e2e="user-avatar"] img', 'src') || 
+                           await this.page.getAttribute('img[alt*="avatar"]', 'src') || '';
 
-    // Verification status
-    try {
-      console.log('Checking verification status...');
-      const verifiedSelectors = [
-        '[data-e2e="user-verified"]',
-        'svg[data-e2e="user-verified"]',
-        '.user-verified',
-        '[title="Verified account"]'
-      ];
-      
-      for (const selector of verifiedSelectors) {
-        try {
-          const element = page.locator(selector).first();
-          if (await element.isVisible({ timeout: 3000 })) {
-            isVerified = true;
-            console.log('Account is verified');
-            break;
-          }
-        } catch (error) {
-          console.log(`Verified selector ${selector} failed:`, error);
-        }
-      }
-    } catch (error) {
-      console.log('Could not check verification status:', error);
-    }
-
-    // Metrics extraction
-    try {
-      console.log('Extracting follower metrics...');
-      
-             // Note: Multiple approaches for extracting metrics
-      
-      // Try to find metrics containers
-      const metricsContainers = [
-        '[data-e2e="user-page"]',
-        '.user-page',
-        'main'
-      ];
-      
-      for (const containerSelector of metricsContainers) {
-        try {
-          const container = page.locator(containerSelector).first();
-          if (await container.isVisible({ timeout: 5000 })) {
-            
-            // Look for follower count
-            const followerTexts = [
-              'Followers', 'followers', 'Follower', 'follower'
-            ];
-            
-            for (const followerText of followerTexts) {
-              try {
-                const followerElements = container.locator(`text=${followerText}`);
-                const count = await followerElements.count();
-                
-                for (let i = 0; i < count; i++) {
-                  const element = followerElements.nth(i);
-                  const parent = element.locator('..').first();
-                  const text = await parent.textContent() || '';
-                  
-                  console.log('Found potential follower text:', text);
-                  
-                  // Extract number from the text
-                  const matches = text.match(/([\d,]+(?:\.\d+)?[KM]?)/);
-                  if (matches && matches[1]) {
-                    const numberStr = matches[1];
-                    if (/^[\d,KM.]+$/.test(numberStr)) {
-                      followerCount = scraper.parseNumberWithSuffix(numberStr);
-                      console.log('Parsed follower count:', followerCount);
-                      break;
-                    }
-                  }
-                }
-                
-                if (followerCount > 0) break;
-              } catch (error) {
-                console.log(`Follower extraction failed for "${followerText}":`, error);
-              }
-            }
-            
-            // Look for following count
-            const followingTexts = [
-              'Following', 'following'
-            ];
-            
-            for (const followingText of followingTexts) {
-              try {
-                const followingElements = container.locator(`text=${followingText}`);
-                const count = await followingElements.count();
-                
-                for (let i = 0; i < count; i++) {
-                  const element = followingElements.nth(i);
-                  const parent = element.locator('..').first();
-                  const text = await parent.textContent() || '';
-                  
-                  console.log('Found potential following text:', text);
-                  
-                  const matches = text.match(/([\d,]+(?:\.\d+)?[KM]?)/);
-                  if (matches && matches[1]) {
-                    const numberStr = matches[1];
-                    if (/^[\d,KM.]+$/.test(numberStr)) {
-                      followingCount = scraper.parseNumberWithSuffix(numberStr);
-                      console.log('Parsed following count:', followingCount);
-                      break;
-                    }
-                  }
-                }
-                
-                if (followingCount > 0) break;
-              } catch (error) {
-                console.log(`Following extraction failed for "${followingText}":`, error);
-              }
-            }
-            
-            // Look for likes count
-            const likesTexts = [
-              'Likes', 'likes', 'Like', 'like'
-            ];
-            
-            for (const likesText of likesTexts) {
-              try {
-                const likesElements = container.locator(`text=${likesText}`);
-                const count = await likesElements.count();
-                
-                for (let i = 0; i < count; i++) {
-                  const element = likesElements.nth(i);
-                  const parent = element.locator('..').first();
-                  const text = await parent.textContent() || '';
-                  
-                  console.log('Found potential likes text:', text);
-                  
-                  const matches = text.match(/([\d,]+(?:\.\d+)?[KM]?)/);
-                  if (matches && matches[1]) {
-                    const numberStr = matches[1];
-                    if (/^[\d,KM.]+$/.test(numberStr)) {
-                      likeCount = scraper.parseNumberWithSuffix(numberStr);
-                      console.log('Parsed likes count:', likeCount);
-                      break;
-                    }
-                  }
-                }
-                
-                if (likeCount > 0) break;
-              } catch (error) {
-                console.log(`Likes extraction failed for "${likesText}":`, error);
-              }
-            }
-            
-            break; // Exit container loop if we found the right container
-          }
-        } catch (error) {
-          console.log(`Container ${containerSelector} failed:`, error);
-        }
-      }
-      
-      // Try to estimate video count by counting video elements
-      try {
-        const videoElements = page.locator('[data-e2e="user-post-item"], .video-feed-item');
-        videoCount = await videoElements.count();
-        console.log('Estimated video count:', videoCount);
-      } catch (error) {
-        console.log('Could not count videos:', error);
-      }
-      
-    } catch (error) {
-      console.error('Error extracting TikTok metrics:', error);
-    }
-
-    console.log('Final extracted TikTok data:', {
-      displayName,
-      bio: bio.substring(0, 100) + (bio.length > 100 ? '...' : ''),
-      followerCount,
-      followingCount,
-      likeCount,
-      videoCount,
-      isVerified,
-      profileImageUrl: profileImageUrl ? 'Found' : 'Not found',
-      profileImageUrlActual: profileImageUrl
-    });
-
+    // Build metrics
     const metrics: TikTokMetrics = {
       followerCount,
       followingCount,
       likeCount,
-      videoCount,
-      engagementRate: 0, // Will be calculated later
+      videoCount: 0, // Would need additional scraping
       averageViews: 0,
       averageLikes: 0,
-      recentVideos: [] // Would need additional scraping to populate
+      engagementRate: 0,
+      recentVideos: []
     };
 
     return {
-      displayName,
-      bio,
+      displayName: displayName.trim(),
+      bio: bio.trim(),
       profileImageUrl,
       isVerified,
       followerCount,
       followingCount,
-      location,
-      website,
       metrics
     };
-
-  } catch (error) {
-    console.error('Error in scrapeTikTokProfileData:', error);
-    throw error;
   }
+
+  private parseNumber(str: string): number {
+    const cleaned = str.replace(/,/g, '').toLowerCase();
+    const number = parseFloat(cleaned);
+    
+    if (cleaned.includes('k')) return Math.floor(number * 1000);
+    if (cleaned.includes('m')) return Math.floor(number * 1000000);
+    if (cleaned.includes('b')) return Math.floor(number * 1000000000);
+    
+    return Math.floor(number);
+  }
+}
+
+export async function analyzeTikTokProfile(username: string): Promise<TikTokScrapingResult> {
+  const scraper = new TikTokScraper();
+  return scraper.analyzeProfile(username);
 } 

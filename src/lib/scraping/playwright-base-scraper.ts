@@ -1,13 +1,15 @@
 import { chromium, Browser, Page } from 'playwright';
 
 // Import chromium for serverless environments
-let chromiumPkg: any = null;
+let chromiumPkg: { executablePath: () => Promise<string>; args: string[] } | null = null;
 try {
   // Only import in serverless/production environments
   if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     chromiumPkg = require('@sparticuz/chromium');
   }
-} catch (error) {
+} catch {
+  // Silently fail if package not available
   console.log('Sparticuz chromium not available, using default Playwright chromium');
 }
 
@@ -28,7 +30,11 @@ export abstract class PlaywrightBaseScraper {
       console.log('🚀 Launching browser...');
       
       // Configure browser launch options based on environment
-      const launchOptions: any = {
+      const launchOptions: {
+        headless: boolean;
+        args: string[];
+        executablePath?: string;
+      } = {
         headless: true,
         args: [
           '--no-sandbox',
