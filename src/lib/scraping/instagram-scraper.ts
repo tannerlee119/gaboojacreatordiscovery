@@ -16,6 +16,8 @@ interface InstagramScrapingResult extends ScrapingResult {
 }
 
 class InstagramScraper extends PlaywrightBaseScraper {
+  private isLoggedIn = false;
+
   async analyzeProfile(username: string): Promise<InstagramScrapingResult> {
     try {
       console.log(`🔍 Starting Instagram analysis for: ${username}`);
@@ -42,84 +44,86 @@ class InstagramScraper extends PlaywrightBaseScraper {
         'Sec-Fetch-Dest': 'document'
       });
       
-      console.log('🎯 Strategy: Direct access with enhanced stealth');
+      console.log('🎯 Strategy: Try direct access, then login if needed');
       
       const profileUrl = `https://www.instagram.com/${username}/`;
       console.log(`📱 Navigating to: ${profileUrl}`);
 
-      // Navigate directly to the profile
+      // Navigate directly to the profile first
       await this.page.goto(profileUrl, { 
-        waitUntil: 'domcontentloaded', // Less strict waiting
+        waitUntil: 'domcontentloaded',
         timeout: 45000
       });
 
       // Human-like delays
       await this.page.waitForTimeout(3000 + Math.random() * 2000);
 
-      // Try to wait for profile content - simple approach
-      console.log('⏳ Waiting for profile content...');
+      // Check what we got
+      console.log('⏳ Checking page content...');
+      
+      await this.page.waitForSelector('body', { timeout: 10000 });
+      
+      const pageContent = await this.page.textContent('body') || '';
+      const currentUrl = this.page.url();
+      
+      // Check if we got the profile content directly
+      const hasProfileContent = (
+        pageContent.includes('posts') ||
+        pageContent.includes('followers') ||
+        pageContent.includes('following') ||
+        pageContent.includes(username)
+      ) && !currentUrl.includes('/accounts/login/');
       
       let success = false;
       
-      try {
-        // Wait for any content to load, then check what we got
-        await this.page.waitForSelector('body', { timeout: 10000 });
+      if (hasProfileContent) {
+        console.log('✅ Profile content loaded directly');
+        success = true;
+      } else {
+        // Need to login
+        console.log('🔑 Profile requires login, attempting authentication...');
         
-        // Check if we can find profile indicators
-        const pageContent = await this.page.textContent('body') || '';
-        const currentUrl = this.page.url();
-        
-        // Simple check - if we see profile-like content, proceed
-        const hasProfileContent = (
-          pageContent.includes('posts') ||
-          pageContent.includes('followers') ||
-          pageContent.includes('following') ||
-          pageContent.includes(username)
-        ) && !currentUrl.includes('/accounts/login/');
-        
-        if (hasProfileContent) {
-          console.log('✅ Profile content detected');
-          success = true;
-        } else {
-          console.log('⚠️ No profile content found or redirected to login');
+        const loginSuccess = await this.attemptLogin();
+        if (loginSuccess) {
+          console.log('🎉 Login successful, accessing profile...');
           
-          // Check if this is a login requirement or other issue
-          if (currentUrl.includes('/accounts/login/') || pageContent.includes('Log in')) {
-            console.log('🔒 Instagram requires login for this profile');
-            return {
-              success: false,
-              error: `Instagram requires login to view @${username}. This often happens for:\n• Private accounts\n• New or restricted profiles\n• When Instagram detects automated access\n\nTry popular public profiles like @instagram, @nike, @cocacola, or @natgeo instead.`,
-              method: 'Playwright with Sparticuz Chromium'
-            };
-          } else if (pageContent.includes('Page Not Found') || pageContent.includes("isn't available")) {
-            console.log('❌ Profile not found');
-            return {
-              success: false,
-              error: `Instagram profile @${username} not found or may be private`,
-              method: 'Playwright with Sparticuz Chromium'
-            };
+          // Navigate to profile after login
+          await this.page.goto(profileUrl, { 
+            waitUntil: 'domcontentloaded',
+            timeout: 45000 
+          });
+          
+          await this.page.waitForTimeout(2000);
+          
+          // Check if we have profile content now
+          const postLoginContent = await this.page.textContent('body') || '';
+          const hasPostLoginContent = (
+            postLoginContent.includes('posts') ||
+            postLoginContent.includes('followers') ||
+            postLoginContent.includes('following') ||
+            postLoginContent.includes(username)
+          );
+          
+          if (hasPostLoginContent) {
+            console.log('✅ Profile accessible after login');
+            success = true;
           } else {
-            console.log('❓ Unknown response from Instagram');
-            return {
-              success: false,
-              error: `Unable to access @${username}. Instagram may be blocking automated access. Try popular public profiles like @instagram, @nike, @cocacola.`,
-              method: 'Playwright with Sparticuz Chromium'
-            };
+            console.log('❌ Profile still not accessible after login');
           }
+        } else {
+          console.log('❌ Login failed');
+          return {
+            success: false,
+            error: 'Instagram login failed. This may be due to account verification requirements or incorrect credentials.',
+            method: 'Playwright with Sparticuz Chromium'
+          };
         }
-      } catch {
-        console.log('⚠️ Timeout waiting for content');
-        return {
-          success: false,
-          error: `Timeout accessing @${username}. Instagram may be slow or blocking access. Try popular public profiles like @instagram, @nike, @cocacola.`,
-          method: 'Playwright with Sparticuz Chromium'
-        };
       }
 
       if (!success) {
         return {
           success: false,
-          error: `Unable to load profile for @${username}. Try popular public profiles like @instagram, @nike, @cocacola.`,
+          error: `Unable to access @${username}. Try checking if the account exists and is public.`,
           method: 'Playwright with Sparticuz Chromium'
         };
       }
@@ -145,18 +149,76 @@ class InstagramScraper extends PlaywrightBaseScraper {
         success: true,
         data: profileData,
         screenshot,
-        method: 'Playwright with Sparticuz Chromium (Anonymous)'
+        method: 'Playwright with Sparticuz Chromium' + (this.isLoggedIn ? ' (Authenticated)' : ' (Anonymous)')
       };
 
     } catch (error) {
       console.error('❌ Instagram scraping failed:', error);
       return {
         success: false,
-        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Try popular public profiles like @instagram, @nike, @cocacola.`,
+        error: `Instagram analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         method: 'Playwright with Sparticuz Chromium'
       };
     } finally {
       await this.cleanup();
+    }
+  }
+
+  private async attemptLogin(): Promise<boolean> {
+    if (!this.page) return false;
+
+    const username = process.env.INSTAGRAM_USERNAME;
+    const password = process.env.INSTAGRAM_PASSWORD;
+
+    if (!username || !password) {
+      console.log('📝 No Instagram credentials found');
+      return false;
+    }
+
+    try {
+      console.log('🔑 Attempting Instagram login...');
+      
+      // Navigate to login page
+      await this.page.goto('https://www.instagram.com/accounts/login/', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+
+      // Wait for form
+      await this.page.waitForSelector('input[name="username"]', { timeout: 10000 });
+      
+      // Fill credentials with human-like delays
+      await this.page.fill('input[name="username"]', username);
+      await this.page.waitForTimeout(1000 + Math.random() * 1000);
+      
+      await this.page.fill('input[name="password"]', password);
+      await this.page.waitForTimeout(1000 + Math.random() * 1000);
+      
+      // Submit
+      await this.page.click('button[type="submit"]');
+      
+      // Wait for response
+      await this.page.waitForTimeout(5000);
+      
+      // Check if login was successful
+      const currentUrl = this.page.url();
+      const pageText = await this.page.textContent('body') || '';
+      
+      // Simple success check
+      if (!currentUrl.includes('/accounts/login/') && 
+          !currentUrl.includes('/challenge/') &&
+          !pageText.includes('incorrect')) {
+        console.log('✅ Login appears successful');
+        this.isLoggedIn = true;
+        return true;
+      } else {
+        console.log('❌ Login failed or requires verification');
+        return false;
+      }
+
+    } catch (error) {
+      console.error('❌ Login attempt failed:', error);
+      return false;
     }
   }
 
