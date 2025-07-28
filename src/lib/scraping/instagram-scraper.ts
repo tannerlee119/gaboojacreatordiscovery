@@ -107,7 +107,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
             };
           }
         }
-      } catch (error) {
+      } catch {
         console.log('⚠️ Timeout waiting for content');
         return {
           success: false,
