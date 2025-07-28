@@ -666,6 +666,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
       );
 
       return {
+        username: pageUsername,
         displayName: displayName || pageUsername,
         bio: bio || undefined,
         profileImageUrl: profileImageUrl || '',
