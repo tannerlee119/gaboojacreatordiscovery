@@ -40,6 +40,20 @@ class InstagramScraper extends PlaywrightBaseScraper {
         // Enhanced stealth setup - be more aggressive about appearing human
         await this.setupStealth();
         
+        // Inject cookies if provided
+        const cookiesEnv = process.env.INSTAGRAM_COOKIES_JSON;
+        if (cookiesEnv) {
+          try {
+            const cookies = JSON.parse(cookiesEnv);
+            if (Array.isArray(cookies) && cookies.length > 0) {
+              await this.page.context().addCookies(cookies);
+              console.log(`🍪 Injected ${cookies.length} cookies from env`);
+            }
+          } catch (cookieErr) {
+            console.log('⚠️ Failed to parse INSTAGRAM_COOKIES_JSON:', cookieErr);
+          }
+        }
+        
         // Add some additional stealth measures
         await this.page.setExtraHTTPHeaders({
           'Accept-Language': 'en-US,en;q=0.9',
