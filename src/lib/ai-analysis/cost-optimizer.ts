@@ -49,6 +49,7 @@ export class AICostOptimizer {
     if (followerCount > 1000000) score += 3; // 1M+ followers
     else if (followerCount > 100000) score += 2; // 100K+ followers
     else if (followerCount > 10000) score += 1; // 10K+ followers
+    else if (followerCount < 5000) score += 2; // VERY small accounts need richer analysis
     
     // Verification adds importance
     if (hasVerification) score += 2;
