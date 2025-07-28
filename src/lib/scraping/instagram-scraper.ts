@@ -680,12 +680,12 @@ class InstagramScraper extends PlaywrightBaseScraper {
     
     try {
       // Look for follower patterns in the content
-      const followerMatches = profileData.rawContent.match(/(\d+(?:[.,]\d+)*)\s*(?:K|M|B)?\s*followers?/i);
+      const followerMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*followers?/i);
       if (followerMatches) {
         followerCount = this.parseCount(followerMatches[1]);
       }
 
-      const followingMatches = profileData.rawContent.match(/(\d+(?:[.,]\d+)*)\s*(?:K|M|B)?\s*following/i);
+      const followingMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*following/i);
       if (followingMatches) {
         followingCount = this.parseCount(followingMatches[1]);
       }
@@ -696,7 +696,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
     // Extract posts count
     let postCount = 0;
     try {
-      const postMatches = profileData.rawContent.match(/(\d+(?:[.,]\d+)*)\s*(?:K|M|B)?\s*posts?/i);
+      const postMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*posts?/i);
       if (postMatches) {
         postCount = this.parseCount(postMatches[1]);
       }
@@ -749,16 +749,21 @@ class InstagramScraper extends PlaywrightBaseScraper {
 
   private parseCount(countStr: string): number {
     try {
-      // Remove commas and convert to number
-      const cleanStr = countStr.replace(/,/g, '');
-      const num = parseFloat(cleanStr);
-      
-      // Handle K, M, B suffixes
-      if (countStr.includes('K')) return Math.round(num * 1000);
-      if (countStr.includes('M')) return Math.round(num * 1000000);
-      if (countStr.includes('B')) return Math.round(num * 1000000000);
-      
-      return Math.round(num);
+      const suffixMatch = countStr.match(/[KMB]$/i);
+      const suffix = suffixMatch ? suffixMatch[0].toUpperCase() : '';
+      const numericPart = countStr.replace(/[^\d.,]/g, '').replace(/,/g, '');
+      const num = parseFloat(numericPart);
+      if (isNaN(num)) return 0;
+      switch (suffix) {
+        case 'K':
+          return Math.round(num * 1_000);
+        case 'M':
+          return Math.round(num * 1_000_000);
+        case 'B':
+          return Math.round(num * 1_000_000_000);
+        default:
+          return Math.round(num);
+      }
     } catch {
       return 0;
     }
