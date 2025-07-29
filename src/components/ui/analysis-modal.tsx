@@ -95,7 +95,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
           <DialogTitle className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                {analysisData.profile.platform === 'instagram' ? `@${analysisData.profile.username}` : analysisData.profile.displayName}
+                @{analysisData.profile.username}
                 {analysisData.profile.isVerified && (
                   <span className="text-primary">✓</span>
                 )}

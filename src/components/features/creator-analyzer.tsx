@@ -284,7 +284,7 @@ export function CreatorAnalyzer() {
                 <div className="flex items-center gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      {result.profile.platform === 'instagram' ? `@${result.profile.username}` : result.profile.displayName}
+                      @{result.profile.username}
                       {result.profile.isVerified && (
                         <span className="text-primary">✓</span>
                       )}

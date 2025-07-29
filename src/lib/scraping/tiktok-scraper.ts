@@ -369,6 +369,13 @@ class TikTokScraper extends PlaywrightBaseScraper {
         const followerCount = this.parseNumber(followersMatch[1]);
         const likeCount = this.parseNumber(likesMatch[1]);
         
+        // Check for verification indicators in the page text
+        const isVerified = pageText.includes('verified') || 
+                          pageText.includes('Verified') || 
+                          pageText.includes('✓') ||
+                          pageText.includes('checkmark') ||
+                          /verified["\s]*:\s*true/i.test(pageText);
+        
         const metrics: TikTokMetrics = {
           followerCount,
           followingCount,
@@ -384,7 +391,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
           displayName: username, // Fallback to username
           bio: '',
           profileImageUrl: '',
-          isVerified: false,
+          isVerified,
           followerCount,
           followingCount,
           metrics
@@ -399,6 +406,13 @@ class TikTokScraper extends PlaywrightBaseScraper {
       
       // Clean up bio text
       const bio = bioRaw.replace(/Something went wrong.*$/i, '').trim();
+      
+      // Check for verification indicators in the page text
+      const isVerified = pageText.includes('verified') || 
+                        pageText.includes('Verified') || 
+                        pageText.includes('✓') ||
+                        pageText.includes('checkmark') ||
+                        /verified["\s]*:\s*true/i.test(pageText);
       
       const metrics: TikTokMetrics = {
         followerCount,
@@ -417,7 +431,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
         displayName: displayName.trim(),
         bio: bio,
         profileImageUrl: '',
-        isVerified: false, // Could add verification detection later
+        isVerified,
         followerCount,
         followingCount,
         metrics

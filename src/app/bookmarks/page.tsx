@@ -159,7 +159,7 @@ export default function BookmarksPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-base font-semibold">
-                          {bookmark.platform === 'instagram' ? `@${bookmark.username}` : bookmark.displayName}
+                          @{bookmark.username}
                         </span>
                         {bookmark.isVerified && (
                           <span className="text-primary">✓</span>

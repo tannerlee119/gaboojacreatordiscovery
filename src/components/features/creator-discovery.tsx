@@ -90,7 +90,7 @@ export function CreatorDiscovery() {
                   <div className="flex items-center gap-3">
                     <div>
                       <div className="font-medium">
-                        {analysis.profile.platform === 'instagram' ? `@${analysis.profile.username}` : analysis.profile.displayName}
+                        @{analysis.profile.username}
                         {analysis.profile.isVerified && <span className="ml-1 text-primary">✓</span>}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
