@@ -17,6 +17,14 @@ interface TikTokScrapingResult extends ScrapingResult {
 
 class TikTokScraper extends PlaywrightBaseScraper {
   async analyzeProfile(username: string): Promise<TikTokScrapingResult> {
+    // 1) Fast path – try TikTok public JSON API (no login, no JS)
+    try {
+      const apiResult = await this.fetchUserJson(username);
+      if (apiResult) return apiResult;
+    } catch (apiErr) {
+      console.log('⚠️ Public API fallback failed:', apiErr);
+    }
+
     try {
       console.log(`🔍 Starting TikTok analysis for: ${username}`);
       
@@ -195,6 +203,64 @@ class TikTokScraper extends PlaywrightBaseScraper {
       followingCount,
       metrics
     };
+  }
+
+  private async fetchUserJson(username: string): Promise<TikTokScrapingResult | null> {
+    try {
+      const url = `https://www.tiktok.com/node/share/user/@${username}`;
+      console.log(`🌐 Trying JSON API: ${url}`);
+      // Use global fetch (Node 18+) – fall back gracefully if not available
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const res = await (typeof fetch !== 'undefined' ? fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0 Safari/537.36',
+          'Referer': 'https://www.tiktok.com/'
+        }
+      }) : null);
+
+      if (!res || res.status !== 200) {
+        console.log(`🔍 JSON API returned status ${res?.status}`);
+        return null;
+      }
+
+      const json = await res.json();
+      if (!json || !json.userInfo || !json.userInfo.user) {
+        console.log('⚠️ JSON payload missing userInfo');
+        return null;
+      }
+
+      const user = json.userInfo.user;
+      const stats = json.userInfo.stats || {};
+
+      const metrics: TikTokMetrics = {
+        followerCount: stats.followerCount || 0,
+        followingCount: stats.followingCount || 0,
+        likeCount: stats.heartCount || 0,
+        videoCount: stats.videoCount || 0,
+        averageViews: 0,
+        averageLikes: 0,
+        engagementRate: 0,
+        recentVideos: []
+      };
+
+      return {
+        success: true,
+        data: {
+          displayName: user.nickname || username,
+          bio: user.signature || '',
+          profileImageUrl: user.avatarLarger || '',
+          isVerified: !!user.verified,
+          followerCount: stats.followerCount || 0,
+          followingCount: stats.followingCount || 0,
+          metrics
+        },
+        method: 'public-json'
+      };
+    } catch (err) {
+      console.log('⚠️ fetchUserJson error', err);
+      return null;
+    }
   }
 
   private parseNumber(str: string): number {
