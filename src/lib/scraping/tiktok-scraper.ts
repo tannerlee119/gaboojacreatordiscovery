@@ -47,8 +47,37 @@ class TikTokScraper extends PlaywrightBaseScraper {
         }
       }
 
-      // Wait for page to load
-      await this.page.waitForTimeout(5000);
+      // Wait for DOM and attempt to dismiss cookie / login overlays
+      await this.page.waitForLoadState('domcontentloaded');
+
+      // Dismiss cookie consent if present
+      try {
+        const acceptBtn = await this.page.$('button:has-text("Accept all")');
+        if (acceptBtn) {
+          await acceptBtn.click();
+          console.log('🍪 Dismissed cookie banner');
+        }
+      } catch {
+        // ignore
+      }
+
+      // Dismiss login popup if present
+      try {
+        const closeLogin = await this.page.$('div[role="dialog"] button:has-text("Close")');
+        if (closeLogin) {
+          await closeLogin.click();
+          console.log('🔒 Closed login modal');
+        }
+      } catch {
+        // ignore
+      }
+
+      // Wait for the profile subtitle (username) to appear
+      try {
+        await this.page.waitForSelector('[data-e2e="user-subtitle"], h2:has-text("@")', { timeout: 15000 });
+      } catch {
+        console.log('⚠️ Profile subtitle not found – may be blocked or non-existent');
+      }
 
       // Check for error states
       const errorMessages = [
@@ -58,16 +87,15 @@ class TikTokScraper extends PlaywrightBaseScraper {
         'User not found'
       ];
 
-      const pageText = await this.page.textContent('body') || '';
-      
-      for (const errorMsg of errorMessages) {
-        if (pageText.includes(errorMsg)) {
-          return {
-            success: false,
-            error: `TikTok account @${username} does not exist`,
-            method: 'scraping'
-          };
-        }
+      const pageText = (await this.page.textContent('body')) || '';
+
+      // If HTTP 404 or known text indicates not-found, return error
+      if (this.page.url().includes('404') || errorMessages.some(msg => pageText.includes(msg))) {
+        return {
+          success: false,
+          error: `TikTok account @${username} does not exist`,
+          method: 'scraping'
+        };
       }
 
       // Extract profile data
@@ -101,20 +129,24 @@ class TikTokScraper extends PlaywrightBaseScraper {
   private async extractProfileData(username: string) {
     if (!this.page) throw new Error('Page not initialized');
 
-    // Wait for profile data to load
-    await this.page.waitForTimeout(3000);
+    // Ensure main header elements are loaded
+    try {
+      await this.page.waitForSelector('[data-e2e="user-title"], h1', { timeout: 15000 });
+    } catch {
+      console.log('⚠️ Profile header not found');
+    }
 
     // Extract display name
-    const displayName = await this.page.textContent('[data-e2e="user-title"]') || 
-                       await this.page.textContent('h1') || 
-                       await this.page.textContent('h2') ||
+    // Use new selectors first
+    const displayName = await this.page.textContent('[data-e2e="user-title"]') ||
+                       await this.page.textContent('h1') ||
                        username;
 
     // Extract bio
     const bio = await this.page.textContent('[data-e2e="user-bio"]') || '';
 
     // Extract follower/following counts from stats
-    const statsElements = await this.page.locator('[data-e2e="followers-count"], [data-e2e="following-count"]').all();
+    const statsElements = await this.page.locator('[data-e2e="followers-count"], [data-e2e="following-count"], strong').all();
     
     let followerCount = 0;
     let followingCount = 0;
