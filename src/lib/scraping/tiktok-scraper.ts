@@ -103,21 +103,15 @@ class TikTokScraper extends PlaywrightBaseScraper {
       console.log(`📄 Page text length: ${pageText.length}`);
       console.log(`📄 Page text sample: ${pageText.substring(0, 300)}...`);
 
-      // Check for login/age verification walls
-      const blockedIndicators = [
-        'Log in to TikTok',
-        'Sign up for TikTok',
-        'You must be 18 or older',
-        'This content is age-restricted',
-      ];
-
-      const isBlocked = blockedIndicators.some(indicator => pageText.includes(indicator));
-      if (isBlocked) {
-        console.log('🚫 Detected login/age verification wall');
+      // First, try to extract data from page text (even if login prompts are present)
+      console.log('🔍 Attempting to parse profile data from page text...');
+      const textData = this.parseFromPageText(pageText, username);
+      if (textData) {
+        console.log('✅ Successfully parsed profile data from page text');
         return {
-          success: false,
-          error: `TikTok is blocking access to @${username} - requires login or age verification`,
-          method: 'scraping'
+          success: true,
+          data: textData,
+          method: 'text-parsing'
         };
       }
 
@@ -143,25 +137,31 @@ class TikTokScraper extends PlaywrightBaseScraper {
       const foundElements = hasProfileElements.filter(el => el !== null).length;
       console.log(`📊 Found ${foundElements}/6 profile indicators`);
 
-      // Try to parse data from page text if normal selectors don't work
+      // If no text data and no structured elements, check for blocking
       if (foundElements === 0) {
-        console.log('🔍 No structured elements found, trying to parse from page text...');
-        const textData = this.parseFromPageText(pageText, username);
-        if (textData) {
-          console.log('✅ Successfully parsed profile data from page text');
-          return {
-            success: true,
-            data: textData,
-            method: 'text-parsing'
-          };
-        } else {
-          console.log('❌ No profile data found in page text either');
+        const blockedIndicators = [
+          'Log in to TikTok',
+          'Sign up for TikTok',
+          'You must be 18 or older',
+          'This content is age-restricted',
+        ];
+
+        const isBlocked = blockedIndicators.some(indicator => pageText.includes(indicator));
+        if (isBlocked) {
+          console.log('🚫 No data found and login/age verification wall detected');
           return {
             success: false,
-            error: `Unable to access TikTok profile @${username} - page may be restricted or require login`,
+            error: `TikTok is blocking access to @${username} - requires login or age verification`,
             method: 'scraping'
           };
         }
+
+        console.log('❌ No profile data or elements found');
+        return {
+          success: false,
+          error: `Unable to access TikTok profile @${username} - page may be restricted`,
+          method: 'scraping'
+        };
       }
 
       // Extract profile data
