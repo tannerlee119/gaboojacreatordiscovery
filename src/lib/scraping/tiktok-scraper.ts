@@ -108,9 +108,20 @@ class TikTokScraper extends PlaywrightBaseScraper {
       const textData = this.parseFromPageText(pageText, username);
       if (textData) {
         console.log('✅ Successfully parsed profile data from page text');
+       
+        // Take screenshot for AI analysis
+        console.log('📸 Taking screenshot for AI analysis...');
+        const screenshot = await this.page.screenshot({ 
+          fullPage: false,
+          type: 'jpeg',
+          quality: 80,
+          clip: { x: 0, y: 0, width: 1280, height: 1024 }
+        });
+        
         return {
           success: true,
           data: textData,
+          screenshot,
           method: 'text-parsing'
         };
       }
