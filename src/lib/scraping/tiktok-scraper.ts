@@ -97,11 +97,58 @@ class TikTokScraper extends PlaywrightBaseScraper {
 
       const pageText = (await this.page.textContent('body')) || '';
 
+      // Debug: log what we actually see
+      console.log(`📄 Page URL: ${this.page.url()}`);
+      console.log(`📄 Page title: ${await this.page.title()}`);
+      console.log(`📄 Page text length: ${pageText.length}`);
+      console.log(`📄 Page text sample: ${pageText.substring(0, 300)}...`);
+
+      // Check for login/age verification walls
+      const blockedIndicators = [
+        'Log in to TikTok',
+        'Sign up for TikTok',
+        'You must be 18 or older',
+        'This content is age-restricted',
+        'Something went wrong'
+      ];
+
+      const isBlocked = blockedIndicators.some(indicator => pageText.includes(indicator));
+      if (isBlocked) {
+        console.log('🚫 Detected login/age verification wall');
+        return {
+          success: false,
+          error: `TikTok is blocking access to @${username} - requires login or age verification`,
+          method: 'scraping'
+        };
+      }
+
       // If HTTP 404 or known text indicates not-found, return error
       if (this.page.url().includes('404') || errorMessages.some(msg => pageText.includes(msg))) {
         return {
           success: false,
           error: `TikTok account @${username} does not exist`,
+          method: 'scraping'
+        };
+      }
+
+      // Check if we have any profile indicators at all
+      const hasProfileElements = await Promise.all([
+        this.page.$('[data-e2e="user-title"]'),
+        this.page.$('[data-e2e="user-subtitle"]'),
+        this.page.$('h1'),
+        this.page.$('h2'),
+        this.page.$(`text=${username}`),
+        this.page.$(`text=@${username}`)
+      ]);
+
+      const foundElements = hasProfileElements.filter(el => el !== null).length;
+      console.log(`📊 Found ${foundElements}/6 profile indicators`);
+
+      if (foundElements === 0) {
+        console.log('❌ No profile elements found - likely blocked or non-existent');
+        return {
+          success: false,
+          error: `Unable to access TikTok profile @${username} - page may be restricted or require login`,
           method: 'scraping'
         };
       }
