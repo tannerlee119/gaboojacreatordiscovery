@@ -109,7 +109,6 @@ class TikTokScraper extends PlaywrightBaseScraper {
         'Sign up for TikTok',
         'You must be 18 or older',
         'This content is age-restricted',
-        'Something went wrong'
       ];
 
       const isBlocked = blockedIndicators.some(indicator => pageText.includes(indicator));
@@ -144,13 +143,25 @@ class TikTokScraper extends PlaywrightBaseScraper {
       const foundElements = hasProfileElements.filter(el => el !== null).length;
       console.log(`📊 Found ${foundElements}/6 profile indicators`);
 
+      // Try to parse data from page text if normal selectors don't work
       if (foundElements === 0) {
-        console.log('❌ No profile elements found - likely blocked or non-existent');
-        return {
-          success: false,
-          error: `Unable to access TikTok profile @${username} - page may be restricted or require login`,
-          method: 'scraping'
-        };
+        console.log('🔍 No structured elements found, trying to parse from page text...');
+        const textData = this.parseFromPageText(pageText, username);
+        if (textData) {
+          console.log('✅ Successfully parsed profile data from page text');
+          return {
+            success: true,
+            data: textData,
+            method: 'text-parsing'
+          };
+        } else {
+          console.log('❌ No profile data found in page text either');
+          return {
+            success: false,
+            error: `Unable to access TikTok profile @${username} - page may be restricted or require login`,
+            method: 'scraping'
+          };
+        }
       }
 
       // Extract profile data
@@ -319,6 +330,92 @@ class TikTokScraper extends PlaywrightBaseScraper {
     if (cleaned.includes('b')) return Math.floor(number * 1000000000);
     
     return Math.floor(number);
+  }
+
+  private parseFromPageText(pageText: string, username: string): TikTokScrapingResult['data'] | null {
+    try {
+      // Look for the compact format: "usernameDisplay Name123Following456Followers789LikesBio text here"
+      const pattern = new RegExp(
+        `${username}([^0-9]+?)(\\d+(?:\\.\\d+)?[KMB]?)Following(\\d+(?:\\.\\d+)?[KMB]?)Followers(\\d+(?:\\.\\d+)?[KMB]?)Likes([^{]+?)(?:{|$)`,
+        'i'
+      );
+      
+      const match = pageText.match(pattern);
+      
+      if (!match) {
+        console.log('🔍 Could not parse compact format, trying alternative...');
+        
+        // Try simpler patterns for individual pieces
+        const followingMatch = pageText.match(/([\d.]+[KMB]?)Following/i);
+        const followersMatch = pageText.match(/([\d.]+[KMB]?)Followers/i);
+        const likesMatch = pageText.match(/([\d.]+[KMB]?)Likes/i);
+        
+        if (!followingMatch || !followersMatch || !likesMatch) {
+          return null;
+        }
+        
+        const followingCount = this.parseNumber(followingMatch[1]);
+        const followerCount = this.parseNumber(followersMatch[1]);
+        const likeCount = this.parseNumber(likesMatch[1]);
+        
+        const metrics: TikTokMetrics = {
+          followerCount,
+          followingCount,
+          likeCount,
+          videoCount: 0,
+          averageViews: 0,
+          averageLikes: 0,
+          engagementRate: 0,
+          recentVideos: []
+        };
+        
+        return {
+          displayName: username, // Fallback to username
+          bio: '',
+          profileImageUrl: '',
+          isVerified: false,
+          followerCount,
+          followingCount,
+          metrics
+        };
+      }
+      
+      const [, displayName, followingRaw, followersRaw, likesRaw, bioRaw] = match;
+      
+      const followingCount = this.parseNumber(followingRaw);
+      const followerCount = this.parseNumber(followersRaw);
+      const likeCount = this.parseNumber(likesRaw);
+      
+      // Clean up bio text
+      const bio = bioRaw.replace(/Something went wrong.*$/i, '').trim();
+      
+      const metrics: TikTokMetrics = {
+        followerCount,
+        followingCount,
+        likeCount,
+        videoCount: 0,
+        averageViews: 0,
+        averageLikes: 0,
+        engagementRate: 0,
+        recentVideos: []
+      };
+      
+      console.log(`📊 Parsed: ${displayName.trim()}, ${followingCount} following, ${followerCount} followers, ${likeCount} likes`);
+      
+      return {
+        displayName: displayName.trim(),
+        bio: bio,
+        profileImageUrl: '',
+        isVerified: false, // Could add verification detection later
+        followerCount,
+        followingCount,
+        metrics
+      };
+      
+    } catch (err) {
+      console.log('⚠️ Error parsing page text:', err);
+      return null;
+    }
   }
 }
 
