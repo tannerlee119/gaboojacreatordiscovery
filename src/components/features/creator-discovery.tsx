@@ -217,7 +217,7 @@ export function CreatorDiscovery() {
                 )}
               </CardTitle>
               <CardDescription>
-                Find potential collaboration partners in the mid-tier range (10K-100K followers)
+                Find creators across all tiers - from nano influencers to mega creators (focus on mid-tier 10K-100K)
               </CardDescription>
             </CardHeader>
             <CardContent>
