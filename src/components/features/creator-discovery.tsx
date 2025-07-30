@@ -9,7 +9,7 @@ import { formatNumber } from '@/lib/utils';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
-import { addBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { addBookmark, removeBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Storage keys for state persistence
@@ -143,6 +143,7 @@ export function CreatorDiscovery() {
       const savedState = localStorage.getItem(DISCOVERY_STATE_KEY);
       if (savedState) {
         const state: DiscoveryState = JSON.parse(savedState);
+
         setSearchTerm(state.searchTerm);
         setFilters(state.filters);
         setCurrentPage(state.currentPage);
@@ -173,19 +174,21 @@ export function CreatorDiscovery() {
     }
   }, [isStateLoaded, fetchDiscoveryData, currentPage]);
 
-  // Save state whenever it changes
+  // Save state whenever it changes (only after state is loaded to avoid overwriting)
   useEffect(() => {
-    try {
-      const state: DiscoveryState = {
-        searchTerm,
-        filters,
-        currentPage
-      };
-      localStorage.setItem(DISCOVERY_STATE_KEY, JSON.stringify(state));
-    } catch (error) {
-      console.error('Error saving discovery state:', error);
+    if (isStateLoaded) {
+      try {
+        const state: DiscoveryState = {
+          searchTerm,
+          filters,
+          currentPage
+        };
+        localStorage.setItem(DISCOVERY_STATE_KEY, JSON.stringify(state));
+      } catch (error) {
+        console.error('Error saving discovery state:', error);
+      }
     }
-  }, [searchTerm, filters, currentPage]);
+  }, [searchTerm, filters, currentPage, isStateLoaded]);
 
   // Save collapsed state whenever it changes
   useEffect(() => {
@@ -198,6 +201,7 @@ export function CreatorDiscovery() {
 
   const handleFiltersChange = (newFilters: DiscoveryFilters) => {
     setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleApplyFilters = () => {
@@ -205,18 +209,25 @@ export function CreatorDiscovery() {
   };
 
   const handleBookmarkCreator = async (creator: DiscoveryCreator) => {
-    // Convert discovery creator to bookmark format
-    const bookmarkData = {
-      username: creator.username,
-      platform: creator.platform,
-      displayName: creator.displayName,
-      bio: creator.bio,
-      isVerified: creator.isVerified,
-      followerCount: creator.followerCount,
-      followingCount: creator.followingCount,
-    };
+    const isCurrentlyBookmarked = isBookmarked(creator.platform, creator.username);
     
-    const newBookmark = addBookmark(bookmarkData);
+    if (isCurrentlyBookmarked) {
+      // Remove bookmark
+      removeBookmark(creator.platform, creator.username);
+    } else {
+      // Add bookmark
+      const bookmarkData = {
+        username: creator.username,
+        platform: creator.platform,
+        displayName: creator.displayName,
+        bio: creator.bio,
+        isVerified: creator.isVerified,
+        followerCount: creator.followerCount,
+        followingCount: creator.followingCount,
+      };
+      addBookmark(bookmarkData);
+    }
+    
     setBookmarks(getBookmarkedCreators()); // Refresh bookmarks
   };
 
@@ -351,7 +362,10 @@ export function CreatorDiscovery() {
       {analysisHistory.length > 0 && (
         <Card className="gabooja-card">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md p-2 -m-2 transition-colors"
+              onClick={() => setIsRecentAnalysesCollapsed(!isRecentAnalysesCollapsed)}
+            >
               <div>
                 <CardTitle className="flex items-center gap-2">
                   Recent Analyses
@@ -363,18 +377,13 @@ export function CreatorDiscovery() {
                   Your recently analyzed creators persist across navigation
                 </CardDescription>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsRecentAnalysesCollapsed(!isRecentAnalysesCollapsed)}
-                className="h-8 w-8 p-0"
-              >
+              <div className="h-8 w-8 flex items-center justify-center">
                 {isRecentAnalysesCollapsed ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronUp className="h-4 w-4" />
                 )}
-              </Button>
+              </div>
             </div>
           </CardHeader>
           
