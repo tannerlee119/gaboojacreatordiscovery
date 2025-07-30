@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useCreator } from '@/lib/creator-context';
 import { formatNumber } from '@/lib/utils';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
+import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
+import { addBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { Search, Loader2, AlertCircle } from 'lucide-react';
 
 interface AnalysisData {
   profile: {
@@ -48,32 +53,236 @@ interface AnalysisData {
   };
 }
 
+interface DiscoveryResponse {
+  creators: DiscoveryCreator[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  appliedFilters: DiscoveryFilters;
+}
+
 export function CreatorDiscovery() {
   const { analysisHistory } = useCreator();
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
+  
+  // Discovery state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<DiscoveryFilters>({
+    platform: 'all',
+    category: [],
+    minFollowers: 0,
+    maxFollowers: 10000000,
+    verified: undefined,
+    sortBy: 'followers'
+  });
+  const [discoveryData, setDiscoveryData] = useState<DiscoveryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch discovery data
+  const fetchDiscoveryData = useCallback(async (page = 1) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        platform: filters.platform,
+        page: page.toString(),
+        limit: '12',
+        sortBy: filters.sortBy,
+        minFollowers: filters.minFollowers.toString(),
+        maxFollowers: filters.maxFollowers.toString()
+      });
+
+      if (filters.category.length > 0) {
+        params.append('category', filters.category.join(','));
+      }
+
+      if (filters.verified !== undefined) {
+        params.append('verified', filters.verified.toString());
+      }
+
+      const response = await fetch(`/api/discover-creators?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch creators');
+      }
+
+      const data = await response.json();
+      setDiscoveryData(data);
+      setCurrentPage(page);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch creators');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters]);
+
+  // Load initial data
+  useEffect(() => {
+    fetchDiscoveryData(1);
+  }, [fetchDiscoveryData]);
+
+  // Load bookmarks on mount
+  useEffect(() => {
+    setBookmarks(getBookmarkedCreators());
+  }, []);
+
+  const handleFiltersChange = (newFilters: DiscoveryFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleApplyFilters = () => {
+    fetchDiscoveryData(1);
+  };
+
+  const handleBookmarkCreator = async (creator: DiscoveryCreator) => {
+    // Convert discovery creator to bookmark format
+    const bookmarkData = {
+      username: creator.username,
+      platform: creator.platform,
+      displayName: creator.displayName,
+      bio: creator.bio,
+      isVerified: creator.isVerified,
+      followerCount: creator.followerCount,
+      followingCount: creator.followingCount,
+    };
+    
+    const newBookmark = addBookmark(bookmarkData);
+    setBookmarks(getBookmarkedCreators()); // Refresh bookmarks
+  };
+
+  const handleAnalyzeCreator = async (creator: DiscoveryCreator) => {
+    // Trigger analysis - for now, just show a message
+    // In the future, this would call the analysis API
+    alert(`Analysis for @${creator.username} would be triggered here`);
+  };
 
   const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
     setIsModalOpen(true);
   };
 
+  const isCreatorBookmarked = (creator: DiscoveryCreator) => {
+    return isBookmarked(creator.platform, creator.username);
+  };
+
+  const filteredCreators = discoveryData?.creators.filter(creator =>
+    searchTerm === '' || 
+    creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    creator.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
   return (
     <div className="space-y-6">
+      {/* Search Bar */}
       <Card className="gabooja-card">
-        <CardHeader>
-          <CardTitle>Creator Discovery</CardTitle>
-          <CardDescription>
-            Discover creators across different platforms and categories
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground">
-            <p>Creator discovery functionality coming soon...</p>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search creators by username or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
 
+      {/* Main Content */}
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Filters Sidebar */}
+        <div className="lg:col-span-1">
+          <DiscoveryFiltersComponent
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onApplyFilters={handleApplyFilters}
+          />
+        </div>
+
+        {/* Discovery Results */}
+        <div className="lg:col-span-3">
+          <Card className="gabooja-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Discover Creators</span>
+                {discoveryData && (
+                  <span className="text-sm text-muted-foreground font-normal">
+                    {discoveryData.totalCount} creators found
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Find potential collaboration partners in the mid-tier range (10K-100K followers)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading creators...</span>
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center py-12 text-red-500">
+                  <AlertCircle className="h-8 w-8 mr-2" />
+                  <span>{error}</span>
+                </div>
+              ) : filteredCreators.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No creators found matching your criteria.</p>
+                  <p className="text-sm mt-2">Try adjusting your filters or search term.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Creator Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+                    {filteredCreators.map((creator) => (
+                      <DiscoveryCreatorCard
+                        key={creator.id}
+                        creator={creator}
+                        isBookmarked={isCreatorBookmarked(creator)}
+                        onBookmark={handleBookmarkCreator}
+                        onAnalyze={handleAnalyzeCreator}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {discoveryData && discoveryData.totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === 1 || isLoading}
+                        onClick={() => fetchDiscoveryData(currentPage - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {discoveryData.totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!discoveryData.hasNextPage || isLoading}
+                        onClick={() => fetchDiscoveryData(currentPage + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Recent Analyses Section */}
       {analysisHistory.length > 0 && (
         <Card className="gabooja-card">
           <CardHeader>
