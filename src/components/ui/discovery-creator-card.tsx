@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
-import { Bookmark, BookmarkCheck, Eye, BarChart3 } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Eye, BarChart3, ExternalLink } from 'lucide-react';
 
 export interface DiscoveryCreator {
   id: string;
@@ -25,15 +25,13 @@ interface DiscoveryCreatorCardProps {
   isBookmarked: boolean;
   onBookmark: (creator: DiscoveryCreator) => void;
   onAnalyze: (creator: DiscoveryCreator) => void;
-  onViewProfile?: (creator: DiscoveryCreator) => void;
 }
 
 export function DiscoveryCreatorCard({ 
   creator, 
   isBookmarked, 
   onBookmark, 
-  onAnalyze, 
-  onViewProfile 
+  onAnalyze
 }: DiscoveryCreatorCardProps) {
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
@@ -54,6 +52,14 @@ export function DiscoveryCreatorCard({
     } finally {
       setIsAnalyzeLoading(false);
     }
+  };
+
+  const handleViewProfile = () => {
+    const profileUrl = creator.platform === 'instagram' 
+      ? `https://instagram.com/${creator.username}`
+      : `https://tiktok.com/@${creator.username}`;
+    
+    window.open(profileUrl, '_blank', 'noopener,noreferrer');
   };
 
   const getCategoryColor = (category: string) => {
@@ -87,22 +93,27 @@ export function DiscoveryCreatorCard({
     <Card className="gabooja-card hover:shadow-lg transition-shadow duration-200">
       <CardContent className="p-4">
         <div className="space-y-3">
-          {/* Header with username and verification */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-semibold">
-                @{creator.username}
-              </span>
-              {creator.isVerified && (
-                <span className="text-primary">✓</span>
-              )}
+          {/* Header with bookmark */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-base font-semibold truncate">
+                  @{creator.username}
+                </span>
+                {creator.isVerified && (
+                  <span className="text-primary text-sm">✓</span>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {creator.displayName}
+              </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBookmark}
               disabled={isBookmarkLoading}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 flex-shrink-0 ml-2"
             >
               {isBookmarked ? (
                 <BookmarkCheck className="h-4 w-4 text-primary" />
@@ -110,11 +121,6 @@ export function DiscoveryCreatorCard({
                 <Bookmark className="h-4 w-4" />
               )}
             </Button>
-          </div>
-
-          {/* Display name */}
-          <div className="text-sm text-muted-foreground">
-            {creator.displayName}
           </div>
 
           {/* Platform and category tags */}
@@ -160,28 +166,26 @@ export function DiscoveryCreatorCard({
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleAnalyze}
               disabled={isAnalyzeLoading}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               <BarChart3 className="h-3 w-3 mr-1" />
               {isAnalyzeLoading ? 'Analyzing...' : 'Analyze'}
             </Button>
-            {onViewProfile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onViewProfile(creator)}
-                className="flex-1 text-xs"
-              >
-                <Eye className="h-3 w-3 mr-1" />
-                View
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleViewProfile}
+              className="text-xs"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              View Profile
+            </Button>
           </div>
         </div>
       </CardContent>

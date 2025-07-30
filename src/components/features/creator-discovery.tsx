@@ -10,7 +10,17 @@ import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
 import { addBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
-import { Search, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+
+// Storage keys for state persistence
+const DISCOVERY_STATE_KEY = 'gabooja-discovery-state';
+const RECENT_ANALYSES_COLLAPSED_KEY = 'gabooja-recent-analyses-collapsed';
+
+interface DiscoveryState {
+  searchTerm: string;
+  filters: DiscoveryFilters;
+  currentPage: number;
+}
 
 interface AnalysisData {
   profile: {
@@ -68,7 +78,10 @@ export function CreatorDiscovery() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
   
-  // Discovery state
+  // Recent analyses collapsed state
+  const [isRecentAnalysesCollapsed, setIsRecentAnalysesCollapsed] = useState(true);
+  
+  // Discovery state with persistence
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<DiscoveryFilters>({
     platform: 'all',
@@ -121,15 +134,67 @@ export function CreatorDiscovery() {
     }
   }, [filters]);
 
-  // Load initial data
+  // Load persisted state on mount
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
+  
   useEffect(() => {
-    fetchDiscoveryData(1);
-  }, [fetchDiscoveryData]);
+    try {
+      // Load discovery state
+      const savedState = localStorage.getItem(DISCOVERY_STATE_KEY);
+      if (savedState) {
+        const state: DiscoveryState = JSON.parse(savedState);
+        setSearchTerm(state.searchTerm);
+        setFilters(state.filters);
+        setCurrentPage(state.currentPage);
+      }
+
+      // Load recent analyses collapsed state
+      const savedCollapsedState = localStorage.getItem(RECENT_ANALYSES_COLLAPSED_KEY);
+      if (savedCollapsedState !== null) {
+        setIsRecentAnalysesCollapsed(JSON.parse(savedCollapsedState));
+      }
+
+      setIsStateLoaded(true);
+    } catch (error) {
+      console.error('Error loading discovery state:', error);
+      setIsStateLoaded(true);
+    }
+  }, []);
 
   // Load bookmarks on mount
   useEffect(() => {
     setBookmarks(getBookmarkedCreators());
   }, []);
+
+  // Load initial data after state is loaded
+  useEffect(() => {
+    if (isStateLoaded) {
+      fetchDiscoveryData(currentPage);
+    }
+  }, [isStateLoaded, fetchDiscoveryData, currentPage]);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    try {
+      const state: DiscoveryState = {
+        searchTerm,
+        filters,
+        currentPage
+      };
+      localStorage.setItem(DISCOVERY_STATE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error('Error saving discovery state:', error);
+    }
+  }, [searchTerm, filters, currentPage]);
+
+  // Save collapsed state whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECENT_ANALYSES_COLLAPSED_KEY, JSON.stringify(isRecentAnalysesCollapsed));
+    } catch (error) {
+      console.error('Error saving collapsed state:', error);
+    }
+  }, [isRecentAnalysesCollapsed]);
 
   const handleFiltersChange = (newFilters: DiscoveryFilters) => {
     setFilters(newFilters);
@@ -285,48 +350,77 @@ export function CreatorDiscovery() {
       {/* Recent Analyses Section */}
       {analysisHistory.length > 0 && (
         <Card className="gabooja-card">
-          <CardHeader>
-            <CardTitle>Recent Analyses</CardTitle>
-            <CardDescription>
-              Your recently analyzed creators persist across navigation
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  Recent Analyses
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({analysisHistory.length})
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Your recently analyzed creators persist across navigation
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsRecentAnalysesCollapsed(!isRecentAnalysesCollapsed)}
+                className="h-8 w-8 p-0"
+              >
+                {isRecentAnalysesCollapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {analysisHistory.slice(0, 5).map((analysis) => (
-                <div key={`${analysis.profile.username}-${analysis.profile.platform}`} 
-                     className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="font-medium">
-                        @{analysis.profile.username}
-                        {analysis.profile.isVerified && <span className="ml-1 text-primary">✓</span>}
-                      </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          analysis.profile.platform === 'instagram' 
-                            ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
-                            : analysis.profile.platform === 'tiktok'
-                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
-                          {analysis.profile.platform}
-                        </span>
-                        • {formatNumber(analysis.profile.followerCount)} followers
+          
+          {!isRecentAnalysesCollapsed && (
+            <CardContent>
+              <div className="grid gap-4">
+                {analysisHistory.slice(0, 5).map((analysis) => (
+                  <div key={`${analysis.profile.username}-${analysis.profile.platform}`} 
+                       className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="font-medium">
+                          @{analysis.profile.username}
+                          {analysis.profile.isVerified && <span className="ml-1 text-primary">✓</span>}
+                        </div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            analysis.profile.platform === 'instagram' 
+                              ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                              : analysis.profile.platform === 'tiktok'
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                          }`}>
+                            {analysis.profile.platform}
+                          </span>
+                          • {formatNumber(analysis.profile.followerCount)} followers
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewAnalysis(analysis)}
+                    >
+                      View Analysis
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewAnalysis(analysis)}
-                  >
-                    View Analysis
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
+                ))}
+                {analysisHistory.length > 5 && (
+                  <div className="text-center text-sm text-muted-foreground pt-2">
+                    Showing 5 of {analysisHistory.length} recent analyses
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 
