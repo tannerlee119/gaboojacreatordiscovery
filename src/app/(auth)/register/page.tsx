@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -52,7 +53,7 @@ export default function RegisterPage() {
         return;
       }
 
-      const success = await register(formData.username.trim(), '', formData.password);
+      const success = await register(formData.username.trim(), formData.email.trim(), formData.password);
       
       if (success) {
         // Redirect to analyze page
@@ -100,7 +101,24 @@ export default function RegisterPage() {
               </div>
             </div>
 
-
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email <span className="text-muted-foreground text-xs">(optional)</span>
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email (optional)"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
