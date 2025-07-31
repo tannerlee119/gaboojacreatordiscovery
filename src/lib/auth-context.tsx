@@ -44,13 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, _password: string): Promise<boolean> => {
     try {
       // Get stored users
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       
       // Find user by username
-      const foundUser = users.find((u: any) => u.username === username);
+      const foundUser = users.find((u: { username: string }) => u.username === username);
       
       if (!foundUser) {
         return false; // User not found
@@ -92,13 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   };
 
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = async (username: string, email: string, _password: string): Promise<boolean> => {
     try {
       // Get existing users
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       
       // Check if username already exists
-      const userExists = users.find((u: any) => u.username === username);
+      const userExists = users.find((u: { username: string }) => u.username === username);
       if (userExists) {
         return false; // Username already exists
       }

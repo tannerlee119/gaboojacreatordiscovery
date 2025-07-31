@@ -500,14 +500,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter creators based on criteria
-    let filteredCreators = sampleCreators.filter(creator => {
+    const filteredCreators = sampleCreators.filter(creator => {
       // Platform filter
       if (filters.platform !== 'all' && creator.platform !== filters.platform) {
         return false;
       }
 
       // Category filter
-      if (filters.category && filters.category.length > 0 && !filters.category.includes(creator.category as any)) {
+      if (filters.category && filters.category.length > 0 && !filters.category.includes(creator.category as typeof filters.category[0])) {
         return false;
       }
 
@@ -558,7 +558,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid filter parameters', details: error.errors },
+        { error: 'Invalid filter parameters', details: error.issues },
         { status: 400 }
       );
     }

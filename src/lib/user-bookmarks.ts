@@ -1,5 +1,43 @@
 import { BookmarkedCreator } from './bookmarks';
 
+// Define a simplified analysis result type to avoid circular imports
+interface AnalysisResult {
+  profile: {
+    username: string;
+    platform: string;
+    displayName: string;
+    bio?: string;
+    profileImageUrl: string;
+    isVerified: boolean;
+    followerCount: number;
+    followingCount: number;
+    location?: string;
+    website?: string;
+    metrics: Record<string, unknown>;
+    aiAnalysis?: Record<string, unknown>;
+  };
+  scrapingDetails: {
+    method: string;
+    timestamp: string;
+  };
+}
+
+// User settings interface
+export interface UserSettings {
+  theme?: 'light' | 'dark' | 'system';
+  autoSave?: boolean;
+  showBookmarks?: boolean;
+  showRecentSearches?: boolean;
+  [key: string]: unknown; // Allow additional settings
+}
+
+export interface UserDataExport {
+  bookmarks: UserBookmark[];
+  recentSearches: RecentSearch[];
+  settings: UserSettings;
+  exportedAt: string;
+}
+
 export interface UserBookmark extends BookmarkedCreator {
   userId: string;
   bookmarkedAt: string;
@@ -11,7 +49,7 @@ export interface RecentSearch {
   username: string;
   platform: 'instagram' | 'tiktok';
   searchedAt: string;
-  analysisData?: any; // Store analysis results
+  analysisData?: AnalysisResult; // Store analysis results
 }
 
 export class UserBookmarksService {
@@ -122,7 +160,7 @@ export class UserBookmarksService {
     userId: string, 
     username: string, 
     platform: 'instagram' | 'tiktok',
-    analysisData?: any
+    analysisData?: AnalysisResult
   ): void {
     if (typeof window === 'undefined') return;
     
@@ -182,7 +220,7 @@ export class UserBookmarksService {
   }
 
   // User Settings
-  static getUserSettings(userId: string): Record<string, any> {
+  static getUserSettings(userId: string): UserSettings {
     if (typeof window === 'undefined') return {};
     
     try {
@@ -195,7 +233,7 @@ export class UserBookmarksService {
     }
   }
 
-  static saveUserSettings(userId: string, settings: Record<string, any>): void {
+  static saveUserSettings(userId: string, settings: UserSettings): void {
     if (typeof window === 'undefined') return;
     
     try {
@@ -207,17 +245,17 @@ export class UserBookmarksService {
   }
 
   // User Data Export
-  static exportUserData(userId: string): Record<string, any> {
+  static exportUserData(userId: string): UserDataExport {
     return {
       bookmarks: this.getUserBookmarks(userId),
       recentSearches: this.getUserRecentSearches(userId, 50),
       settings: this.getUserSettings(userId),
-      exportDate: new Date().toISOString()
+      exportedAt: new Date().toISOString()
     };
   }
 
   // User Data Import
-  static importUserData(userId: string, data: Record<string, any>): void {
+  static importUserData(userId: string, data: UserDataExport): void {
     if (typeof window === 'undefined') return;
     
     try {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookmarkedCreator, getBookmarkedCreators, removeBookmark } from '@/lib/bookmarks';
+import { getBookmarkedCreators, removeBookmark } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
 import { Trash2, ExternalLink, Link, Eye } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';

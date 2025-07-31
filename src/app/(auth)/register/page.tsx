@@ -61,7 +61,7 @@ export default function RegisterPage() {
       } else {
         setError('Username already exists');
       }
-    } catch (err) {
+    } catch {
       setError('Registration failed. Please try again.');
     } finally {
       setIsLoading(false);

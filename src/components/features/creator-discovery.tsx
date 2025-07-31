@@ -9,7 +9,7 @@ import { formatNumber } from '@/lib/utils';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
-import { addBookmark, removeBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { addBookmark, removeBookmark, isBookmarked } from '@/lib/bookmarks';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
@@ -76,7 +76,7 @@ export function CreatorDiscovery() {
   const { analysisHistory } = useCreator();
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
+  // Bookmarks are now managed through user-specific storage
   
   // Recent analyses collapsed state
   const [isRecentAnalysesCollapsed, setIsRecentAnalysesCollapsed] = useState(true);
@@ -162,10 +162,7 @@ export function CreatorDiscovery() {
     }
   }, []);
 
-  // Load bookmarks on mount
-  useEffect(() => {
-    setBookmarks(getBookmarkedCreators());
-  }, []);
+  // Bookmarks are now loaded from user-specific storage in individual components
 
   // Load initial data after state is loaded
   useEffect(() => {
@@ -228,7 +225,7 @@ export function CreatorDiscovery() {
       addBookmark(bookmarkData);
     }
     
-    setBookmarks(getBookmarkedCreators()); // Refresh bookmarks
+            // Bookmarks are now refreshed automatically through user-specific storage
   };
 
   const handleAnalyzeCreator = async (creator: DiscoveryCreator) => {

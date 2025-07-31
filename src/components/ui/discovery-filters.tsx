@@ -115,7 +115,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   name="platform"
                   value={platform.value}
                   checked={tempFilters.platform === platform.value}
-                  onChange={() => handlePlatformChange(platform.value as any)}
+                  onChange={() => handlePlatformChange(platform.value as 'all' | 'instagram' | 'tiktok')}
                   className="text-primary"
                 />
                 <span className="text-sm">{platform.label}</span>
@@ -226,7 +226,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   name="sortBy"
                   value={sort.value}
                   checked={tempFilters.sortBy === sort.value}
-                  onChange={() => handleSortByChange(sort.value as any)}
+                  onChange={() => handleSortByChange(sort.value as 'followers' | 'engagement' | 'recent')}
                   className="text-primary"
                 />
                 <span className="text-sm">{sort.label}</span>

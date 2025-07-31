@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
-import { Bookmark, BookmarkCheck, Eye, BarChart3, ExternalLink } from 'lucide-react';
+import { Bookmark, BookmarkCheck, BarChart3, ExternalLink } from 'lucide-react';
 
 export interface DiscoveryCreator {
   id: string;

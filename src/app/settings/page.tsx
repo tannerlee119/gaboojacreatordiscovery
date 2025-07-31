@@ -37,7 +37,7 @@ export default function SettingsPage() {
       localStorage.setItem('userSettings', JSON.stringify(settings));
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
+    } catch {
       setMessage('Failed to save settings');
     } finally {
       setIsLoading(false);

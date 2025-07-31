@@ -39,7 +39,7 @@ export default function LoginPage() {
       } else {
         setError('Invalid username or password');
       }
-    } catch (err) {
+    } catch {
       setError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -129,7 +129,7 @@ export default function LoginPage() {
             </Button>
 
             <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/register" className="text-primary hover:underline">
                 Sign up
               </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { formatNumber } from '@/lib/utils';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { UserBookmarksService } from '@/lib/user-bookmarks';
+import { useAuth } from '@/lib/auth-context';
 import Image from 'next/image';
 
 interface AnalysisData {
@@ -58,18 +60,49 @@ interface AnalysisModalProps {
 }
 
 export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalProps) {
+  const { user, isAuthenticated } = useAuth();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(
-    isBookmarked(analysisData.profile.platform, analysisData.profile.username)
-  );
+  
+  // Check bookmark status based on user authentication
+  const getBookmarkStatus = useCallback(() => {
+    if (isAuthenticated && user) {
+      return UserBookmarksService.isUserBookmarked(
+        user.id, 
+        analysisData.profile.username, 
+        analysisData.profile.platform as 'instagram' | 'tiktok'
+      );
+    } else {
+      return isBookmarked(analysisData.profile.platform, analysisData.profile.username);
+    }
+  }, [isAuthenticated, user, analysisData.profile.username, analysisData.profile.platform]);
+  
+  const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(getBookmarkStatus());
+
+  // Update bookmark status when analysis data or user changes
+  useEffect(() => {
+    setBookmarkedStatus(getBookmarkStatus());
+  }, [getBookmarkStatus]);
 
   const handleBookmarkToggle = () => {
+    if (!user) return;
+
     if (bookmarkedStatus) {
-      removeBookmark(analysisData.profile.platform, analysisData.profile.username);
+      // Remove bookmark
+      if (isAuthenticated) {
+        UserBookmarksService.removeUserBookmark(
+          user.id, 
+          analysisData.profile.username, 
+          analysisData.profile.platform as 'instagram' | 'tiktok'
+        );
+      } else {
+        removeBookmark(analysisData.profile.platform, analysisData.profile.username);
+      }
       setBookmarkedStatus(false);
     } else {
-      const bookmarkData: Omit<BookmarkedCreator, 'id' | 'bookmarkedAt'> = {
+      // Add bookmark
+      const bookmarkData: BookmarkedCreator = {
+        id: Date.now().toString(),
         username: analysisData.profile.username,
         platform: analysisData.profile.platform,
         displayName: analysisData.profile.displayName,
@@ -81,9 +114,14 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
         bio: analysisData.profile.bio,
         metrics: analysisData.profile.metrics,
         aiAnalysis: analysisData.profile.aiAnalysis,
+        bookmarkedAt: new Date().toISOString(),
       };
       
-      addBookmark(bookmarkData);
+      if (isAuthenticated) {
+        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+      } else {
+        addBookmark(bookmarkData);
+      }
       setBookmarkedStatus(true);
     }
   };
