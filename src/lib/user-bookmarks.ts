@@ -1,0 +1,242 @@
+import { BookmarkedCreator } from './bookmarks';
+
+export interface UserBookmark extends BookmarkedCreator {
+  userId: string;
+  bookmarkedAt: string;
+}
+
+export interface RecentSearch {
+  id: string;
+  userId: string;
+  username: string;
+  platform: 'instagram' | 'tiktok';
+  searchedAt: string;
+  analysisData?: any; // Store analysis results
+}
+
+export class UserBookmarksService {
+  private static getStorageKey(userId: string, type: 'bookmarks' | 'recent-searches') {
+    return `user_${userId}_${type}`;
+  }
+
+  // Bookmarks
+  static getUserBookmarks(userId: string): UserBookmark[] {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+      const key = this.getStorageKey(userId, 'bookmarks');
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error loading user bookmarks:', error);
+      return [];
+    }
+  }
+
+  static addUserBookmark(userId: string, creator: BookmarkedCreator): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const bookmarks = this.getUserBookmarks(userId);
+      const existingIndex = bookmarks.findIndex(
+        bookmark => bookmark.username === creator.username && bookmark.platform === creator.platform
+      );
+
+      const userBookmark: UserBookmark = {
+        ...creator,
+        userId,
+        bookmarkedAt: new Date().toISOString()
+      };
+
+      if (existingIndex >= 0) {
+        // Update existing bookmark
+        bookmarks[existingIndex] = userBookmark;
+      } else {
+        // Add new bookmark
+        bookmarks.push(userBookmark);
+      }
+
+      const key = this.getStorageKey(userId, 'bookmarks');
+      localStorage.setItem(key, JSON.stringify(bookmarks));
+    } catch (error) {
+      console.error('Error adding user bookmark:', error);
+    }
+  }
+
+  static removeUserBookmark(userId: string, username: string, platform: 'instagram' | 'tiktok'): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const bookmarks = this.getUserBookmarks(userId);
+      const filteredBookmarks = bookmarks.filter(
+        bookmark => !(bookmark.username === username && bookmark.platform === platform)
+      );
+
+      const key = this.getStorageKey(userId, 'bookmarks');
+      localStorage.setItem(key, JSON.stringify(filteredBookmarks));
+    } catch (error) {
+      console.error('Error removing user bookmark:', error);
+    }
+  }
+
+  static isUserBookmarked(userId: string, username: string, platform: 'instagram' | 'tiktok'): boolean {
+    const bookmarks = this.getUserBookmarks(userId);
+    return bookmarks.some(
+      bookmark => bookmark.username === username && bookmark.platform === platform
+    );
+  }
+
+  static clearUserBookmarks(userId: string): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const key = this.getStorageKey(userId, 'bookmarks');
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error('Error clearing user bookmarks:', error);
+    }
+  }
+
+  // Recent Searches
+  static getUserRecentSearches(userId: string, limit: number = 10): RecentSearch[] {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+      const key = this.getStorageKey(userId, 'recent-searches');
+      const data = localStorage.getItem(key);
+      const searches = data ? JSON.parse(data) : [];
+      
+      // Sort by most recent and limit results
+      return searches
+        .sort((a: RecentSearch, b: RecentSearch) => 
+          new Date(b.searchedAt).getTime() - new Date(a.searchedAt).getTime()
+        )
+        .slice(0, limit);
+    } catch (error) {
+      console.error('Error loading user recent searches:', error);
+      return [];
+    }
+  }
+
+  static addUserRecentSearch(
+    userId: string, 
+    username: string, 
+    platform: 'instagram' | 'tiktok',
+    analysisData?: any
+  ): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const key = this.getStorageKey(userId, 'recent-searches');
+      const searches = this.getUserRecentSearches(userId, 50); // Get more to avoid duplicates
+      
+      // Remove existing entry for this username/platform
+      const filteredSearches = searches.filter(
+        search => !(search.username === username && search.platform === platform)
+      );
+
+      // Add new search at the beginning
+      const newSearch: RecentSearch = {
+        id: Date.now().toString(),
+        userId,
+        username,
+        platform,
+        searchedAt: new Date().toISOString(),
+        analysisData
+      };
+
+      filteredSearches.unshift(newSearch);
+
+      // Keep only the most recent 20 searches
+      const limitedSearches = filteredSearches.slice(0, 20);
+      
+      localStorage.setItem(key, JSON.stringify(limitedSearches));
+    } catch (error) {
+      console.error('Error adding user recent search:', error);
+    }
+  }
+
+  static clearUserRecentSearches(userId: string): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const key = this.getStorageKey(userId, 'recent-searches');
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error('Error clearing user recent searches:', error);
+    }
+  }
+
+  static removeUserRecentSearch(userId: string, searchId: string): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const searches = this.getUserRecentSearches(userId, 50);
+      const filteredSearches = searches.filter(search => search.id !== searchId);
+      
+      const key = this.getStorageKey(userId, 'recent-searches');
+      localStorage.setItem(key, JSON.stringify(filteredSearches));
+    } catch (error) {
+      console.error('Error removing user recent search:', error);
+    }
+  }
+
+  // User Settings
+  static getUserSettings(userId: string): Record<string, any> {
+    if (typeof window === 'undefined') return {};
+    
+    try {
+      const key = `user_${userId}_settings`;
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : {};
+    } catch (error) {
+      console.error('Error loading user settings:', error);
+      return {};
+    }
+  }
+
+  static saveUserSettings(userId: string, settings: Record<string, any>): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const key = `user_${userId}_settings`;
+      localStorage.setItem(key, JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving user settings:', error);
+    }
+  }
+
+  // User Data Export
+  static exportUserData(userId: string): Record<string, any> {
+    return {
+      bookmarks: this.getUserBookmarks(userId),
+      recentSearches: this.getUserRecentSearches(userId, 50),
+      settings: this.getUserSettings(userId),
+      exportDate: new Date().toISOString()
+    };
+  }
+
+  // User Data Import
+  static importUserData(userId: string, data: Record<string, any>): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      if (data.bookmarks) {
+        const bookmarksKey = this.getStorageKey(userId, 'bookmarks');
+        localStorage.setItem(bookmarksKey, JSON.stringify(data.bookmarks));
+      }
+
+      if (data.recentSearches) {
+        const searchesKey = this.getStorageKey(userId, 'recent-searches');
+        localStorage.setItem(searchesKey, JSON.stringify(data.recentSearches));
+      }
+
+      if (data.settings) {
+        const settingsKey = `user_${userId}_settings`;
+        localStorage.setItem(settingsKey, JSON.stringify(data.settings));
+      }
+    } catch (error) {
+      console.error('Error importing user data:', error);
+    }
+  }
+} 

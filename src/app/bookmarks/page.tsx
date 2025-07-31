@@ -7,6 +7,8 @@ import { BookmarkedCreator, getBookmarkedCreators, removeBookmark } from '@/lib/
 import { formatNumber } from '@/lib/utils';
 import { Trash2, ExternalLink, Link, Eye } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+import { useAuth } from '@/lib/auth-context';
+import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
 
 interface AnalysisData {
   profile: {
@@ -50,7 +52,8 @@ interface AnalysisData {
 }
 
 export default function BookmarksPage() {
-  const [bookmarks, setBookmarks] = useState<BookmarkedCreator[]>([]);
+  const { user, isAuthenticated } = useAuth();
+  const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,8 +61,18 @@ export default function BookmarksPage() {
   // Load bookmarks on component mount
   useEffect(() => {
     const loadBookmarks = () => {
-      const savedBookmarks = getBookmarkedCreators();
-      setBookmarks(savedBookmarks);
+      if (isAuthenticated && user) {
+        const userBookmarks = UserBookmarksService.getUserBookmarks(user.id);
+        setBookmarks(userBookmarks);
+      } else {
+        // Fallback to global bookmarks for non-authenticated users
+        const savedBookmarks = getBookmarkedCreators();
+        setBookmarks(savedBookmarks.map(bookmark => ({
+          ...bookmark,
+          userId: 'anonymous',
+          bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
+        })));
+      }
       setLoading(false);
     };
 
@@ -72,15 +85,19 @@ export default function BookmarksPage() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [isAuthenticated, user]);
 
   const handleRemoveBookmark = (platform: string, username: string) => {
-    removeBookmark(platform as 'instagram' | 'tiktok', username);
+    if (isAuthenticated && user) {
+      UserBookmarksService.removeUserBookmark(user.id, username, platform as 'instagram' | 'tiktok');
+    } else {
+      removeBookmark(platform as 'instagram' | 'tiktok', username);
+    }
     // Update local state
     setBookmarks(prev => prev.filter(b => !(b.platform === platform && b.username === username)));
   };
 
-  const handleViewAnalysis = (bookmark: BookmarkedCreator) => {
+  const handleViewAnalysis = (bookmark: UserBookmark) => {
     // Convert bookmark data to analysis format
     const analysisData: AnalysisData = {
       profile: {
