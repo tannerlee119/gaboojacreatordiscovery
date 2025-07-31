@@ -131,6 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Clear user-specific data if user exists
+    if (user) {
+      // Note: We don't clear user-specific bookmarks and searches on logout
+      // as they should persist for when the user logs back in
+    }
+    
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('user');
     setUser(null);

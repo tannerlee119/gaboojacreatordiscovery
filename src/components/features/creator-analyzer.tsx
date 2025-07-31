@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { UserBookmarksService } from '@/lib/user-bookmarks';
+import { useAuth } from '@/lib/auth-context';
 import { useCreator } from '@/lib/creator-context';
 import Image from 'next/image';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
@@ -91,6 +93,7 @@ function hasDataQuality(result: AnalysisResult): result is AnalysisResult & { da
 
 export function CreatorAnalyzer() {
   const { currentAnalysis, setCurrentAnalysis, addToHistory, isLoading, setIsLoading } = useCreator();
+  const { user, isAuthenticated } = useAuth();
   const [username, setUsername] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +137,16 @@ export function CreatorAnalyzer() {
       setCurrentAnalysis(newResult);
       addToHistory(newResult);
       
+      // Add to user's recent searches if authenticated
+      if (isAuthenticated && user) {
+        UserBookmarksService.addUserRecentSearch(
+          user.id,
+          username,
+          platform as 'instagram' | 'tiktok',
+          newResult
+        );
+      }
+      
       // Cache the result for this platform
       setResultCache(prev => ({
         ...prev,
@@ -152,12 +165,16 @@ export function CreatorAnalyzer() {
 
   // Check bookmark status when result changes
   useEffect(() => {
-    if (result) {
-      setBookmarkedStatus(isBookmarked(result.profile.platform, result.profile.username));
+    if (result && user) {
+      if (isAuthenticated) {
+        setBookmarkedStatus(UserBookmarksService.isUserBookmarked(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok'));
+      } else {
+        setBookmarkedStatus(isBookmarked(result.profile.platform, result.profile.username));
+      }
     } else {
       setBookmarkedStatus(false);
     }
-  }, [result]);
+  }, [result, user, isAuthenticated]);
 
   // Handle platform switching - restore cached result if available
   const handlePlatformChange = (newPlatform: Platform) => {
@@ -179,15 +196,20 @@ export function CreatorAnalyzer() {
 
   // Handle bookmark toggle
   const handleBookmarkToggle = () => {
-    if (!result) return;
+    if (!result || !user) return;
 
     if (bookmarkedStatus) {
       // Remove bookmark
-      removeBookmark(result.profile.platform, result.profile.username);
+      if (isAuthenticated) {
+        UserBookmarksService.removeUserBookmark(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok');
+      } else {
+        removeBookmark(result.profile.platform, result.profile.username);
+      }
       setBookmarkedStatus(false);
     } else {
       // Add bookmark
-      const bookmarkData: Omit<BookmarkedCreator, 'id' | 'bookmarkedAt'> = {
+      const bookmarkData: BookmarkedCreator = {
+        id: Date.now().toString(),
         username: result.profile.username,
         platform: result.profile.platform,
         displayName: result.profile.displayName,
@@ -199,9 +221,14 @@ export function CreatorAnalyzer() {
         bio: result.profile.bio,
         metrics: result.profile.metrics,
         aiAnalysis: result.profile.aiAnalysis,
+        bookmarkedAt: new Date().toISOString(),
       };
       
-      addBookmark(bookmarkData);
+      if (isAuthenticated) {
+        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+      } else {
+        addBookmark(bookmarkData);
+      }
       setBookmarkedStatus(true);
     }
   };
