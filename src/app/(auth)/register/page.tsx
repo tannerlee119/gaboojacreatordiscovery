@@ -118,11 +118,9 @@ export default function RegisterPage() {
                   className="pl-10 pr-10"
                   disabled={isLoading}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-200 cursor-pointer"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
@@ -131,7 +129,7 @@ export default function RegisterPage() {
                   ) : (
                     <Eye className="h-4 w-4" />
                   )}
-                </Button>
+                </button>
               </div>
             </div>
 
@@ -151,11 +149,9 @@ export default function RegisterPage() {
                   className="pl-10 pr-10"
                   disabled={isLoading}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-200 cursor-pointer"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   disabled={isLoading}
                 >
@@ -164,7 +160,7 @@ export default function RegisterPage() {
                   ) : (
                     <Eye className="h-4 w-4" />
                   )}
-                </Button>
+                </button>
               </div>
             </div>
 
