@@ -30,8 +30,8 @@ class TikTokScraper extends PlaywrightBaseScraper {
       
       // Initialize browser with Sparticuz chromium if available
       await this.initBrowser();
-      
-      const profileUrl = `https://www.tiktok.com/@${username}`;
+
+    const profileUrl = `https://www.tiktok.com/@${username}`;
       console.log(`📱 Navigating to: ${profileUrl}`);
       
       if (!this.page) {
@@ -43,7 +43,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       while (retries > 0) {
         try {
           await this.page.goto(profileUrl, { 
-            waitUntil: 'networkidle', 
+      waitUntil: 'networkidle',
             timeout: 30000 
           });
           break;
@@ -160,12 +160,12 @@ class TikTokScraper extends PlaywrightBaseScraper {
         const isBlocked = blockedIndicators.some(indicator => pageText.includes(indicator));
         if (isBlocked) {
           console.log('🚫 No data found and login/age verification wall detected');
-          return {
-            success: false,
+      return {
+        success: false,
             error: `TikTok is blocking access to @${username} - requires login or age verification`,
-            method: 'scraping'
-          };
-        }
+        method: 'scraping'
+      };
+    }
 
         console.log('❌ No profile data or elements found');
         return {
@@ -183,21 +183,21 @@ class TikTokScraper extends PlaywrightBaseScraper {
         fullPage: true,
         type: 'png'
       });
+    
+    return {
+      success: true,
+      data: profileData,
+      screenshot,
+      method: 'scraping'
+    };
 
-      return {
-        success: true,
-        data: profileData,
-        screenshot,
-        method: 'scraping'
-      };
-
-    } catch (error) {
+  } catch (error) {
       console.error('❌ TikTok scraping failed:', error);
-      return {
-        success: false,
+    return {
+      success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
-        method: 'scraping'
-      };
+      method: 'scraping'
+    };
     } finally {
       await this.cleanup();
     }
@@ -225,9 +225,9 @@ class TikTokScraper extends PlaywrightBaseScraper {
     // Extract follower/following counts from stats
     const statsElements = await this.page.locator('[data-e2e="followers-count"], [data-e2e="following-count"], strong').all();
     
-    let followerCount = 0;
-    let followingCount = 0;
-    let likeCount = 0;
+  let followerCount = 0;
+  let followingCount = 0;
+  let likeCount = 0;
 
     // Parse stats from visible elements
     for (const element of statsElements) {
@@ -413,30 +413,30 @@ class TikTokScraper extends PlaywrightBaseScraper {
                         pageText.includes('✓') ||
                         pageText.includes('checkmark') ||
                         /verified["\s]*:\s*true/i.test(pageText);
-      
-      const metrics: TikTokMetrics = {
-        followerCount,
-        followingCount,
-        likeCount,
+
+    const metrics: TikTokMetrics = {
+      followerCount,
+      followingCount,
+      likeCount,
         videoCount: 0,
-        averageViews: 0,
-        averageLikes: 0,
+      averageViews: 0,
+      averageLikes: 0,
         engagementRate: 0,
         recentVideos: []
-      };
+    };
       
       console.log(`📊 Parsed: ${displayName.trim()}, ${followingCount} following, ${followerCount} followers, ${likeCount} likes`);
-      
-      return {
+
+    return {
         displayName: displayName.trim(),
         bio: bio,
         profileImageUrl: '',
-        isVerified,
-        followerCount,
-        followingCount,
-        metrics
-      };
-      
+      isVerified,
+      followerCount,
+      followingCount,
+      metrics
+    };
+
     } catch (err) {
       console.log('⚠️ Error parsing page text:', err);
       return null;

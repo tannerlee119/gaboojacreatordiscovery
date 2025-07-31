@@ -67,8 +67,8 @@ class InstagramScraper extends PlaywrightBaseScraper {
         });
         
         console.log('🎯 Strategy: Try direct access, then login if needed');
-        
-        const profileUrl = `https://www.instagram.com/${username}/`;
+
+    const profileUrl = `https://www.instagram.com/${username}/`;
         console.log(`📱 Navigating to: ${profileUrl}`);
 
         // Navigate directly to the profile first with extended timeout
@@ -147,8 +147,8 @@ class InstagramScraper extends PlaywrightBaseScraper {
               await this.page?.waitForTimeout(5000); // Wait before retry
               continue; // Try again
             } else {
-              return {
-                success: false,
+      return {
+        success: false,
                 error: 'Instagram login failed after multiple attempts. This may be due to account verification requirements, rate limiting, or IP restrictions on Vercel servers.',
                 method: 'Playwright with Sparticuz Chromium'
               };
@@ -164,7 +164,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
             await this.cleanup();
             await this.page?.waitForTimeout(3000); // Wait before retry
             continue; // Try again
-          } else {
+      } else {
             return {
               success: false,
               error: errorMsg,
@@ -196,15 +196,15 @@ class InstagramScraper extends PlaywrightBaseScraper {
           const memory = process.memoryUsage();
           console.log(`💾 Final memory: ${Math.round(memory.heapUsed / 1024 / 1024)}MB used / ${Math.round(memory.heapTotal / 1024 / 1024)}MB total`);
         }
-
-        return {
-          success: true,
-          data: profileData,
-          screenshot,
+    
+    return {
+      success: true,
+      data: profileData,
+      screenshot,
           method: `Playwright with Sparticuz Chromium${this.isLoggedIn ? ' (Authenticated)' : ' (Anonymous)'} - Attempt ${attempt}`
-        };
+    };
 
-      } catch (error) {
+  } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         console.error(`❌ Instagram scraping attempt ${attempt} failed:`, lastError);
         
@@ -290,7 +290,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
           console.log(`✅ Found login form with selector: ${selectors[i]}`);
           formFound = true;
           break;
-        } catch (error) {
+  } catch (error) {
           console.log(`❌ Selector ${selectors[i]} failed: ${error}`);
         }
       }
@@ -368,7 +368,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
             console.log(`📤 Found submit button: "${buttonText}" with selector: ${selector}`);
             await button.click();
             submitClicked = true;
-            break;
+              break;
           }
         } catch (error) {
           console.log(`❌ Submit selector ${selector} failed: ${error}`);
@@ -640,10 +640,10 @@ class InstagramScraper extends PlaywrightBaseScraper {
         const element = document.querySelector(selector);
         if (element && element.textContent && element.textContent.length > 20) {
           bio = element.textContent.trim();
-          break;
-        }
-      }
-
+              break;
+            }
+          }
+          
       // Try to find profile image
       let profileImageUrl = '';
       const imgSelectors = [
