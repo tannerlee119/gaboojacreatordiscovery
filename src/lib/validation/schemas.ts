@@ -52,6 +52,11 @@ export class InputSanitizer {
   static sanitizeProfileData(data: Record<string, unknown>): Record<string, unknown> {
     const sanitized = { ...data };
     
+    // Sanitize username field
+    if (typeof sanitized.username === 'string') {
+      sanitized.username = this.sanitizeString(sanitized.username);
+    }
+    
     // Sanitize string fields
     if (typeof sanitized.displayName === 'string') {
       sanitized.displayName = this.sanitizeString(sanitized.displayName);

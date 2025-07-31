@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from '@/lib/types';
+import { useAuth } from '@/lib/auth-context';
 
 interface AnalysisResult {
   profile: {
@@ -57,44 +58,63 @@ interface CreatorContextType {
 
 const CreatorContext = createContext<CreatorContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'gabooja-creator-data';
-const HISTORY_KEY = 'gabooja-creator-history';
 const MAX_HISTORY_SIZE = 10;
 
+// Helper functions to get user-specific storage keys
+const getStorageKey = (userId: string | null) => 
+  userId ? `user_${userId}_creator-data` : 'gabooja-creator-data';
+
+const getHistoryKey = (userId: string | null) => 
+  userId ? `user_${userId}_creator-history` : 'gabooja-creator-history';
+
 export function CreatorProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
   const [currentAnalysis, setCurrentAnalysisState] = useState<AnalysisResult | null>(null);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load data from localStorage on mount
+  // Load data from localStorage when user changes
   useEffect(() => {
     try {
-      const storedAnalysis = localStorage.getItem(STORAGE_KEY);
-      const storedHistory = localStorage.getItem(HISTORY_KEY);
+      const userId = isAuthenticated && user ? user.id : null;
+      const storageKey = getStorageKey(userId);
+      const historyKey = getHistoryKey(userId);
+      
+      const storedAnalysis = localStorage.getItem(storageKey);
+      const storedHistory = localStorage.getItem(historyKey);
       
       if (storedAnalysis) {
         const analysis = JSON.parse(storedAnalysis);
         setCurrentAnalysisState(analysis);
+      } else {
+        setCurrentAnalysisState(null);
       }
       
       if (storedHistory) {
         const history = JSON.parse(storedHistory);
         setAnalysisHistory(history);
+      } else {
+        setAnalysisHistory([]);
       }
     } catch (error) {
       console.error('Error loading creator data from localStorage:', error);
+      setCurrentAnalysisState(null);
+      setAnalysisHistory([]);
     }
-  }, []);
+  }, [user, isAuthenticated]);
 
   // Save current analysis to localStorage whenever it changes
   const setCurrentAnalysis = (analysis: AnalysisResult | null) => {
     setCurrentAnalysisState(analysis);
     
     try {
+      const userId = isAuthenticated && user ? user.id : null;
+      const storageKey = getStorageKey(userId);
+      
       if (analysis) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(analysis));
+        localStorage.setItem(storageKey, JSON.stringify(analysis));
       } else {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(storageKey);
       }
     } catch (error) {
       console.error('Error saving creator data to localStorage:', error);
@@ -114,7 +134,9 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
       const newHistory = [analysis, ...filtered].slice(0, MAX_HISTORY_SIZE);
       
       try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+        const userId = isAuthenticated && user ? user.id : null;
+        const historyKey = getHistoryKey(userId);
+        localStorage.setItem(historyKey, JSON.stringify(newHistory));
       } catch (error) {
         console.error('Error saving analysis history to localStorage:', error);
       }
@@ -127,7 +149,9 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
   const clearHistory = () => {
     setAnalysisHistory([]);
     try {
-      localStorage.removeItem(HISTORY_KEY);
+      const userId = isAuthenticated && user ? user.id : null;
+      const historyKey = getHistoryKey(userId);
+      localStorage.removeItem(historyKey);
     } catch (error) {
       console.error('Error clearing analysis history:', error);
     }
