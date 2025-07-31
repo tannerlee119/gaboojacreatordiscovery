@@ -116,7 +116,7 @@ export function DiscoveryCreatorCard({
               className="h-8 w-8 p-0 flex-shrink-0 ml-2 hover:bg-accent transition-colors"
             >
               {isBookmarked ? (
-                <BookmarkCheck className="h-4 w-4 text-white hover:text-white/80" />
+                <BookmarkCheck className="h-4 w-4 text-white hover:text-primary" />
               ) : (
                 <Bookmark className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               )}
