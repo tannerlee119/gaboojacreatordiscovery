@@ -6,13 +6,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, User, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -38,7 +37,7 @@ export default function RegisterPage() {
 
     try {
       // Validation
-      if (!formData.username.trim() || !formData.email.trim() || !formData.password) {
+      if (!formData.username.trim() || !formData.password) {
         setError('Please fill in all fields');
         return;
       }
@@ -53,11 +52,11 @@ export default function RegisterPage() {
         return;
       }
 
-      const success = await register(formData.username.trim(), formData.email.trim(), formData.password);
+      const success = await register(formData.username.trim(), '', formData.password);
       
       if (success) {
-        // Redirect to home page
-        router.push('/');
+        // Redirect to analyze page
+        router.push('/analyze');
       } else {
         setError('Username already exists');
       }

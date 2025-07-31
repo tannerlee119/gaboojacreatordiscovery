@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, UserX } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
@@ -34,8 +34,8 @@ export default function LoginPage() {
       const success = await login(username.trim(), password);
       
       if (success) {
-        // Redirect to home page
-        router.push('/');
+        // Redirect to analyze page
+        router.push('/analyze');
       } else {
         setError('Invalid username or password');
       }
@@ -44,6 +44,21 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGuestLogin = () => {
+    // Create a guest user
+    const guestUser = {
+      id: 'guest_' + Date.now(),
+      username: 'Guest',
+      loginTime: new Date().toISOString()
+    };
+
+    localStorage.setItem('user', JSON.stringify(guestUser));
+    localStorage.setItem('isAuthenticated', 'true');
+    
+    // Redirect to analyze page
+    router.push('/analyze');
   };
 
   return (
@@ -130,6 +145,27 @@ export default function LoginPage() {
                 Sign up
               </Link>
             </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGuestLogin}
+            >
+              <UserX className="w-4 h-4 mr-2" />
+              Continue as Guest
+            </Button>
           </form>
         </CardContent>
       </Card>
