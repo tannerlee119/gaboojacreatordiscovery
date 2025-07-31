@@ -21,7 +21,7 @@ export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const navigation = [
-    { name: "Analyze", href: "/" },
+    { name: "Analyze", href: "/analyze" },
     { name: "Discovery", href: "/discovery" },
     { name: "Bookmarks", href: "/bookmarks" },
   ];
@@ -33,7 +33,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/30 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-20 items-center justify-between px-6">
-        <Link href="/" className="flex items-center space-x-3">
+        <Link href="/analyze" className="flex items-center space-x-3">
           <Image 
             src="/gaboojalogo.png" 
             alt="Gabooja" 

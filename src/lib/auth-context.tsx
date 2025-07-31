@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  loginAsGuest: () => void;
   logout: () => void;
   register: (username: string, email: string, password: string) => Promise<boolean>;
 }
@@ -77,6 +78,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginAsGuest = () => {
+    const guestUser = {
+      id: 'guest_' + Date.now(),
+      username: 'Guest',
+      loginTime: new Date().toISOString()
+    };
+
+    localStorage.setItem('user', JSON.stringify(guestUser));
+    localStorage.setItem('isAuthenticated', 'true');
+    
+    setUser(guestUser);
+    setIsAuthenticated(true);
+  };
+
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
       // Get existing users
@@ -127,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated,
       login,
+      loginAsGuest,
       logout,
       register
     }}>

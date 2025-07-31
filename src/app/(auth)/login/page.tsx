@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,16 +47,7 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = () => {
-    // Create a guest user
-    const guestUser = {
-      id: 'guest_' + Date.now(),
-      username: 'Guest',
-      loginTime: new Date().toISOString()
-    };
-
-    localStorage.setItem('user', JSON.stringify(guestUser));
-    localStorage.setItem('isAuthenticated', 'true');
-    
+    loginAsGuest();
     // Redirect to analyze page
     router.push('/analyze');
   };

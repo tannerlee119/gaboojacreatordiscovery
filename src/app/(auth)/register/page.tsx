@@ -100,24 +100,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
