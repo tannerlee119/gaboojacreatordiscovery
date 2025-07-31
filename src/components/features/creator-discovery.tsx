@@ -10,7 +10,7 @@ import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
 import { addBookmark, removeBookmark, getBookmarkedCreators, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
-import { Search, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
 const DISCOVERY_STATE_KEY = 'gabooja-discovery-state';
@@ -361,30 +361,26 @@ export function CreatorDiscovery() {
       {/* Recent Analyses Section */}
       {analysisHistory.length > 0 && (
         <Card className="gabooja-card">
-          <CardHeader className="pb-3">
-            <div 
-              className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md p-2 -m-2 transition-colors"
-              onClick={() => setIsRecentAnalysesCollapsed(!isRecentAnalysesCollapsed)}
-            >
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  Recent Analyses
-                  <span className="text-sm font-normal text-muted-foreground">
-                    ({analysisHistory.length})
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  Your recently analyzed creators persist across navigation
-                </CardDescription>
+          <CardHeader 
+            className="cursor-pointer hover:bg-muted/50 transition-colors pb-3"
+            onClick={() => setIsRecentAnalysesCollapsed(!isRecentAnalysesCollapsed)}
+          >
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                Recent Analyses
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({analysisHistory.length})
+                </span>
               </div>
-              <div className="h-8 w-8 flex items-center justify-center">
-                {isRecentAnalysesCollapsed ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronUp className="h-4 w-4" />
-                )}
-              </div>
-            </div>
+              {isRecentAnalysesCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </CardTitle>
+            <CardDescription>
+              Your recently analyzed creators persist across navigation
+            </CardDescription>
           </CardHeader>
           
           {!isRecentAnalysesCollapsed && (
