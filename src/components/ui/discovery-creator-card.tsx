@@ -178,7 +178,7 @@ export function DiscoveryCreatorCard({
               {isAnalyzeLoading ? 'Analyzing...' : 'Analyze'}
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleViewProfile}
               className="text-xs"
