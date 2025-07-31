@@ -109,16 +109,16 @@ export function DiscoveryCreatorCard({
               </div>
             </div>
             <Button
-              variant="ghost"
+              variant={isBookmarked ? "default" : "outline"}
               size="sm"
               onClick={handleBookmark}
               disabled={isBookmarkLoading}
-              className="h-8 w-8 p-0 flex-shrink-0 ml-2 hover:bg-accent transition-colors"
+              className="h-8 w-8 p-0 flex-shrink-0 ml-2"
             >
               {isBookmarked ? (
-                <BookmarkCheck className="h-4 w-4 text-white hover:text-primary" />
+                <BookmarkCheck className="h-4 w-4" />
               ) : (
-                <Bookmark className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                <Bookmark className="h-4 w-4" />
               )}
             </Button>
           </div>
