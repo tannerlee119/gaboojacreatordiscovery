@@ -29,10 +29,10 @@ export function BookmarkCommentModal({
   const [comments, setComments] = useState(initialComments);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     setIsSaving(true);
     try {
-      await onSave(comments);
+      onSave(comments);
       onClose();
     } catch (error) {
       console.error('Error saving comments:', error);
@@ -48,7 +48,7 @@ export function BookmarkCommentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
@@ -62,16 +62,16 @@ export function BookmarkCommentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <Label htmlFor="comments">Your Notes</Label>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <Label htmlFor="comments" className="text-base font-medium">Your Notes</Label>
             <Textarea
               id="comments"
               placeholder="Add your thoughts, collaboration ideas, contact details, or any other notes about this creator..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
-              rows={6}
-              className="resize-none"
+              rows={8}
+              className="resize-none text-base"
             />
             <p className="text-xs text-muted-foreground">
               These notes are only visible to you and will be saved with your bookmark.

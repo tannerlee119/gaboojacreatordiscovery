@@ -316,17 +316,6 @@ export default function BookmarksPage() {
                 <div className="pt-2 border-t border-border space-y-2">
                   {/* Horizontal Button Row */}
                   <div className="flex gap-2">
-                    {/* Edit Notes Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditNotes(bookmark)}
-                      className="flex-1 flex items-center gap-2"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                      {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
-                    </Button>
-                    
                     {/* View Analysis Button - only show if AI analysis exists */}
                     {bookmark.aiAnalysis && (
                       <Button
@@ -339,6 +328,17 @@ export default function BookmarksPage() {
                         View Analysis
                       </Button>
                     )}
+                    
+                    {/* Edit Notes Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditNotes(bookmark)}
+                      className="flex-1 flex items-center gap-2"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
+                    </Button>
                   </div>
                   
                   {/* Profile Link */}
