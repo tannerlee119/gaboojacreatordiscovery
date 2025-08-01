@@ -10,6 +10,14 @@ interface User {
   createdAt?: string;
 }
 
+interface StoredUser {
+  id: string;
+  username: string;
+  email?: string;
+  password: string; // Stored password (in production this would be hashed)
+  createdAt: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -18,6 +26,7 @@ interface AuthContextType {
   logout: () => void;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   updateUser: (updates: Partial<User>) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,24 +54,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (username: string, _password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
       // Get stored users
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
       
       // Find user by username
-      const foundUser = users.find((u: { username: string }) => u.username === username);
+      const foundUser = users.find((u: StoredUser) => u.username === username);
       
       if (!foundUser) {
         return false; // User not found
       }
 
-      // For now, we'll accept any password for existing users
-      // In production, you'd want proper password hashing and verification
+      // Check password (in production, this would use proper password hashing)
+      if (foundUser.password !== password) {
+        return false; // Wrong password
+      }
       
-      const userData = {
-        ...foundUser,
-        loginTime: new Date().toISOString()
+      // Create user data without password for client state
+      const userData: User = {
+        id: foundUser.id,
+        username: foundUser.username,
+        email: foundUser.email,
+        loginTime: new Date().toISOString(),
+        createdAt: foundUser.createdAt
       };
 
       // Store authentication state
@@ -93,35 +108,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   };
 
-  const register = async (username: string, email: string, _password: string): Promise<boolean> => {
+  const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
       // Get existing users
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
       
       // Check if username already exists
-      const userExists = users.find((u: { username: string }) => u.username === username);
+      const userExists = users.find((u: StoredUser) => u.username === username);
       if (userExists) {
         return false; // Username already exists
       }
 
-      // Create new user
-      const newUser = {
+      // Create new stored user (with password)
+      const newStoredUser: StoredUser = {
         id: Date.now().toString(),
         username,
         email,
-        createdAt: new Date().toISOString(),
-        loginTime: new Date().toISOString()
+        password, // In production, this would be hashed
+        createdAt: new Date().toISOString()
       };
 
       // Add to users array
-      users.push(newUser);
+      users.push(newStoredUser);
       localStorage.setItem('users', JSON.stringify(users));
 
+      // Create user data without password for client state
+      const userData: User = {
+        id: newStoredUser.id,
+        username: newStoredUser.username,
+        email: newStoredUser.email,
+        loginTime: new Date().toISOString(),
+        createdAt: newStoredUser.createdAt
+      };
+
       // Auto-login
-      localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('isAuthenticated', 'true');
       
-      setUser(newUser);
+      setUser(userData);
       setIsAuthenticated(true);
       
       return true;
@@ -139,12 +163,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Update localStorage
     localStorage.setItem('user', JSON.stringify(updatedUser));
     
-    // Update users array if it exists
+    // Update users array if it exists (preserving password)
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex((u: User) => u.id === user.id);
+      const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = users.findIndex((u: StoredUser) => u.id === user.id);
       if (userIndex >= 0) {
-        users[userIndex] = updatedUser;
+        // Only update allowed fields, preserve password
+        users[userIndex] = {
+          ...users[userIndex],
+          username: updatedUser.username,
+          email: updatedUser.email
+        };
         localStorage.setItem('users', JSON.stringify(users));
       }
     } catch (error) {
@@ -153,6 +182,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Update state to trigger re-render
     setUser(updatedUser);
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    // Guest users can't change passwords
+    if (user.id.startsWith('guest_')) {
+      return false;
+    }
+    
+    try {
+      const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = users.findIndex((u: StoredUser) => u.id === user.id);
+      
+      if (userIndex < 0) {
+        return false; // User not found
+      }
+      
+      // Verify current password
+      if (users[userIndex].password !== currentPassword) {
+        return false; // Wrong current password
+      }
+      
+      // Update password
+      users[userIndex].password = newPassword;
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      return true;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      return false;
+    }
   };
 
   const logout = () => {
@@ -181,7 +242,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginAsGuest,
       logout,
       register,
-      updateUser
+      updateUser,
+      changePassword
     }}>
       {children}
     </AuthContext.Provider>

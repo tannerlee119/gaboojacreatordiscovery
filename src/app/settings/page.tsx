@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { User, Shield, Bell, Palette, Trash2, Save, Edit3, Eye, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, updateUser } = useAuth();
+  const { user, isAuthenticated, updateUser, changePassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   
@@ -135,13 +135,18 @@ export default function SettingsPage() {
     
     setIsLoading(true);
     try {
-      // In a real app, this would call an API to verify current password and update
-      setMessage('Password changed successfully!');
-      setShowChangePasswordModal(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setTimeout(() => setMessage(''), 3000);
+      const success = await changePassword(currentPassword, newPassword);
+      
+      if (success) {
+        setMessage('Password changed successfully!');
+        setShowChangePasswordModal(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage('Current password is incorrect');
+      }
     } catch {
       setMessage('Failed to change password');
     } finally {
@@ -288,22 +293,32 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start cursor-pointer"
-                  onClick={() => setShowChangePasswordModal(true)}
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Change Password
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start cursor-pointer"
-                  onClick={() => setShowLoginHistoryModal(true)}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Login History
-                </Button>
+                {user?.id.startsWith('guest_') ? (
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      Security features are not available for guest accounts. Please create a full account to access password management and login history.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start cursor-pointer"
+                      onClick={() => setShowChangePasswordModal(true)}
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Change Password
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start cursor-pointer"
+                      onClick={() => setShowLoginHistoryModal(true)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Login History
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
