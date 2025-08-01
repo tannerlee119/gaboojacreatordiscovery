@@ -55,16 +55,13 @@ export function DeleteConfirmationModal({
         </DialogHeader>
 
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-red-800 dark:text-red-200 mb-1">
-                This action cannot be undone
-              </p>
-              <p className="text-red-700 dark:text-red-300">
-                The creator will be permanently removed from your bookmarks, including any notes you&apos;ve added.
-              </p>
-            </div>
+          <div className="text-sm">
+            <p className="font-medium text-red-800 dark:text-red-200 mb-1">
+              This action cannot be undone
+            </p>
+            <p className="text-red-700 dark:text-red-300">
+              The creator will be permanently removed from your bookmarks, including any notes you&apos;ve added.
+            </p>
           </div>
         </div>
 
@@ -84,7 +81,7 @@ export function DeleteConfirmationModal({
 
         <DialogFooter className="justify-start gap-2">
           <Button
-            className="bg-red-500 hover:bg-red-600 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
             onClick={handleConfirm}
             disabled={isDeleting}
           >
