@@ -6,13 +6,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { User, Shield, Bell, Palette, Trash2, Save } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { User, Shield, Bell, Palette, Trash2, Save, Edit3, Eye, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Modal states
+  const [showEditUsernameModal, setShowEditUsernameModal] = useState(false);
+  const [showEditEmailModal, setShowEditEmailModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showLoginHistoryModal, setShowLoginHistoryModal] = useState(false);
+  
+  // Form states
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -63,6 +77,87 @@ export default function SettingsPage() {
       }
     }
   };
+
+  // Handle username update
+  const handleUpdateUsername = async () => {
+    if (!newUsername.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      // In a real app, this would call an API
+      // For now, we'll just update localStorage
+      const updatedUser = { ...user, username: newUsername.trim() };
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setMessage('Username updated successfully!');
+      setShowEditUsernameModal(false);
+      setNewUsername('');
+      setTimeout(() => setMessage(''), 3000);
+    } catch {
+      setMessage('Failed to update username');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle email update
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      // In a real app, this would call an API
+      const updatedUser = { ...user, email: newEmail.trim() };
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setMessage('Email updated successfully!');
+      setShowEditEmailModal(false);
+      setNewEmail('');
+      setTimeout(() => setMessage(''), 3000);
+    } catch {
+      setMessage('Failed to update email');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle password change
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setMessage('Please fill in all password fields');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setMessage('New passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setMessage('New password must be at least 6 characters');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      // In a real app, this would call an API to verify current password and update
+      setMessage('Password changed successfully!');
+      setShowChangePasswordModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setMessage(''), 3000);
+    } catch {
+      setMessage('Failed to change password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mock login history data
+  const mockLoginHistory = [
+    { id: 1, date: new Date().toISOString(), location: 'San Francisco, CA', device: 'Chrome on MacOS', ip: '192.168.1.1' },
+    { id: 2, date: new Date(Date.now() - 86400000).toISOString(), location: 'San Francisco, CA', device: 'Safari on iPhone', ip: '192.168.1.2' },
+    { id: 3, date: new Date(Date.now() - 172800000).toISOString(), location: 'New York, NY', device: 'Firefox on Windows', ip: '10.0.1.5' },
+  ];
 
   const handleSaveSettings = async () => {
     setIsLoading(true);
@@ -130,11 +225,35 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Username</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium">Username</label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setNewUsername(user?.username || '');
+                          setShowEditUsernameModal(true);
+                        }}
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Input value={user?.username} disabled />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Email</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium">Email</label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setNewEmail(user?.email || '');
+                          setShowEditEmailModal(true);
+                        }}
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Input value={user?.email || 'Not provided'} disabled />
                   </div>
                 </div>
@@ -154,10 +273,6 @@ export default function SettingsPage() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">Active Account</Badge>
-                  <Badge variant="outline">Free Plan</Badge>
-                </div>
               </CardContent>
             </Card>
 
@@ -172,13 +287,20 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setShowChangePasswordModal(true)}
+                >
+                  <Lock className="h-4 w-4 mr-2" />
                   Change Password
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  Enable Two-Factor Authentication
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setShowLoginHistoryModal(true)}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
                   View Login History
                 </Button>
               </CardContent>
@@ -352,6 +474,165 @@ export default function SettingsPage() {
             {isLoading ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
+
+        {/* Edit Username Modal */}
+        <Dialog open={showEditUsernameModal} onOpenChange={setShowEditUsernameModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Username</DialogTitle>
+              <DialogDescription>
+                Choose a new username for your account
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="new-username">New Username</Label>
+                <Input
+                  id="new-username"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Enter new username"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditUsernameModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateUsername} disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update Username'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Email Modal */}
+        <Dialog open={showEditEmailModal} onOpenChange={setShowEditEmailModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Email</DialogTitle>
+              <DialogDescription>
+                Update your email address
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="new-email">New Email</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Enter new email"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditEmailModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateEmail} disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update Email'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Password Modal */}
+        <Dialog open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Change Password</DialogTitle>
+              <DialogDescription>
+                Update your account password
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setShowChangePasswordModal(false);
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleChangePassword} disabled={isLoading}>
+                {isLoading ? 'Changing...' : 'Change Password'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Login History Modal */}
+        <Dialog open={showLoginHistoryModal} onOpenChange={setShowLoginHistoryModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Login History</DialogTitle>
+              <DialogDescription>
+                Recent login activity for your account
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {mockLoginHistory.map((login) => (
+                <div key={login.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        {new Date(login.date).toLocaleDateString()} at {new Date(login.date).toLocaleTimeString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {login.device} • {login.location}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        IP: {login.ip}
+                      </div>
+                    </div>
+                    <div className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded">
+                      Successful
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowLoginHistoryModal(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
