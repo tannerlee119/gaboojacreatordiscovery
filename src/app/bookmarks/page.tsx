@@ -295,19 +295,6 @@ export default function BookmarksPage() {
                   </div>
                 </div>
 
-                {/* User Notes if available */}
-                {bookmark.comments && (
-                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                    <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      Your Notes
-                    </div>
-                    <div className="text-sm text-blue-600 dark:text-blue-400 line-clamp-3">
-                      {bookmark.comments}
-                    </div>
-                  </div>
-                )}
-
                 {/* AI Analysis Score if available */}
                 {bookmark.aiAnalysis && (
                   <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
@@ -318,6 +305,19 @@ export default function BookmarksPage() {
                         const scoreMatch = scoreText.match(/^(\d+(?:\.\d+)?(?:\/\d+)?)/);
                         return scoreMatch ? scoreMatch[1] : scoreText;
                       })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* User Notes if available */}
+                {bookmark.comments && (
+                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Your Notes
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400 line-clamp-3">
+                      {bookmark.comments}
                     </div>
                   </div>
                 )}
