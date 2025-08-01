@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,14 +20,48 @@ export default function SettingsPage() {
     darkMode: false,
     autoSave: true,
     showBookmarks: true,
-    showRecentSearches: true
+    showRecentSearches: true,
+    skipDeleteConfirmation: false
   });
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('userSettings');
+      const skipDeleteConfirmation = localStorage.getItem('gabooja_skip_delete_confirmation') === 'true';
+      
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(prev => ({
+          ...prev,
+          ...parsed,
+          skipDeleteConfirmation // Override with the specific setting
+        }));
+      } else {
+        setSettings(prev => ({
+          ...prev,
+          skipDeleteConfirmation
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  }, []);
 
   const handleSettingChange = (key: string, value: boolean) => {
     setSettings(prev => ({
       ...prev,
       [key]: value
     }));
+    
+    // Special handling for skipDeleteConfirmation
+    if (key === 'skipDeleteConfirmation') {
+      if (value) {
+        localStorage.setItem('gabooja_skip_delete_confirmation', 'true');
+      } else {
+        localStorage.removeItem('gabooja_skip_delete_confirmation');
+      }
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -224,6 +258,22 @@ export default function SettingsPage() {
                     onClick={() => handleSettingChange('showRecentSearches', !settings.showRecentSearches)}
                   >
                     {settings.showRecentSearches ? 'On' : 'Off'}
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Skip Delete Confirmation</label>
+                    <p className="text-xs text-muted-foreground">
+                      Skip confirmation dialog when deleting bookmarks
+                    </p>
+                  </div>
+                  <Button
+                    variant={settings.skipDeleteConfirmation ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleSettingChange('skipDeleteConfirmation', !settings.skipDeleteConfirmation)}
+                  >
+                    {settings.skipDeleteConfirmation ? 'On' : 'Off'}
                   </Button>
                 </div>
               </CardContent>

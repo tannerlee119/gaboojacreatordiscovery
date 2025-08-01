@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
-import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
+import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useAuth } from '@/lib/auth-context';
 import { useCreator } from '@/lib/creator-context';
+import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import Image from 'next/image';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 
@@ -100,6 +101,7 @@ export function CreatorAnalyzer() {
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
   
   // Cache for storing last results per platform
   const [resultCache, setResultCache] = useState<{
@@ -230,6 +232,28 @@ export function CreatorAnalyzer() {
         addBookmark(bookmarkData);
       }
       setBookmarkedStatus(true);
+      
+      // Show comment modal after bookmarking
+      setShowCommentModal(true);
+    }
+  };
+
+  const handleSaveComments = async (comments: string) => {
+    if (!result || !user) return;
+    
+    try {
+      if (isAuthenticated) {
+        UserBookmarksService.updateUserBookmarkComments(
+          user.id,
+          result.profile.username,
+          result.profile.platform as 'instagram' | 'tiktok',
+          comments
+        );
+      } else {
+        updateBookmarkComments(result.profile.platform, result.profile.username, comments);
+      }
+    } catch (error) {
+      console.error('Error saving bookmark comments:', error);
     }
   };
 
@@ -761,6 +785,19 @@ export function CreatorAnalyzer() {
              )}
            </Card>
       </div>
+      )}
+
+      {/* Comment Modal */}
+      {result && (
+        <BookmarkCommentModal
+          isOpen={showCommentModal}
+          onClose={() => setShowCommentModal(false)}
+          onSave={handleSaveComments}
+          creatorUsername={result.profile.username}
+          platform={result.profile.platform}
+          initialComments=""
+          isEditing={false}
+        />
       )}
     </div>
   );

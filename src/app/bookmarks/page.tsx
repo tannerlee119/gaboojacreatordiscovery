@@ -93,8 +93,18 @@ export default function BookmarksPage() {
   }, [isAuthenticated, user]);
 
   const handleDeleteClick = (bookmark: UserBookmark) => {
-    setSelectedBookmark(bookmark);
-    setShowDeleteModal(true);
+    // Check if user has disabled confirmation modal
+    const skipConfirmation = localStorage.getItem('gabooja_skip_delete_confirmation') === 'true';
+    
+    if (skipConfirmation) {
+      // Skip modal and delete directly
+      setSelectedBookmark(bookmark);
+      handleConfirmDelete();
+    } else {
+      // Show confirmation modal
+      setSelectedBookmark(bookmark);
+      setShowDeleteModal(true);
+    }
   };
 
   const handleConfirmDelete = async () => {

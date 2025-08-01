@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 interface DeleteConfirmationModalProps {
@@ -21,10 +23,15 @@ export function DeleteConfirmationModal({
   platform
 }: DeleteConfirmationModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   const handleConfirm = async () => {
     setIsDeleting(true);
     try {
+      // Save preference if checkbox is checked
+      if (dontShowAgain) {
+        localStorage.setItem('gabooja_skip_delete_confirmation', 'true');
+      }
       await onConfirm();
       onClose();
     } catch (error) {
@@ -61,7 +68,29 @@ export function DeleteConfirmationModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="dont-show-again"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+          />
+          <Label
+            htmlFor="dont-show-again"
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            Don&apos;t show this confirmation again
+          </Label>
+        </div>
+
+        <DialogFooter className="justify-start gap-2">
+          <Button
+            className="bg-red-500 hover:bg-red-600 text-white"
+            onClick={handleConfirm}
+            disabled={isDeleting}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {isDeleting ? 'Deleting...' : 'Delete Bookmark'}
+          </Button>
           <Button
             variant="outline"
             onClick={onClose}
@@ -69,14 +98,6 @@ export function DeleteConfirmationModal({
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isDeleting}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {isDeleting ? 'Deleting...' : 'Delete Bookmark'}
           </Button>
         </DialogFooter>
       </DialogContent>
