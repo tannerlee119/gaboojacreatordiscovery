@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input';
 import { useCreator } from '@/lib/creator-context';
 import { formatNumber } from '@/lib/utils';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
-import { addBookmark, removeBookmark, isBookmarked } from '@/lib/bookmarks';
+import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
+import { UserBookmarksService } from '@/lib/user-bookmarks';
+import { useAuth } from '@/lib/auth-context';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
@@ -73,10 +76,12 @@ interface DiscoveryResponse {
 }
 
 export function CreatorDiscovery() {
+  const { user, isAuthenticated } = useAuth();
   const { analysisHistory } = useCreator();
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // Bookmarks are now managed through user-specific storage
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedCreatorForComment, setSelectedCreatorForComment] = useState<DiscoveryCreator | null>(null);
   
   // Recent analyses collapsed state
   const [isRecentAnalysesCollapsed, setIsRecentAnalysesCollapsed] = useState(true);
@@ -206,14 +211,23 @@ export function CreatorDiscovery() {
   };
 
   const handleBookmarkCreator = async (creator: DiscoveryCreator) => {
-    const isCurrentlyBookmarked = isBookmarked(creator.platform, creator.username);
+    if (!user) return;
+
+    const isCurrentlyBookmarked = isAuthenticated ? 
+      UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform) : 
+      isBookmarked(creator.platform, creator.username);
     
     if (isCurrentlyBookmarked) {
       // Remove bookmark
-      removeBookmark(creator.platform, creator.username);
+      if (isAuthenticated) {
+        UserBookmarksService.removeUserBookmark(user.id, creator.username, creator.platform);
+      } else {
+        removeBookmark(creator.platform, creator.username);
+      }
     } else {
       // Add bookmark
       const bookmarkData = {
+        id: Date.now().toString(),
         username: creator.username,
         platform: creator.platform,
         displayName: creator.displayName,
@@ -221,11 +235,38 @@ export function CreatorDiscovery() {
         isVerified: creator.isVerified,
         followerCount: creator.followerCount,
         followingCount: creator.followingCount,
+        bookmarkedAt: new Date().toISOString(),
       };
-      addBookmark(bookmarkData);
+      
+      if (isAuthenticated) {
+        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+      } else {
+        addBookmark(bookmarkData);
+      }
+      
+      // Show comment modal after bookmarking
+      setSelectedCreatorForComment(creator);
+      setShowCommentModal(true);
     }
+  };
+
+  const handleSaveComments = async (comments: string) => {
+    if (!selectedCreatorForComment || !user) return;
     
-            // Bookmarks are now refreshed automatically through user-specific storage
+    try {
+      if (isAuthenticated) {
+        UserBookmarksService.updateUserBookmarkComments(
+          user.id,
+          selectedCreatorForComment.username,
+          selectedCreatorForComment.platform,
+          comments
+        );
+      } else {
+        updateBookmarkComments(selectedCreatorForComment.platform, selectedCreatorForComment.username, comments);
+      }
+    } catch (error) {
+      console.error('Error saving bookmark comments:', error);
+    }
   };
 
   const handleAnalyzeCreator = async (creator: DiscoveryCreator) => {
@@ -240,7 +281,11 @@ export function CreatorDiscovery() {
   };
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
-    return isBookmarked(creator.platform, creator.username);
+    if (isAuthenticated && user) {
+      return UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
+    } else {
+      return isBookmarked(creator.platform, creator.username);
+    }
   };
 
   const filteredCreators = discoveryData?.creators.filter(creator =>
@@ -435,6 +480,22 @@ export function CreatorDiscovery() {
             setSelectedAnalysis(null);
           }}
           analysisData={selectedAnalysis}
+        />
+      )}
+
+      {/* Comment Modal */}
+      {selectedCreatorForComment && (
+        <BookmarkCommentModal
+          isOpen={showCommentModal}
+          onClose={() => {
+            setShowCommentModal(false);
+            setSelectedCreatorForComment(null);
+          }}
+          onSave={handleSaveComments}
+          creatorUsername={selectedCreatorForComment.username}
+          platform={selectedCreatorForComment.platform}
+          initialComments=""
+          isEditing={false}
         />
       )}
     </div>
