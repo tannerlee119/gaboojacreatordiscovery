@@ -314,29 +314,32 @@ export default function BookmarksPage() {
                 
                 {/* Action Buttons */}
                 <div className="pt-2 border-t border-border space-y-2">
-                  {/* Edit Notes Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditNotes(bookmark)}
-                    className="w-full flex items-center gap-2"
-                  >
-                    <Edit3 className="h-3 w-3" />
-                    {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
-                  </Button>
-                  
-                  {/* View Analysis Button - only show if AI analysis exists */}
-                  {bookmark.aiAnalysis && (
+                  {/* Horizontal Button Row */}
+                  <div className="flex gap-2">
+                    {/* Edit Notes Button */}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleViewAnalysis(bookmark)}
-                      className="w-full flex items-center gap-2"
+                      onClick={() => handleEditNotes(bookmark)}
+                      className="flex-1 flex items-center gap-2"
                     >
-                      <Eye className="h-3 w-3" />
-                      View Analysis
+                      <Edit3 className="h-3 w-3" />
+                      {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
                     </Button>
-                  )}
+                    
+                    {/* View Analysis Button - only show if AI analysis exists */}
+                    {bookmark.aiAnalysis && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewAnalysis(bookmark)}
+                        className="flex-1 flex items-center gap-2"
+                      >
+                        <Eye className="h-3 w-3" />
+                        View Analysis
+                      </Button>
+                    )}
+                  </div>
                   
                   {/* Profile Link */}
                   <a

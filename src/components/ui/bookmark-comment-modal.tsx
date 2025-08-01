@@ -63,7 +63,7 @@ export function BookmarkCommentModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="comments">Your Notes</Label>
             <Textarea
               id="comments"
@@ -79,7 +79,14 @@ export function BookmarkCommentModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="justify-start gap-2">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isSaving ? 'Saving...' : 'Save Notes'}
+          </Button>
           <Button
             variant="outline"
             onClick={handleClose}
@@ -87,13 +94,6 @@ export function BookmarkCommentModal({
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save Notes'}
           </Button>
         </DialogFooter>
       </DialogContent>
