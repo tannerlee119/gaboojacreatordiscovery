@@ -12,6 +12,7 @@ export interface BookmarkedCreator {
   website?: string;
   bio?: string;
   bookmarkedAt: string; // ISO timestamp
+  comments?: string; // User-added notes/comments
   metrics?: {
     followerCount?: number;
     followingCount?: number;
@@ -110,6 +111,25 @@ export function isBookmarked(platform: Platform, username: string): boolean {
 export function getBookmark(platform: Platform, username: string): BookmarkedCreator | null {
   const bookmarks = getBookmarkedCreators();
   return bookmarks.find(b => b.platform === platform && b.username === username) || null;
+}
+
+// Update bookmark comments
+export function updateBookmarkComments(platform: Platform, username: string, comments: string): boolean {
+  const bookmarks = getBookmarkedCreators();
+  const bookmarkIndex = bookmarks.findIndex(
+    b => b.platform === platform && b.username === username
+  );
+  
+  if (bookmarkIndex >= 0) {
+    bookmarks[bookmarkIndex] = {
+      ...bookmarks[bookmarkIndex],
+      comments
+    };
+    saveBookmarkedCreators(bookmarks);
+    return true;
+  }
+  
+  return false;
 }
 
 // Clear all bookmarks

@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getBookmarkedCreators, removeBookmark } from '@/lib/bookmarks';
+import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
-import { Trash2, ExternalLink, Link, Eye } from 'lucide-react';
+import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
+import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
+import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
 import { useAuth } from '@/lib/auth-context';
 import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
 
@@ -57,6 +59,9 @@ export default function BookmarksPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedBookmark, setSelectedBookmark] = useState<UserBookmark | null>(null);
 
   // Load bookmarks on component mount
   useEffect(() => {
@@ -87,14 +92,54 @@ export default function BookmarksPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isAuthenticated, user]);
 
-  const handleRemoveBookmark = (platform: string, username: string) => {
+  const handleDeleteClick = (bookmark: UserBookmark) => {
+    setSelectedBookmark(bookmark);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedBookmark) return;
+    
     if (isAuthenticated && user) {
-      UserBookmarksService.removeUserBookmark(user.id, username, platform as 'instagram' | 'tiktok');
+      UserBookmarksService.removeUserBookmark(user.id, selectedBookmark.username, selectedBookmark.platform as 'instagram' | 'tiktok');
     } else {
-      removeBookmark(platform as 'instagram' | 'tiktok', username);
+      removeBookmark(selectedBookmark.platform as 'instagram' | 'tiktok', selectedBookmark.username);
     }
+    
     // Update local state
-    setBookmarks(prev => prev.filter(b => !(b.platform === platform && b.username === username)));
+    setBookmarks(prev => prev.filter(b => !(b.platform === selectedBookmark.platform && b.username === selectedBookmark.username)));
+    setSelectedBookmark(null);
+  };
+
+  const handleEditNotes = (bookmark: UserBookmark) => {
+    setSelectedBookmark(bookmark);
+    setShowCommentModal(true);
+  };
+
+  const handleSaveComments = async (comments: string) => {
+    if (!selectedBookmark) return;
+    
+    try {
+      if (isAuthenticated && user) {
+        UserBookmarksService.updateUserBookmarkComments(
+          user.id,
+          selectedBookmark.username,
+          selectedBookmark.platform as 'instagram' | 'tiktok',
+          comments
+        );
+      } else {
+        updateBookmarkComments(selectedBookmark.platform as 'instagram' | 'tiktok', selectedBookmark.username, comments);
+      }
+      
+      // Update local state
+      setBookmarks(prev => prev.map(b => 
+        b.platform === selectedBookmark.platform && b.username === selectedBookmark.username
+          ? { ...b, comments }
+          : b
+      ));
+    } catch (error) {
+      console.error('Error saving bookmark comments:', error);
+    }
   };
 
   const handleViewAnalysis = (bookmark: UserBookmark) => {
@@ -199,7 +244,7 @@ export default function BookmarksPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRemoveBookmark(bookmark.platform, bookmark.username)}
+                    onClick={() => handleDeleteClick(bookmark)}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -240,6 +285,19 @@ export default function BookmarksPage() {
                   </div>
                 </div>
 
+                {/* User Notes if available */}
+                {bookmark.comments && (
+                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Your Notes
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400 line-clamp-3">
+                      {bookmark.comments}
+                    </div>
+                  </div>
+                )}
+
                 {/* AI Analysis Score if available */}
                 {bookmark.aiAnalysis && (
                   <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
@@ -256,6 +314,17 @@ export default function BookmarksPage() {
                 
                 {/* Action Buttons */}
                 <div className="pt-2 border-t border-border space-y-2">
+                  {/* Edit Notes Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditNotes(bookmark)}
+                    className="w-full flex items-center gap-2"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
+                  </Button>
+                  
                   {/* View Analysis Button - only show if AI analysis exists */}
                   {bookmark.aiAnalysis && (
                     <Button
@@ -299,6 +368,36 @@ export default function BookmarksPage() {
             setSelectedAnalysis(null);
           }}
           analysisData={selectedAnalysis}
+        />
+      )}
+
+      {/* Comment Modal */}
+      {selectedBookmark && (
+        <BookmarkCommentModal
+          isOpen={showCommentModal}
+          onClose={() => {
+            setShowCommentModal(false);
+            setSelectedBookmark(null);
+          }}
+          onSave={handleSaveComments}
+          creatorUsername={selectedBookmark.username}
+          platform={selectedBookmark.platform}
+          initialComments={selectedBookmark.comments || ''}
+          isEditing={!!selectedBookmark.comments}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {selectedBookmark && (
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedBookmark(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          creatorUsername={selectedBookmark.username}
+          platform={selectedBookmark.platform}
         />
       )}
     </div>

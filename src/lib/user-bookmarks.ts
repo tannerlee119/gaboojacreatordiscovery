@@ -124,6 +124,33 @@ export class UserBookmarksService {
     );
   }
 
+  static updateUserBookmarkComments(userId: string, username: string, platform: 'instagram' | 'tiktok', comments: string): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const bookmarks = this.getUserBookmarks(userId);
+      const bookmarkIndex = bookmarks.findIndex(
+        bookmark => bookmark.username === username && bookmark.platform === platform
+      );
+      
+      if (bookmarkIndex >= 0) {
+        bookmarks[bookmarkIndex] = {
+          ...bookmarks[bookmarkIndex],
+          comments
+        };
+        
+        const key = this.getStorageKey(userId, 'bookmarks');
+        localStorage.setItem(key, JSON.stringify(bookmarks));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error updating bookmark comments:', error);
+      return false;
+    }
+  }
+
   static clearUserBookmarks(userId: string): void {
     if (typeof window === 'undefined') return;
     

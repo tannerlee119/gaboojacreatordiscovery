@@ -10,6 +10,7 @@ import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck 
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useAuth } from '@/lib/auth-context';
+import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import Image from 'next/image';
 
 interface AnalysisData {
@@ -63,6 +64,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
   const { user, isAuthenticated } = useAuth();
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
   
   // Check bookmark status based on user authentication
   const getBookmarkStatus = useCallback(() => {
@@ -100,7 +102,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
       }
       setBookmarkedStatus(false);
     } else {
-      // Add bookmark
+      // Add bookmark (without comments initially)
       const bookmarkData: BookmarkedCreator = {
         id: Date.now().toString(),
         username: analysisData.profile.username,
@@ -123,6 +125,37 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
         addBookmark(bookmarkData);
       }
       setBookmarkedStatus(true);
+      
+      // Show comment modal after bookmarking
+      setShowCommentModal(true);
+    }
+  };
+
+  const handleSaveComments = async (comments: string) => {
+    if (!user) return;
+    
+    try {
+      if (isAuthenticated) {
+        UserBookmarksService.updateUserBookmarkComments(
+          user.id,
+          analysisData.profile.username,
+          analysisData.profile.platform as 'instagram' | 'tiktok',
+          comments
+        );
+      } else {
+        // Update non-authenticated bookmark comments
+        const bookmarks = JSON.parse(localStorage.getItem('gabooja_bookmarked_creators') || '[]');
+        const bookmarkIndex = bookmarks.findIndex(
+          (b: BookmarkedCreator) => b.platform === analysisData.profile.platform && b.username === analysisData.profile.username
+        );
+        
+        if (bookmarkIndex >= 0) {
+          bookmarks[bookmarkIndex].comments = comments;
+          localStorage.setItem('gabooja_bookmarked_creators', JSON.stringify(bookmarks));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving bookmark comments:', error);
     }
   };
 
@@ -467,6 +500,17 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
           </Card>
         </div>
       </DialogContent>
+      
+      {/* Comment Modal */}
+      <BookmarkCommentModal
+        isOpen={showCommentModal}
+        onClose={() => setShowCommentModal(false)}
+        onSave={handleSaveComments}
+        creatorUsername={analysisData.profile.username}
+        platform={analysisData.profile.platform}
+        initialComments=""
+        isEditing={false}
+      />
     </Dialog>
   );
 } 
