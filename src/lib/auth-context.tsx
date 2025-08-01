@@ -17,6 +17,7 @@ interface AuthContextType {
   loginAsGuest: () => void;
   logout: () => void;
   register: (username: string, email: string, password: string) => Promise<boolean>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,6 +131,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...updates };
+    
+    // Update localStorage
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update users array if it exists
+    try {
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = users.findIndex((u: User) => u.id === user.id);
+      if (userIndex >= 0) {
+        users[userIndex] = updatedUser;
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+    } catch (error) {
+      console.error('Error updating users array:', error);
+    }
+    
+    // Update state to trigger re-render
+    setUser(updatedUser);
+  };
+
   const logout = () => {
     // Clear user-specific data if user exists
     if (user) {
@@ -155,7 +180,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       loginAsGuest,
       logout,
-      register
+      register,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

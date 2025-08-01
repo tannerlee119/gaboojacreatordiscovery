@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { User, Shield, Bell, Palette, Trash2, Save, Edit3, Eye, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   
@@ -84,10 +84,8 @@ export default function SettingsPage() {
     
     setIsLoading(true);
     try {
-      // In a real app, this would call an API
-      // For now, we'll just update localStorage
-      const updatedUser = { ...user, username: newUsername.trim() };
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      // Update user through auth context
+      updateUser({ username: newUsername.trim() });
       setMessage('Username updated successfully!');
       setShowEditUsernameModal(false);
       setNewUsername('');
@@ -105,9 +103,8 @@ export default function SettingsPage() {
     
     setIsLoading(true);
     try {
-      // In a real app, this would call an API
-      const updatedUser = { ...user, email: newEmail.trim() };
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      // Update user through auth context
+      updateUser({ email: newEmail.trim() });
       setMessage('Email updated successfully!');
       setShowEditEmailModal(false);
       setNewEmail('');
@@ -152,11 +149,13 @@ export default function SettingsPage() {
     }
   };
 
-  // Mock login history data
+  // More realistic login history data
   const mockLoginHistory = [
-    { id: 1, date: new Date().toISOString(), location: 'San Francisco, CA', device: 'Chrome on MacOS', ip: '192.168.1.1' },
-    { id: 2, date: new Date(Date.now() - 86400000).toISOString(), location: 'San Francisco, CA', device: 'Safari on iPhone', ip: '192.168.1.2' },
-    { id: 3, date: new Date(Date.now() - 172800000).toISOString(), location: 'New York, NY', device: 'Firefox on Windows', ip: '10.0.1.5' },
+    { id: 1, date: new Date().toISOString(), location: 'Current Session', device: 'Chrome 131 on macOS', ip: '76.102.234.156' },
+    { id: 2, date: new Date(Date.now() - 7200000).toISOString(), location: 'San Francisco, CA', device: 'Chrome 131 on macOS', ip: '76.102.234.156' },
+    { id: 3, date: new Date(Date.now() - 86400000).toISOString(), location: 'San Francisco, CA', device: 'Safari 17 on iPhone', ip: '76.102.234.156' },
+    { id: 4, date: new Date(Date.now() - 172800000).toISOString(), location: 'San Francisco, CA', device: 'Chrome 131 on macOS', ip: '76.102.234.156' },
+    { id: 5, date: new Date(Date.now() - 432000000).toISOString(), location: 'San Francisco, CA', device: 'Firefox 132 on macOS', ip: '76.102.234.156' },
   ];
 
   const handleSaveSettings = async () => {
@@ -230,6 +229,7 @@ export default function SettingsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="cursor-pointer"
                         onClick={() => {
                           setNewUsername(user?.username || '');
                           setShowEditUsernameModal(true);
@@ -246,6 +246,7 @@ export default function SettingsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="cursor-pointer"
                         onClick={() => {
                           setNewEmail(user?.email || '');
                           setShowEditEmailModal(true);
@@ -289,7 +290,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start"
+                  className="w-full justify-start cursor-pointer"
                   onClick={() => setShowChangePasswordModal(true)}
                 >
                   <Lock className="h-4 w-4 mr-2" />
@@ -297,7 +298,7 @@ export default function SettingsPage() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start"
+                  className="w-full justify-start cursor-pointer"
                   onClick={() => setShowLoginHistoryModal(true)}
                 >
                   <Eye className="h-4 w-4 mr-2" />
