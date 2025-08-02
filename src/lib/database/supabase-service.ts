@@ -137,7 +137,7 @@ export async function saveCreatorAnalysis(
       console.warn('⚠️ RPC functions failed, falling back to direct table operations:', rpcError);
       
       // Fallback: Direct table operations
-      // First, insert or update the creator record
+      // First, insert or update the creator record (basic info only)
       const { data: creator, error: creatorError } = await supabase
         .from('creators')
         .upsert({
@@ -147,25 +147,13 @@ export async function saveCreatorAnalysis(
           bio: analysisData.profile.bio,
           profile_image_url: analysisData.profile.profileImageUrl,
           is_verified: analysisData.profile.isVerified,
-          follower_count: analysisData.profile.followerCount,
-          following_count: analysisData.profile.followingCount,
           location: analysisData.profile.location,
           website: analysisData.profile.website,
-          analysis_status: 'completed',
-          last_analyzed: new Date().toISOString(),
-          // AI Analysis fields
-          creator_score: analysisData.profile.aiAnalysis?.creator_score,
           category: analysisData.profile.aiAnalysis?.category,
-          brand_potential: analysisData.profile.aiAnalysis?.brand_potential,
-          key_strengths: analysisData.profile.aiAnalysis?.key_strengths,
-          engagement_quality: analysisData.profile.aiAnalysis?.engagement_quality,
-          content_style: analysisData.profile.aiAnalysis?.content_style,
-          audience_demographics: analysisData.profile.aiAnalysis?.audience_demographics,
-          collaboration_potential: analysisData.profile.aiAnalysis?.collaboration_potential,
-          overall_assessment: analysisData.profile.aiAnalysis?.overall_assessment
+          last_analyzed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }, { 
-          onConflict: 'username,platform',
-          returning: 'representation'
+          onConflict: 'username,platform'
         })
         .select('id')
         .single();
@@ -177,7 +165,85 @@ export async function saveCreatorAnalysis(
 
       console.log('✅ Creator record saved with ID:', creator.id);
 
-      // Insert platform-specific metrics
+      // Now insert the detailed analysis record
+      const analysisRecord = {
+        creator_id: creator.id,
+        analysis_status: 'completed',
+        analyzed_by_user_id: userId || null,
+        
+        // Core metrics from scraper
+        follower_count: analysisData.profile.followerCount || 0,
+        following_count: analysisData.profile.followingCount || 0,
+        
+        // Platform-specific metrics
+        ...(analysisData.profile.platform === 'instagram' && {
+          post_count: analysisData.profile.metrics?.postCount,
+          average_likes: analysisData.profile.metrics?.averageLikes,
+          average_comments: analysisData.profile.metrics?.averageComments,
+          engagement_rate: analysisData.profile.metrics?.engagementRate
+        }),
+        ...(analysisData.profile.platform === 'tiktok' && {
+          like_count: analysisData.profile.metrics?.likeCount,
+          video_count: analysisData.profile.metrics?.videoCount,
+          average_views: analysisData.profile.metrics?.averageViews,
+          engagement_rate: analysisData.profile.metrics?.engagementRate
+        }),
+        
+        // Profile snapshot
+        display_name: analysisData.profile.displayName,
+        bio: analysisData.profile.bio,
+        profile_image_url: analysisData.profile.profileImageUrl,
+        profile_image_base64: analysisData.profile.profileImageBase64,
+        is_verified: analysisData.profile.isVerified,
+        location: analysisData.profile.location,
+        website: analysisData.profile.website,
+        
+        // AI analysis results
+        ai_analysis_raw: analysisData.profile.aiAnalysis,
+        ai_creator_score: analysisData.profile.aiAnalysis?.creator_score,
+        ai_category: analysisData.profile.aiAnalysis?.category,
+        ai_brand_potential: analysisData.profile.aiAnalysis?.brand_potential,
+        ai_key_strengths: analysisData.profile.aiAnalysis?.key_strengths,
+        ai_engagement_quality: analysisData.profile.aiAnalysis?.engagement_quality,
+        ai_content_style: analysisData.profile.aiAnalysis?.content_style,
+        ai_audience_demographics: analysisData.profile.aiAnalysis?.audience_demographics,
+        ai_collaboration_potential: analysisData.profile.aiAnalysis?.collaboration_potential,
+        ai_overall_assessment: analysisData.profile.aiAnalysis?.overall_assessment,
+        
+        // AI metrics
+        ai_model: analysisData.aiMetrics?.model || 'unknown',
+        ai_cost_cents: Math.round((analysisData.aiMetrics?.cost || 0) * 100),
+        ai_cached: analysisData.aiMetrics?.cached || false,
+        
+        // Data quality
+        data_quality_score: analysisData.dataQuality?.score || 0,
+        data_quality_valid: analysisData.dataQuality?.isValid || true,
+        data_completeness: analysisData.dataQuality?.breakdown?.completeness || 0,
+        data_consistency: analysisData.dataQuality?.breakdown?.consistency || 0,
+        data_reliability: analysisData.dataQuality?.breakdown?.reliability || 0,
+        data_transformations: analysisData.dataQuality?.transformations || 0,
+        data_issues: analysisData.dataQuality?.issues?.length || 0,
+        
+        // Scraping metadata
+        scraping_method: analysisData.scrapingDetails?.method || 'playwright',
+        processing_time_ms: analysisData.processingTime || 0
+      };
+
+      const { data: analysis, error: analysisError } = await supabase
+        .from('creator_analyses')
+        .insert(analysisRecord)
+        .select('id')
+        .single();
+
+      if (analysisError) {
+        console.error('❌ Error inserting analysis record:', analysisError);
+        // Don't fail completely - creator record was still saved
+        console.warn('⚠️ Continuing despite analysis record error');
+      } else {
+        console.log('✅ Analysis record saved with ID:', analysis.id);
+      }
+
+      // Insert platform-specific metrics (legacy support)
       if (analysisData.profile.platform === 'instagram' && analysisData.profile.metrics) {
         const { error: metricsError } = await supabase
           .from('instagram_metrics')

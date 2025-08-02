@@ -3,6 +3,7 @@ import { InstagramMetrics } from '@/lib/types';
 
 interface InstagramScrapingResult extends ScrapingResult {
   data?: {
+    username: string;
     displayName: string;
     bio?: string;
     profileImageUrl: string;
@@ -754,6 +755,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
     };
 
     return {
+      username: profileData.username,
       displayName: profileData.displayName,
       bio: profileData.bio,
       profileImageUrl: profileData.profileImageUrl,
