@@ -270,14 +270,14 @@ export default function SettingsPage() {
                   <div>
                     <label className="text-sm font-medium">Member Since</label>
                     <Input 
-                      value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'} 
+                      value={user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'} 
                       disabled 
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium">Last Login</label>
                     <Input 
-                      value={user?.loginTime ? new Date(user.loginTime).toLocaleDateString() : 'N/A'} 
+                      value={user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'} 
                       disabled 
                     />
                   </div>

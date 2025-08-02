@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
         location: (finalData.location as string) || undefined,
         website: (finalData.website as string) || undefined,
         metrics: finalData.metrics || {},
-        aiAnalysis
+        aiAnalysis: aiAnalysis || undefined
       },
       scrapingDetails: {
         method: scrapingResult.method,
