@@ -217,6 +217,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare complete analysis data for Supabase
+    const processingTime = Date.now() - startTime;
+    
     const analysisData = {
       profile: {
         username,
@@ -281,8 +283,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const processingTime = Date.now() - startTime;
-    
     const response = NextResponse.json({
       success: true,
       data: {
