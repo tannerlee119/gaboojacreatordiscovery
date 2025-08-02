@@ -9,7 +9,7 @@ import { formatNumber } from '@/lib/utils';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import Image from 'next/image';
 
@@ -61,7 +61,8 @@ interface AnalysisModalProps {
 }
 
 export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, session } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);

@@ -9,7 +9,7 @@ import { Platform } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { useCreator } from '@/lib/creator-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import Image from 'next/image';
@@ -94,7 +94,8 @@ function hasDataQuality(result: AnalysisResult): result is AnalysisResult & { da
 
 export function CreatorAnalyzer() {
   const { currentAnalysis, setCurrentAnalysis, addToHistory, isLoading, setIsLoading } = useCreator();
-  const { user, isAuthenticated } = useAuth();
+  const { user, session } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const [username, setUsername] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [error, setError] = useState<string | null>(null);

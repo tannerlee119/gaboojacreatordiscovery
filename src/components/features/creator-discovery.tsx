@@ -12,7 +12,7 @@ import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from 
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
 import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
@@ -76,7 +76,8 @@ interface DiscoveryResponse {
 }
 
 export function CreatorDiscovery() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, session } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const { analysisHistory } = useCreator();
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

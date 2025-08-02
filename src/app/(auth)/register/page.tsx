@@ -58,9 +58,8 @@ export default function RegisterPage() {
       if (signUpError) {
         setError(signUpError.message);
       } else {
-        // Redirect to analyze page or show confirmation message
-        setError('Check your email for a confirmation link, then you can sign in!');
-        setTimeout(() => router.push('/login'), 3000);
+        // Registration successful - redirect to analyze page
+        router.push('/analyze');
       }
     } catch {
       setError('Registration failed. Please try again.');

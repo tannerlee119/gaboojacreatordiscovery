@@ -123,6 +123,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
+        emailRedirectTo: undefined, // Disable email verification for now
         data: {
           username,
           display_name: username

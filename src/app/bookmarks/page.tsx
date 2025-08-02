@@ -9,7 +9,7 @@ import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-re
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
 
 interface AnalysisData {
@@ -54,7 +54,8 @@ interface AnalysisData {
 }
 
 export default function BookmarksPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, session } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
