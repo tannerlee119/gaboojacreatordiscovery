@@ -74,63 +74,158 @@ export async function saveCreatorAnalysis(
   try {
     const supabase = createServerClient();
     
-    // Start analysis record
-    const { data: analysisId, error: startError } = await supabase
-      .rpc('start_creator_analysis', {
-        p_username: analysisData.profile.username,
-        p_platform: analysisData.profile.platform,
-        p_user_id: userId || null
-      });
+    console.log('🚀 Starting analysis record for:', analysisData.profile.username, analysisData.profile.platform);
+    
+    // Try RPC first, but fallback to direct table operations if RPC functions don't exist
+    try {
+      const { data: analysisId, error: startError } = await supabase
+        .rpc('start_creator_analysis', {
+          p_username: analysisData.profile.username,
+          p_platform: analysisData.profile.platform,
+          p_user_id: userId || null
+        });
 
-    if (startError) {
-      console.error('Error starting analysis:', startError);
-      return { success: false, error: startError.message };
+      if (startError) {
+        throw new Error(`RPC start_creator_analysis failed: ${startError.message}`);
+      }
+      
+      console.log('✅ Analysis started with ID:', analysisId);
+
+      // Prepare data for completion function
+      const completionData = {
+        profile: {
+          username: analysisData.profile.username,
+          platform: analysisData.profile.platform,
+          displayName: analysisData.profile.displayName,
+          bio: analysisData.profile.bio,
+          profileImageUrl: analysisData.profile.profileImageUrl,
+          profileImageBase64: analysisData.profile.profileImageBase64,
+          isVerified: analysisData.profile.isVerified,
+          followerCount: analysisData.profile.followerCount,
+          followingCount: analysisData.profile.followingCount,
+          location: analysisData.profile.location,
+          website: analysisData.profile.website,
+          metrics: analysisData.profile.metrics,
+          aiAnalysis: analysisData.profile.aiAnalysis
+        },
+        scrapingDetails: analysisData.scrapingDetails,
+        aiMetrics: analysisData.aiMetrics || { model: 'none', cost: 0, cached: false },
+        dataQuality: analysisData.dataQuality || { 
+          score: 100, 
+          isValid: true, 
+          breakdown: { completeness: 100, consistency: 100, reliability: 100 }
+        },
+        processingTime: analysisData.processingTime || 0
+      };
+
+      console.log('🔄 Completing analysis with ID:', analysisId);
+      
+      const { error: completeError } = await supabase
+        .rpc('complete_creator_analysis', {
+          p_analysis_id: analysisId,
+          p_data: completionData
+        });
+
+      if (completeError) {
+        throw new Error(`RPC complete_creator_analysis failed: ${completeError.message}`);
+      }
+      
+      console.log('✅ Analysis completed successfully via RPC');
+      return { success: true, analysisId };
+      
+    } catch (rpcError) {
+      console.warn('⚠️ RPC functions failed, falling back to direct table operations:', rpcError);
+      
+      // Fallback: Direct table operations
+      // First, insert or update the creator record
+      const { data: creator, error: creatorError } = await supabase
+        .from('creators')
+        .upsert({
+          username: analysisData.profile.username,
+          platform: analysisData.profile.platform,
+          display_name: analysisData.profile.displayName,
+          bio: analysisData.profile.bio,
+          profile_image_url: analysisData.profile.profileImageUrl,
+          is_verified: analysisData.profile.isVerified,
+          follower_count: analysisData.profile.followerCount,
+          following_count: analysisData.profile.followingCount,
+          location: analysisData.profile.location,
+          website: analysisData.profile.website,
+          analysis_status: 'completed',
+          last_analyzed: new Date().toISOString(),
+          // AI Analysis fields
+          creator_score: analysisData.profile.aiAnalysis?.creator_score,
+          category: analysisData.profile.aiAnalysis?.category,
+          brand_potential: analysisData.profile.aiAnalysis?.brand_potential,
+          key_strengths: analysisData.profile.aiAnalysis?.key_strengths,
+          engagement_quality: analysisData.profile.aiAnalysis?.engagement_quality,
+          content_style: analysisData.profile.aiAnalysis?.content_style,
+          audience_demographics: analysisData.profile.aiAnalysis?.audience_demographics,
+          collaboration_potential: analysisData.profile.aiAnalysis?.collaboration_potential,
+          overall_assessment: analysisData.profile.aiAnalysis?.overall_assessment
+        }, { 
+          onConflict: 'username,platform',
+          returning: 'representation'
+        })
+        .select('id')
+        .single();
+
+      if (creatorError) {
+        console.error('❌ Error upserting creator:', creatorError);
+        return { success: false, error: creatorError.message };
+      }
+
+      console.log('✅ Creator record saved with ID:', creator.id);
+
+      // Insert platform-specific metrics
+      if (analysisData.profile.platform === 'instagram' && analysisData.profile.metrics) {
+        const { error: metricsError } = await supabase
+          .from('instagram_metrics')
+          .upsert({
+            creator_id: creator.id,
+            follower_count: analysisData.profile.metrics.followerCount || 0,
+            following_count: analysisData.profile.metrics.followingCount || 0,
+            post_count: analysisData.profile.metrics.postCount || 0,
+            engagement_rate: analysisData.profile.metrics.engagementRate || 0,
+            average_likes: analysisData.profile.metrics.averageLikes || 0,
+            average_comments: analysisData.profile.metrics.averageComments || 0,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'creator_id' });
+
+        if (metricsError) {
+          console.warn('⚠️ Error saving Instagram metrics:', metricsError);
+        } else {
+          console.log('✅ Instagram metrics saved');
+        }
+      }
+
+      if (analysisData.profile.platform === 'tiktok' && analysisData.profile.metrics) {
+        const { error: metricsError } = await supabase
+          .from('tiktok_metrics')
+          .upsert({
+            creator_id: creator.id,
+            follower_count: analysisData.profile.metrics.followerCount || 0,
+            following_count: analysisData.profile.metrics.followingCount || 0,
+            like_count: analysisData.profile.metrics.likeCount || 0,
+            video_count: analysisData.profile.metrics.videoCount || 0,
+            average_views: analysisData.profile.metrics.averageViews || 0,
+            average_likes: analysisData.profile.metrics.averageLikes || 0,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'creator_id' });
+
+        if (metricsError) {
+          console.warn('⚠️ Error saving TikTok metrics:', metricsError);
+        } else {
+          console.log('✅ TikTok metrics saved');
+        }
+      }
+      
+      console.log('✅ Analysis saved successfully via direct table operations');
+      return { success: true, analysisId: creator.id };
     }
-
-    // Prepare data for completion function (matches exact API response format)
-    const completionData = {
-      profile: {
-        username: analysisData.profile.username,
-        platform: analysisData.profile.platform,
-        displayName: analysisData.profile.displayName,
-        bio: analysisData.profile.bio,
-        profileImageUrl: analysisData.profile.profileImageUrl,
-        profileImageBase64: analysisData.profile.profileImageBase64,
-        isVerified: analysisData.profile.isVerified,
-        followerCount: analysisData.profile.followerCount,
-        followingCount: analysisData.profile.followingCount,
-        location: analysisData.profile.location,
-        website: analysisData.profile.website,
-        metrics: analysisData.profile.metrics,
-        aiAnalysis: analysisData.profile.aiAnalysis
-      },
-      scrapingDetails: analysisData.scrapingDetails,
-      aiMetrics: analysisData.aiMetrics || { model: 'none', cost: 0, cached: false },
-      dataQuality: analysisData.dataQuality || { 
-        score: 100, 
-        isValid: true, 
-        breakdown: { completeness: 100, consistency: 100, reliability: 100 }
-      },
-      processingTime: analysisData.processingTime || 0
-    };
-
-    // Complete analysis
-    const { error: completeError } = await supabase
-      .rpc('complete_creator_analysis', {
-        p_analysis_id: analysisId,
-        p_data: completionData
-      });
-
-    if (completeError) {
-      console.error('Error completing analysis:', completeError);
-      return { success: false, error: completeError.message };
-    }
-
-    console.log(`✅ Successfully saved analysis for ${analysisData.profile.username} to Supabase`);
-    return { success: true, analysisId };
 
   } catch (error) {
-    console.error('Error saving creator analysis:', error);
+    console.error('💥 Error saving creator analysis:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

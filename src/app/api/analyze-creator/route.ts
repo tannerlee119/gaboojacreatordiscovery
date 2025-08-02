@@ -261,15 +261,23 @@ export async function POST(request: NextRequest) {
     // Save complete analysis to Supabase
     let analysisId: string | undefined;
     try {
+      console.log('💾 Attempting to save analysis data:', JSON.stringify({
+        username: analysisData.profile.username,
+        platform: analysisData.profile.platform,
+        hasAiAnalysis: !!analysisData.profile.aiAnalysis,
+        dataQualityScore: analysisData.dataQuality?.score,
+        processingTime: analysisData.processingTime
+      }, null, 2));
+      
       const saveResult = await saveCreatorAnalysis(analysisData, userId);
       if (saveResult.success) {
         analysisId = saveResult.analysisId;
         console.log(`✅ Analysis saved to Supabase with ID: ${analysisId}`);
       } else {
-        console.error('Failed to save analysis:', saveResult.error);
+        console.error('❌ Failed to save analysis:', saveResult.error);
       }
     } catch (dbError) {
-      console.error('Database save error:', dbError);
+      console.error('💥 Database save error:', dbError);
       // Continue even if DB save fails - don't expose internal errors
     }
 

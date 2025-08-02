@@ -336,7 +336,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
                         <div className="text-med font-medium gabooja-accent mb-2">Category</div>
                         <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
-                          {analysisData.profile.aiAnalysis.category}
+                          {analysisData.profile.aiAnalysis.category.charAt(0).toUpperCase() + analysisData.profile.aiAnalysis.category.slice(1)}
                         </div>
                       </div>
                     </div>
