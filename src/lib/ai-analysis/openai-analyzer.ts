@@ -205,7 +205,27 @@ export async function analyzeWithOpenAI(
 function generatePrompt(level: AnalysisComplexity['level'], platform: Platform, username: string): string {
   const basePrompt = `You are a social media marketing analyst. Analyze this ${platform} profile page layout for business and marketing insights. Focus on the publicly visible profile information including follower metrics, verification status, bio content, and overall brand presentation for user @${username}.
 
-IMPORTANT: You must respond ONLY in valid JSON format. Do not include any explanatory text outside the JSON structure.`;
+IMPORTANT: You must respond ONLY in valid JSON format. Do not include any explanatory text outside the JSON structure.
+
+For the "category" field, you MUST choose ONLY from these predefined categories:
+- lifestyle (general lifestyle, daily life, personal brand)
+- fashion (clothing, style, fashion trends) 
+- beauty (makeup, skincare, beauty tips)
+- fitness (workouts, health, wellness, sports)
+- food (cooking, restaurants, food reviews, recipes)
+- travel (destinations, travel tips, adventure)
+- tech (technology, gadgets, reviews, tutorials)
+- gaming (video games, gaming content, esports)
+- music (musicians, DJs, music production, concerts, events)
+- comedy (humor, memes, entertainment)
+- education (learning, tutorials, how-to content)
+- business (entrepreneurship, professional content)
+- art (visual arts, creative content, design)
+- pets (animals, pet care, animal content)
+- family (parenting, family life, kids content)
+- other (if none of the above categories clearly fit)
+
+Do NOT create custom category descriptions. Pick the single best match from the list above.`;
   
   switch (level) {
     case 'basic':
@@ -213,22 +233,22 @@ IMPORTANT: You must respond ONLY in valid JSON format. Do not include any explan
       
 Provide a basic creator analysis based on the visual information available:
 1. Creator Score (1-10): Overall rating based on profile presentation
-2. Category: Primary content category based on bio/visuals
+2. Category: Choose ONE category from the predefined list that best matches this creator
 3. Brand Potential: Partnership potential assessment
 4. Key Strengths: Observable strengths from the profile
 5. Overall Assessment: Brief summary
 
 Focus only on what's clearly visible in the screenshot. Make confident assessments based on profile aesthetics, follower counts, verification status, bio content, and overall presentation quality.
 
-Respond in JSON format with these keys:
-{"creator_score": "X/10 - reason", "category": "category", "brand_potential": "assessment", "key_strengths": "strengths", "engagement_quality": "based on profile quality", "content_style": "visual style assessment", "audience_demographics": "inferred from profile", "collaboration_potential": "potential assessment", "overall_assessment": "summary"}`;
+Respond in JSON format with these exact keys:
+{"creator_score": "X/10 - reason", "category": "[choose from predefined list]", "brand_potential": "assessment", "key_strengths": "strengths", "engagement_quality": "based on profile quality", "content_style": "visual style assessment", "audience_demographics": "inferred from profile", "collaboration_potential": "potential assessment", "overall_assessment": "summary"}`
 
     case 'standard':
       return `${basePrompt}
       
 Provide a comprehensive creator analysis based on the visible profile information:
 1. Creator Score (1-10): Overall rating with reasoning based on profile quality
-2. Category: Primary content category/theme from bio and visuals
+2. Category: Choose the single best matching category from the predefined list
 3. Brand Potential: Partnership suitability based on follower count, verification, presentation
 4. Key Strengths: What makes them stand out from the profile
 5. Engagement Quality: Assessment based on follower count, verification, and profile professionalism
@@ -240,14 +260,14 @@ Provide a comprehensive creator analysis based on the visible profile informatio
 Analyze the profile presentation, follower counts, verification status, bio quality, profile aesthetics, and overall brand consistency. Provide confident insights based on these observable elements.
 
 Respond in JSON format with exact keys:
-{"creator_score": "X/10 - reason", "category": "category description", "brand_potential": "assessment", "key_strengths": "specific strengths", "engagement_quality": "quality assessment", "content_style": "style description", "audience_demographics": "demographic insights", "collaboration_potential": "collaboration assessment", "overall_assessment": "summary and recommendations"}`;
+{"creator_score": "X/10 - reason", "category": "[single category from list]", "brand_potential": "assessment", "key_strengths": "specific strengths", "engagement_quality": "quality assessment", "content_style": "style description", "audience_demographics": "demographic insights", "collaboration_potential": "collaboration assessment", "overall_assessment": "summary and recommendations"}`
 
     case 'premium':
       return `${basePrompt}
       
 Provide an in-depth, premium creator analysis based on comprehensive observation of the profile:
 1. Creator Score (1-10): Detailed rating with comprehensive reasoning
-2. Category: Primary content category with subcategories
+2. Category: Select the most accurate single category from the predefined list
 3. Brand Potential: Detailed partnership suitability with specific recommendations
 4. Key Strengths: Comprehensive analysis of unique value propositions
 5. Engagement Quality: Deep assessment based on follower metrics, verification, and profile quality
@@ -259,7 +279,7 @@ Provide an in-depth, premium creator analysis based on comprehensive observation
 Conduct a thorough analysis of all visible elements: follower counts, verification badges, bio content, profile aesthetics, username professionalism, link presence, and overall brand presentation. Provide strategic insights and actionable recommendations for brand partnerships based on these observable factors.
 
 Respond in JSON format with these exact keys:
-{"creator_score": "X/10 - detailed reason", "category": "detailed category description", "brand_potential": "comprehensive assessment", "key_strengths": "detailed strengths analysis", "engagement_quality": "detailed quality assessment", "content_style": "comprehensive style analysis", "audience_demographics": "detailed demographic insights", "collaboration_potential": "detailed collaboration assessment", "overall_assessment": "comprehensive summary and strategic recommendations"}`;
+{"creator_score": "X/10 - detailed reason", "category": "[exact category from predefined list]", "brand_potential": "comprehensive assessment", "key_strengths": "detailed strengths analysis", "engagement_quality": "detailed quality assessment", "content_style": "comprehensive style analysis", "audience_demographics": "detailed demographic insights", "collaboration_potential": "detailed collaboration assessment", "overall_assessment": "comprehensive summary and strategic recommendations"}`
   }
 }
 
@@ -275,7 +295,7 @@ function createFallbackAnalysis(rawText: string, level: AnalysisComplexity['leve
   if (isRefusal) {
     return {
       creator_score: "8/10 - Profile successfully captured and analyzed",
-      category: "Social Media Creator",
+      category: "lifestyle", // Use predefined category
       brand_potential: "Good potential based on profile presentation and metrics",
       key_strengths: "Strong social media presence with engaged audience",
       engagement_quality: "Active creator with consistent content output",
@@ -289,7 +309,7 @@ function createFallbackAnalysis(rawText: string, level: AnalysisComplexity['leve
   // For other parsing errors, include the raw text
   return {
     creator_score: `7/10 - Analysis completed at ${level} level`,
-    category: "Content Creator",
+    category: "other", // Use predefined fallback category
     brand_potential: "Analysis completed - see full details below",
     key_strengths: "Profile successfully analyzed",
     engagement_quality: "Creator metrics captured",

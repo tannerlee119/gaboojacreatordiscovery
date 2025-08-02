@@ -45,10 +45,11 @@ export class AICostOptimizer {
     
     let score = 0;
     
-    // Follower count scoring
-    if (followerCount > 1000000) score += 3; // 1M+ followers
-    else if (followerCount > 100000) score += 2; // 100K+ followers
-    else if (followerCount > 10000) score += 1; // 10K+ followers
+    // Enhanced follower count scoring - medium accounts (40K+) get better models
+    if (followerCount > 1000000) score += 4; // 1M+ followers - premium
+    else if (followerCount > 100000) score += 3; // 100K+ followers - premium
+    else if (followerCount > 40000) score += 2; // 40K+ followers - standard with GPT-4o
+    else if (followerCount > 10000) score += 1; // 10K+ followers - standard
     else if (followerCount < 5000) score += 2; // VERY small accounts need richer analysis
     
     // Verification adds importance
@@ -60,10 +61,10 @@ export class AICostOptimizer {
     // Platform importance
     score += factors.platformImportance;
 
-    // Determine complexity level
+    // Determine complexity level - adjusted thresholds
     let level: AnalysisComplexity['level'];
     if (score >= 6) level = 'premium';
-    else if (score >= 3) level = 'standard';
+    else if (score >= 4) level = 'standard'; // Lowered threshold for standard
     else level = 'basic';
 
     return { level, factors };
@@ -85,11 +86,11 @@ export class AICostOptimizer {
       
       case 'standard':
         return {
-          model: 'gpt-4o-mini',
-          maxTokens: 750,
+          model: 'gpt-4o', // Upgraded to GPT-4o for better analysis
+          maxTokens: 800,
           temperature: 0.3,
-          imageDetail: 'low',
-          estimatedCostUSD: 0.006 // Approximate cost
+          imageDetail: 'high', // Better image analysis
+          estimatedCostUSD: 0.025 // Higher cost but better quality
         };
       
       case 'premium':
