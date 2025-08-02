@@ -34,6 +34,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithUsername: (username: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   updateSettings: (updates: Partial<UserSettings>) => Promise<{ error: Error | null }>;
@@ -141,6 +142,28 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const signInWithUsername = async (username: string, password: string) => {
+    try {
+      // Use RPC function to get email by username
+      const { data: emailData, error: emailError } = await supabase
+        .rpc('get_email_by_username', { username_input: username });
+
+      if (emailError || !emailData) {
+        return { error: new Error('Username not found') as AuthError };
+      }
+
+      // Now sign in with the email and password
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailData,
+        password
+      });
+
+      return { error };
+    } catch {
+      return { error: new Error('Login failed') as AuthError };
+    }
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     return { error };
@@ -207,6 +230,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signIn,
+      signInWithUsername,
       signOut,
       updateProfile,
       updateSettings,

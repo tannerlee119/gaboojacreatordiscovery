@@ -10,14 +10,14 @@ import { Eye, EyeOff, Lock, User, UserX } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const { signIn } = useSupabaseAuth();
+  const { signIn, signInWithUsername } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,12 +26,24 @@ export default function LoginPage() {
 
     try {
       // Simple validation
-      if (!email.trim() || !password.trim()) {
-        setError('Please enter both email and password');
+      if (!emailOrUsername.trim() || !password.trim()) {
+        setError('Please enter both email/username and password');
         return;
       }
 
-      const { error: signInError } = await signIn(email.trim(), password);
+      const trimmedInput = emailOrUsername.trim();
+      let signInError;
+
+      // Check if input looks like an email (contains @)
+      if (trimmedInput.includes('@')) {
+        // Try email login
+        const result = await signIn(trimmedInput, password);
+        signInError = result.error;
+      } else {
+        // Try username login
+        const result = await signInWithUsername(trimmedInput, password);
+        signInError = result.error;
+      }
       
       if (signInError) {
         setError(signInError.message);
@@ -67,17 +79,17 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
+              <label htmlFor="emailOrUsername" className="text-sm font-medium">
+                Email or Username
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="emailOrUsername"
+                  type="text"
+                  placeholder="Enter your email or username"
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
                   className="pl-10"
                   disabled={isLoading}
                 />
