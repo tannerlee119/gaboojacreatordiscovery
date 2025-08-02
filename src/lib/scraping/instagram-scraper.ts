@@ -40,18 +40,32 @@ class InstagramScraper extends PlaywrightBaseScraper {
         // Enhanced stealth setup - be more aggressive about appearing human
         await this.setupStealth();
         
-        // Inject cookies if provided
+        // Inject cookies if provided - this bypasses login entirely
         const cookiesEnv = process.env.INSTAGRAM_COOKIES_JSON;
+        let cookiesInjected = false;
         if (cookiesEnv) {
           try {
             const cookies = JSON.parse(cookiesEnv);
             if (Array.isArray(cookies) && cookies.length > 0) {
               await this.page.context().addCookies(cookies);
-              console.log(`🍪 Injected ${cookies.length} cookies from env`);
+              cookiesInjected = true;
+              console.log(`🍪 Injected ${cookies.length} Instagram session cookies`);
+              
+              // Log key cookies for debugging
+              const sessionCookie = cookies.find(c => c.name === 'sessionid');
+              const csrfCookie = cookies.find(c => c.name === 'csrftoken');
+              console.log(`   📝 Session ID: ${sessionCookie ? 'Present' : 'Missing'}`);
+              console.log(`   🔐 CSRF Token: ${csrfCookie ? 'Present' : 'Missing'}`);
+            } else {
+              console.log('⚠️ INSTAGRAM_COOKIES_JSON is empty or invalid format');
             }
           } catch (cookieErr) {
             console.log('⚠️ Failed to parse INSTAGRAM_COOKIES_JSON:', cookieErr);
+            console.log('   💡 Make sure it\'s valid JSON array format');
           }
+        } else {
+          console.log('⚠️ No INSTAGRAM_COOKIES_JSON found - will attempt login instead');
+          console.log('   💡 Add cookies to .env.local to bypass login issues');
         }
         
         // Add some additional stealth measures
@@ -66,7 +80,11 @@ class InstagramScraper extends PlaywrightBaseScraper {
           'Sec-Fetch-Dest': 'document'
         });
         
-        console.log('🎯 Strategy: Try direct access, then login if needed');
+        if (cookiesInjected) {
+          console.log('🎯 Strategy: Using injected session cookies (bypass login)');
+        } else {
+          console.log('🎯 Strategy: Try direct access, then login if needed');
+        }
 
     const profileUrl = `https://www.instagram.com/${username}/`;
         console.log(`📱 Navigating to: ${profileUrl}`);
