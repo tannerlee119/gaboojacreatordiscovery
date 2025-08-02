@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { User, Settings, LogOut, ChevronDown } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { useSupabaseAuth } from "@/lib/supabase-auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,8 @@ import {
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, profile, session, signOut } = useSupabaseAuth();
+  const isAuthenticated = !!session;
 
   const navigation = [
     { name: "Analyze", href: "/analyze" },
@@ -26,8 +27,8 @@ export function Navbar() {
     { name: "Bookmarks", href: "/bookmarks" },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -67,14 +68,14 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <User className="w-4 h-4" />
-                  <span>{user?.username}</span>
+                  <span>{profile?.username || user?.email?.split('@')[0]}</span>
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.username}</p>
+                    <p className="text-sm font-medium leading-none">{profile?.username || user?.email?.split('@')[0]}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user?.email}
                     </p>

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from '@/lib/types';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 interface AnalysisResult {
   profile: {
@@ -68,7 +68,8 @@ const getHistoryKey = (userId: string | null) =>
   userId ? `user_${userId}_creator-history` : 'gabooja-creator-history';
 
 export function CreatorProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, session } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const [currentAnalysis, setCurrentAnalysisState] = useState<AnalysisResult | null>(null);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);

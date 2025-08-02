@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Lock, User, Mail } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -29,7 +29,7 @@ export default function RegisterPage() {
     });
   };
 
-  const { register } = useAuth();
+  const { signUp } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,13 +53,14 @@ export default function RegisterPage() {
         return;
       }
 
-      const success = await register(formData.username.trim(), formData.email.trim(), formData.password);
+      const { error: signUpError } = await signUp(formData.email.trim(), formData.password, formData.username.trim());
       
-      if (success) {
-        // Redirect to analyze page
-        router.push('/analyze');
+      if (signUpError) {
+        setError(signUpError.message);
       } else {
-        setError('Username already exists');
+        // Redirect to analyze page or show confirmation message
+        setError('Check your email for a confirmation link, then you can sign in!');
+        setTimeout(() => router.push('/login'), 3000);
       }
     } catch {
       setError('Registration failed. Please try again.');

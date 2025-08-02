@@ -118,7 +118,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -133,7 +133,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
@@ -159,7 +159,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      setProfile(data);
+      if (data) {
+        setProfile(data);
+      }
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -179,7 +181,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      setSettings(data);
+      if (data) {
+        setSettings(data);
+      }
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -187,7 +191,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const changePassword = async (newPassword: string) => {
-    const { data, error } = await supabase.auth.updateUser({
+    const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
 

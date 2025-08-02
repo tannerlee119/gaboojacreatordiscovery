@@ -7,17 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Lock, User, UserX } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const { login, loginAsGuest } = useAuth();
+  const { signIn } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,18 +26,18 @@ export default function LoginPage() {
 
     try {
       // Simple validation
-      if (!username.trim() || !password.trim()) {
-        setError('Please enter both username and password');
+      if (!email.trim() || !password.trim()) {
+        setError('Please enter both email and password');
         return;
       }
 
-      const success = await login(username.trim(), password);
+      const { error: signInError } = await signIn(email.trim(), password);
       
-      if (success) {
+      if (signInError) {
+        setError(signInError.message);
+      } else {
         // Redirect to analyze page
         router.push('/analyze');
-      } else {
-        setError('Invalid username or password');
       }
     } catch {
       setError('Login failed. Please try again.');
@@ -47,9 +47,9 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = () => {
-    loginAsGuest();
-    // Redirect to analyze page
-    router.push('/analyze');
+    // For now, redirect to analyze page as anonymous user
+    // TODO: Implement guest mode or redirect to registration
+    router.push('/register');
   };
 
   return (
@@ -67,17 +67,17 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium">
-                Username
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   disabled={isLoading}
                 />
@@ -153,7 +153,7 @@ export default function LoginPage() {
               onClick={handleGuestLogin}
             >
               <UserX className="w-4 h-4 mr-2" />
-              Continue as Guest
+              Create Account Instead
             </Button>
           </form>
         </CardContent>

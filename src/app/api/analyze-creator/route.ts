@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeInstagramProfile } from '@/lib/scraping/instagram-scraper';
 import { analyzeTikTokProfile } from '@/lib/scraping/tiktok-scraper';
 import { analyzeWithOpenAI } from '@/lib/ai-analysis/openai-analyzer';
-import { saveCreatorProfile } from '@/lib/database/creator-service';
+import { saveCreatorAnalysis } from '@/lib/database/supabase-service';
+import { logUserSearch } from '@/lib/database/supabase-service';
+import { createServerClient } from '@/lib/supabase';
 import { analyzeCreatorRequestSchema, InputSanitizer } from '@/lib/validation/schemas';
 import { apiRateLimiter, getClientIdentifier } from '@/lib/security/rate-limiter';
 import { setCorsHeaders, handleCorsPreFlight } from '@/lib/security/cors';
@@ -202,29 +204,81 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prepare the creator profile data
-    const creatorProfile = {
-      username,
-      platform,
-      displayName: (finalData.displayName as string) || '',
-      bio: (finalData.bio as string) || undefined,
-      profileImageUrl: (finalData.profileImageUrl as string) || undefined,
-      isVerified: Boolean(finalData.isVerified),
-      followerCount: Number(finalData.followerCount) || 0,
-      followingCount: Number(finalData.followingCount) || 0,
-      location: (finalData.location as string) || undefined,
-      website: (finalData.website as string) || undefined,
-      metrics: finalData.metrics || {},
-      aiAnalysis,
-      profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
+    // Data will be structured in the analysisData object below
+
+    // Get user ID from request headers (if authenticated)
+    let userId: string | undefined;
+    try {
+      const supabase = createServerClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+    } catch {
+      // Continue without user ID for anonymous analysis
+    }
+
+    // Prepare complete analysis data for Supabase
+    const analysisData = {
+      profile: {
+        username,
+        platform,
+        displayName: (finalData.displayName as string) || '',
+        bio: (finalData.bio as string) || undefined,
+        profileImageUrl: (finalData.profileImageUrl as string) || undefined,
+        profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
+        isVerified: Boolean(finalData.isVerified),
+        followerCount: Number(finalData.followerCount) || 0,
+        followingCount: Number(finalData.followingCount) || 0,
+        location: (finalData.location as string) || undefined,
+        website: (finalData.website as string) || undefined,
+        metrics: finalData.metrics || {},
+        aiAnalysis
+      },
+      scrapingDetails: {
+        method: scrapingResult.method,
+        timestamp: new Date().toISOString()
+      },
+      aiMetrics: {
+        model: aiModel,
+        cost: aiCost,
+        cached: aiModel === 'cached'
+      },
+      dataQuality: {
+        score: qualityReport.quality.overall,
+        isValid: qualityReport.isValid,
+        breakdown: {
+          completeness: qualityReport.quality.completeness,
+          consistency: qualityReport.quality.consistency,
+          reliability: qualityReport.quality.reliability
+        },
+        issues: qualityReport.quality.issues.filter(i => i.severity === 'critical' || i.severity === 'warning'),
+        transformations: qualityReport.normalization.transformations.length
+      },
+      processingTime
     };
 
-    // Save to database
+    // Save complete analysis to Supabase
+    let analysisId: string | undefined;
     try {
-      await saveCreatorProfile(creatorProfile);
+      const saveResult = await saveCreatorAnalysis(analysisData, userId);
+      if (saveResult.success) {
+        analysisId = saveResult.analysisId;
+        console.log(`✅ Analysis saved to Supabase with ID: ${analysisId}`);
+      } else {
+        console.error('Failed to save analysis:', saveResult.error);
+      }
     } catch (dbError) {
       console.error('Database save error:', dbError);
       // Continue even if DB save fails - don't expose internal errors
+    }
+
+    // Log user search if authenticated
+    if (userId) {
+      try {
+        await logUserSearch(userId, username, platform, undefined, analysisId);
+      } catch (searchLogError) {
+        console.error('Failed to log user search:', searchLogError);
+        // Continue even if search logging fails
+      }
     }
 
     const processingTime = Date.now() - startTime;
@@ -232,7 +286,21 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       data: {
-        profile: creatorProfile,
+        profile: {
+          username,
+          platform,
+          displayName: (finalData.displayName as string) || '',
+          bio: (finalData.bio as string) || undefined,
+          profileImageUrl: (finalData.profileImageUrl as string) || undefined,
+          profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
+          isVerified: Boolean(finalData.isVerified),
+          followerCount: Number(finalData.followerCount) || 0,
+          followingCount: Number(finalData.followingCount) || 0,
+          location: (finalData.location as string) || undefined,
+          website: (finalData.website as string) || undefined,
+          metrics: finalData.metrics || {},
+          aiAnalysis
+        },
         scrapingDetails: {
           method: scrapingResult.method,
           timestamp: new Date().toISOString(),
@@ -253,7 +321,8 @@ export async function POST(request: NextRequest) {
           issues: qualityReport.quality.issues.filter(i => i.severity === 'critical' || i.severity === 'warning'),
           transformations: qualityReport.normalization.transformations.length,
           recommendations: qualityReport.recommendations.slice(0, 3) // Top 3 recommendations
-        }
+        },
+        processingTime
       }
     });
 

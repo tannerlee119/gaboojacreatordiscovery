@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { User, Shield, Bell, Palette, Trash2, Save, Edit3, Eye, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, updateUser, changePassword } = useAuth();
+  const { user, profile, session, updateProfile, changePassword } = useSupabaseAuth();
+  const isAuthenticated = !!session;
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   
@@ -84,12 +85,15 @@ export default function SettingsPage() {
     
     setIsLoading(true);
     try {
-      // Update user through auth context
-      updateUser({ username: newUsername.trim() });
-      setMessage('Username updated successfully!');
-      setShowEditUsernameModal(false);
-      setNewUsername('');
-      setTimeout(() => setMessage(''), 3000);
+      const { error } = await updateProfile({ username: newUsername.trim() });
+      if (error) {
+        setMessage('Failed to update username: ' + error.message);
+      } else {
+        setMessage('Username updated successfully!');
+        setShowEditUsernameModal(false);
+        setNewUsername('');
+        setTimeout(() => setMessage(''), 3000);
+      }
     } catch {
       setMessage('Failed to update username');
     } finally {
@@ -97,15 +101,14 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle email update
+  // Handle email update  
   const handleUpdateEmail = async () => {
     if (!newEmail.trim()) return;
     
     setIsLoading(true);
     try {
-      // Update user through auth context
-      updateUser({ email: newEmail.trim() });
-      setMessage('Email updated successfully!');
+      // Email updates in Supabase require verification
+      setMessage('Email updates require verification - feature coming soon!');
       setShowEditEmailModal(false);
       setNewEmail('');
       setTimeout(() => setMessage(''), 3000);
@@ -135,17 +138,17 @@ export default function SettingsPage() {
     
     setIsLoading(true);
     try {
-      const success = await changePassword(currentPassword, newPassword);
+      const { error } = await changePassword(newPassword);
       
-      if (success) {
+      if (error) {
+        setMessage('Failed to change password: ' + error.message);
+      } else {
         setMessage('Password changed successfully!');
         setShowChangePasswordModal(false);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage('Current password is incorrect');
       }
     } catch {
       setMessage('Failed to change password');
@@ -236,14 +239,14 @@ export default function SettingsPage() {
                         size="sm"
                         className="cursor-pointer"
                         onClick={() => {
-                          setNewUsername(user?.username || '');
+                          setNewUsername(profile?.username || '');
                           setShowEditUsernameModal(true);
                         }}
                       >
                         <Edit3 className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Input value={user?.username} disabled />
+                    <Input value={profile?.username || user?.email?.split('@')[0]} disabled />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
