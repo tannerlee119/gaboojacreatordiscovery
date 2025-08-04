@@ -75,14 +75,14 @@ export class DataQualityValidator {
     // Platform-specific validation
     if (platform === 'instagram') {
       // Instagram profiles should have post count
-      if (!data.metrics || !Number((data.metrics as any)?.postCount)) {
+      if (!data.metrics || !Number((data.metrics as Record<string, unknown>)?.postCount)) {
         return { acceptable: false, reason: 'Instagram profile missing post count' };
       }
     }
     
     if (platform === 'tiktok') {
       // TikTok profiles should have video count or like count
-      const metrics = data.metrics as any;
+      const metrics = data.metrics as Record<string, unknown>;
       if (!metrics || (!Number(metrics.videoCount) && !Number(metrics.likeCount))) {
         return { acceptable: false, reason: 'TikTok profile missing video or like count' };
       }

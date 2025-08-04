@@ -11,6 +11,8 @@ import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
+import { CategoryEditor } from '@/components/ui/category-editor';
+import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
 
 interface AnalysisData {
@@ -66,6 +68,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState(analysisData.profile.aiAnalysis?.category || 'other');
   
   // Check bookmark status based on user authentication
   const getBookmarkStatus = useCallback(() => {
@@ -158,6 +161,12 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
     } catch (error) {
       console.error('Error saving bookmark comments:', error);
     }
+  };
+
+  const handleCategoryChange = (newCategory: CreatorCategory) => {
+    setCurrentCategory(newCategory);
+    // You could add API call here to save the category change to database
+    console.log(`Category changed from ${currentCategory} to ${newCategory} for @${analysisData.profile.username}`);
   };
 
   return (
@@ -335,9 +344,11 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                       {/* Category */}
                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
                         <div className="text-med font-medium gabooja-accent mb-2">Category</div>
-                        <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
-                          {analysisData.profile.aiAnalysis.category.charAt(0).toUpperCase() + analysisData.profile.aiAnalysis.category.slice(1)}
-                        </div>
+                        <CategoryEditor
+                          currentCategory={currentCategory}
+                          onCategoryChange={handleCategoryChange}
+                          creatorUsername={analysisData.profile.username}
+                        />
                       </div>
                     </div>
                     

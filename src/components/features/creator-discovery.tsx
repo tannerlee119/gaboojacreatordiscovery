@@ -290,6 +290,8 @@ export function CreatorDiscovery() {
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // Use bookmarkUpdate to ensure component re-renders when bookmarks change
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _forceRerender = bookmarkUpdate;
     if (isAuthenticated && user) {
       return UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
     } else {

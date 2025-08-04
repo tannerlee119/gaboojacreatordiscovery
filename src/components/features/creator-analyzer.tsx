@@ -12,6 +12,8 @@ import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { useCreator } from '@/lib/creator-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
+import { CategoryEditor } from '@/components/ui/category-editor';
+import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
 
@@ -103,6 +105,7 @@ export function CreatorAnalyzer() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<string>('other');
   
   // Cache for storing last results per platform
   const [resultCache, setResultCache] = useState<{
@@ -178,6 +181,13 @@ export function CreatorAnalyzer() {
       setBookmarkedStatus(false);
     }
   }, [result, user, isAuthenticated]);
+
+  // Update category when result changes
+  useEffect(() => {
+    if (result?.profile.aiAnalysis?.category) {
+      setCurrentCategory(result.profile.aiAnalysis.category);
+    }
+  }, [result]);
 
   // Handle platform switching - restore cached result if available
   const handlePlatformChange = (newPlatform: Platform) => {
@@ -256,6 +266,12 @@ export function CreatorAnalyzer() {
     } catch (error) {
       console.error('Error saving bookmark comments:', error);
     }
+  };
+
+  const handleCategoryChange = (newCategory: CreatorCategory) => {
+    setCurrentCategory(newCategory);
+    // You could add API call here to save the category change to database
+    console.log(`Category changed from ${currentCategory} to ${newCategory} for @${result?.profile.username}`);
   };
 
   return (
@@ -495,9 +511,11 @@ export function CreatorAnalyzer() {
                        {/* Category */}
                        <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
                          <div className="text-med font-medium gabooja-accent mb-2">Category</div>
-                         <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
-                           {result.profile.aiAnalysis.category.charAt(0).toUpperCase() + result.profile.aiAnalysis.category.slice(1)}
-                         </div>
+                         <CategoryEditor
+                           currentCategory={currentCategory}
+                           onCategoryChange={handleCategoryChange}
+                           creatorUsername={result.profile.username}
+                         />
                        </div>
                      </div>
                      

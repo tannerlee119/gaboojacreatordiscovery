@@ -106,9 +106,6 @@ export function DiscoveryCreatorCard({
                   <span className="text-primary text-sm">✓</span>
                 )}
               </div>
-              <div className="text-sm text-muted-foreground mt-1">
-                {creator.displayName}
-              </div>
             </div>
             <Button
               variant={isBookmarked ? "default" : "outline"}
@@ -160,12 +157,6 @@ export function DiscoveryCreatorCard({
             </div>
           </div>
 
-          {/* Location */}
-          {creator.location && (
-            <p className="text-xs text-muted-foreground">
-              📍 {creator.location}
-            </p>
-          )}
 
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2 pt-2">
