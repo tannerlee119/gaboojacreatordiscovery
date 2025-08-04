@@ -59,9 +59,9 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = () => {
-    // For now, redirect to analyze page as anonymous user
-    // TODO: Implement guest mode or redirect to registration
-    router.push('/register');
+    // Continue as guest - redirect to analyze page without authentication
+    console.log('Continuing as guest user');
+    router.push('/analyze');
   };
 
   return (
@@ -143,7 +143,7 @@ export default function LoginPage() {
             <div className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{' '}
               <Link href="/register" className="text-primary hover:underline">
-                Sign up
+                Create account
               </Link>
             </div>
 
@@ -153,7 +153,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Or
+                  Or continue as guest
                 </span>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function LoginPage() {
               onClick={handleGuestLogin}
             >
               <UserX className="w-4 h-4 mr-2" />
-              Create Account Instead
+              Continue as Guest
             </Button>
           </form>
         </CardContent>
