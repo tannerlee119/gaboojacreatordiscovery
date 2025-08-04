@@ -6,6 +6,7 @@ export type CreatorCategory =
   | 'fashion'
   | 'beauty'
   | 'fitness'
+  | 'sports'
   | 'food'
   | 'travel'
   | 'tech'

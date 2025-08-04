@@ -25,6 +25,7 @@ const categories = [
   { value: 'fashion', label: 'Fashion' },
   { value: 'beauty', label: 'Beauty' },
   { value: 'fitness', label: 'Fitness' },
+  { value: 'sports', label: 'Sports' },
   { value: 'food', label: 'Food' },
   { value: 'travel', label: 'Travel' },
   { value: 'tech', label: 'Tech' },
