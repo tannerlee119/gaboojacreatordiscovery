@@ -156,9 +156,25 @@ export async function POST(request: NextRequest) {
     // Sanitize scraped data to prevent XSS attacks
     const sanitizedData = InputSanitizer.sanitizeProfileData(scrapingResult.data);
 
+    // First check if data meets minimum quality thresholds
+    console.log('🔍 Checking data acceptability...');
+    const { DataQualityValidator } = await import('@/lib/data-quality/validator');
+    const acceptabilityCheck = DataQualityValidator.isDataAcceptable(sanitizedData, platform);
+    
+    if (!acceptabilityCheck.acceptable) {
+      console.log(`❌ Data rejected: ${acceptabilityCheck.reason}`);
+      const response = NextResponse.json(
+        { 
+          success: false, 
+          error: `Profile analysis failed: ${acceptabilityCheck.reason}. Please try a different creator or try again later.`
+        },
+        { status: 400 }
+      );
+      return setCorsHeaders(response);
+    }
+
     // Validate data quality
     console.log('🔍 Validating data quality...');
-    const { DataQualityValidator } = await import('@/lib/data-quality/validator');
     const qualityReport = await DataQualityValidator.validateCreatorProfile(
       sanitizedData,
       platform,
@@ -170,6 +186,19 @@ export async function POST(request: NextRequest) {
     // Log quality issues if any
     if (qualityReport.quality.issues.length > 0) {
       console.log('⚠️ Data quality issues:', qualityReport.quality.issues.map(i => `${i.field}: ${i.message}`));
+    }
+
+    // Reject data with very low quality scores
+    if (qualityReport.quality.overall < 30) {
+      console.log(`❌ Data quality too low: ${qualityReport.quality.overall}/100`);
+      const response = NextResponse.json(
+        { 
+          success: false, 
+          error: 'Profile data quality is too low for reliable analysis. Please try again or try a different creator.'
+        },
+        { status: 400 }
+      );
+      return setCorsHeaders(response);
     }
 
     // Use normalized data instead of sanitized data

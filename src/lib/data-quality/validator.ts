@@ -43,6 +43,55 @@ export interface BatchQualityReport {
 
 export class DataQualityValidator {
   /**
+   * Check if data meets minimum quality thresholds to prevent garbage insertion
+   */
+  static isDataAcceptable(data: Record<string, unknown>, platform: Platform): { acceptable: boolean; reason?: string } {
+    // Check for essential fields
+    if (!data.username || typeof data.username !== 'string') {
+      return { acceptable: false, reason: 'Missing or invalid username' };
+    }
+    
+    if (!data.displayName || typeof data.displayName !== 'string') {
+      return { acceptable: false, reason: 'Missing display name' };
+    }
+    
+    // Check follower count validity
+    const followerCount = Number(data.followerCount);
+    if (!followerCount || followerCount <= 0 || followerCount > 1000000000) {
+      return { acceptable: false, reason: `Invalid follower count: ${followerCount}` };
+    }
+    
+    // Reject test/invalid usernames
+    const username = String(data.username).toLowerCase();
+    if (username.includes('test') || username.includes('demo') || username.length < 2) {
+      return { acceptable: false, reason: 'Test or invalid username detected' };
+    }
+    
+    // Must have either profile image or bio (indicates successful scraping)
+    if (!data.profileImageUrl && !data.bio) {
+      return { acceptable: false, reason: 'No profile image or bio - indicates scraping failure' };
+    }
+    
+    // Platform-specific validation
+    if (platform === 'instagram') {
+      // Instagram profiles should have post count
+      if (!data.metrics || !Number((data.metrics as any)?.postCount)) {
+        return { acceptable: false, reason: 'Instagram profile missing post count' };
+      }
+    }
+    
+    if (platform === 'tiktok') {
+      // TikTok profiles should have video count or like count
+      const metrics = data.metrics as any;
+      if (!metrics || (!Number(metrics.videoCount) && !Number(metrics.likeCount))) {
+        return { acceptable: false, reason: 'TikTok profile missing video or like count' };
+      }
+    }
+    
+    return { acceptable: true };
+  }
+
+  /**
    * Validate a single creator profile
    */
   static async validateCreatorProfile(
