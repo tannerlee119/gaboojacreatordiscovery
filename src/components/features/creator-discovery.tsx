@@ -101,6 +101,7 @@ export function CreatorDiscovery() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [bookmarkUpdate, setBookmarkUpdate] = useState(0); // Force re-renders when bookmarks change
 
   // Fetch discovery data
   const fetchDiscoveryData = useCallback(async (page = 1) => {
@@ -225,6 +226,9 @@ export function CreatorDiscovery() {
       } else {
         removeBookmark(creator.platform, creator.username);
       }
+      
+      // Force re-render to update bookmark state in UI
+      setBookmarkUpdate(prev => prev + 1);
     } else {
       // Add bookmark
       const bookmarkData = {
@@ -232,7 +236,7 @@ export function CreatorDiscovery() {
         username: creator.username,
         platform: creator.platform,
         displayName: creator.displayName,
-        bio: creator.bio,
+        bio: creator.overallAssessment || creator.displayName,
         isVerified: creator.isVerified,
         followerCount: creator.followerCount,
         followingCount: creator.followingCount,
@@ -249,6 +253,9 @@ export function CreatorDiscovery() {
       setSelectedCreatorForComment(creator);
       setShowCommentModal(true);
     }
+    
+    // Force re-render to update bookmark state in UI
+    setBookmarkUpdate(prev => prev + 1);
   };
 
   const handleSaveComments = async (comments: string) => {
@@ -282,6 +289,7 @@ export function CreatorDiscovery() {
   };
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
+    // Use bookmarkUpdate to ensure component re-renders when bookmarks change
     if (isAuthenticated && user) {
       return UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
     } else {

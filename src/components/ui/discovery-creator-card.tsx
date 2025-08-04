@@ -11,12 +11,12 @@ export interface DiscoveryCreator {
   username: string;
   platform: 'instagram' | 'tiktok';
   displayName: string;
-  bio?: string;
+  overallAssessment?: string; // Replace bio with AI assessment
   isVerified: boolean;
   followerCount: number;
   followingCount: number;
   category: string;
-  engagementRate: number;
+  aiScore?: string; // Replace engagementRate with AI score
   location?: string;
 }
 
@@ -65,27 +65,29 @@ export function DiscoveryCreatorCard({
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
       fitness: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+      sports: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
       food: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-      tech: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      tech: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
       beauty: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
       travel: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
       comedy: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
       fashion: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
       gaming: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-      music: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+      music: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
       education: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
       business: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
-      art: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+      art: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
       pets: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-      family: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-      lifestyle: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+      family: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+      lifestyle: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
     };
     return colors[category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
   };
 
-  const getEngagementColor = (rate: number) => {
-    if (rate >= 6) return 'text-green-600 dark:text-green-400';
-    if (rate >= 3) return 'text-yellow-600 dark:text-yellow-400';
+  const getAiScoreColor = (score: string) => {
+    const numScore = parseFloat(score);
+    if (numScore >= 8) return 'text-green-600 dark:text-green-400';
+    if (numScore >= 6) return 'text-yellow-600 dark:text-yellow-400';
     return 'text-red-600 dark:text-red-400';
   };
 
@@ -113,12 +115,12 @@ export function DiscoveryCreatorCard({
               size="sm"
               onClick={handleBookmark}
               disabled={isBookmarkLoading}
-              className="h-8 w-8 p-0 flex-shrink-0 ml-2"
+              className="group h-8 w-8 p-0 flex-shrink-0 ml-2 cursor-pointer hover:bg-primary/10 hover:border-primary/30 transition-all duration-200"
             >
               {isBookmarked ? (
-                <BookmarkCheck className="h-4 w-4" />
+                <BookmarkCheck className="h-4 w-4 text-white dark:text-black group-hover:!text-black dark:group-hover:!text-white" />
               ) : (
-                <Bookmark className="h-4 w-4" />
+                <Bookmark className="h-4 w-4 text-black dark:text-white group-hover:!text-black dark:group-hover:!text-white" />
               )}
             </Button>
           </div>
@@ -137,10 +139,10 @@ export function DiscoveryCreatorCard({
             </span>
           </div>
 
-          {/* Bio */}
-          {creator.bio && (
+          {/* Overall Assessment */}
+          {creator.overallAssessment && (
             <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-              {creator.bio}
+              {creator.overallAssessment}
             </p>
           )}
 
@@ -151,9 +153,9 @@ export function DiscoveryCreatorCard({
               <p className="font-medium">{formatNumber(creator.followerCount)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Engagement</p>
-              <p className={`font-medium ${getEngagementColor(creator.engagementRate)}`}>
-                {creator.engagementRate.toFixed(1)}%
+              <p className="text-muted-foreground">AI Score</p>
+              <p className={`font-medium ${creator.aiScore ? getAiScoreColor(creator.aiScore) : 'text-muted-foreground'}`}>
+                {creator.aiScore || 'N/A'}
               </p>
             </div>
           </div>
@@ -172,7 +174,7 @@ export function DiscoveryCreatorCard({
               size="sm"
               onClick={handleAnalyze}
               disabled={isAnalyzeLoading}
-              className="text-xs"
+              className="text-xs cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
             >
               <BarChart3 className="h-3 w-3 mr-1" />
               {isAnalyzeLoading ? 'Analyzing...' : 'Analyze'}
@@ -181,7 +183,7 @@ export function DiscoveryCreatorCard({
               variant="outline"
               size="sm"
               onClick={handleViewProfile}
-              className="text-xs"
+              className="text-xs cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               View Profile

@@ -5,7 +5,7 @@ import { z } from 'zod';
 const discoveryFiltersSchema = z.object({
   platform: z.enum(['all', 'instagram', 'tiktok']).optional().default('all'),
   category: z.array(z.enum([
-    'lifestyle', 'fashion', 'beauty', 'fitness', 'food', 'travel',
+    'lifestyle', 'fashion', 'beauty', 'fitness', 'sports', 'food', 'travel',
     'tech', 'gaming', 'music', 'comedy', 'education', 'business',
     'art', 'pets', 'family', 'other'
   ])).optional(),
@@ -25,12 +25,12 @@ const sampleCreators = [
     username: 'local_coffee_sarah',
     platform: 'instagram' as const,
     displayName: 'Sarah Miller',
-    bio: 'Local coffee shop reviews ☕ Finding hidden gems in Portland',
+    overallAssessment: 'Authentic local voice with strong community engagement. Perfect for location-based coffee and food partnerships.',
     isVerified: false,
     followerCount: 3400,
     followingCount: 890,
     category: 'food',
-    engagementRate: 8.9,
+    aiScore: '8.9',
     location: 'Portland, OR'
   },
   {
@@ -38,12 +38,12 @@ const sampleCreators = [
     username: 'college_fitness_ben',
     platform: 'tiktok' as const,
     displayName: 'Ben Martinez',
-    bio: 'College student sharing dorm workouts 💪 Budget fitness tips',
+    overallAssessment: 'High-energy college fitness content with excellent engagement. Great for student-focused fitness brands.',
     isVerified: false,
     followerCount: 7200,
     followingCount: 145,
     category: 'fitness',
-    engagementRate: 12.3,
+    aiScore: '12.3',
     location: 'Austin, TX'
   },
   {
@@ -51,12 +51,12 @@ const sampleCreators = [
     username: 'weekend_painter_anna',
     platform: 'instagram' as const,
     displayName: 'Anna Chen',
-    bio: 'Weekend watercolor artist 🎨 Teaching beginners to paint',
+    overallAssessment: 'Creative content with educational value. Strong potential for art supply and tutorial partnerships.',
     isVerified: false,
     followerCount: 5800,
     followingCount: 234,
     category: 'art',
-    engagementRate: 9.7,
+    aiScore: '9.7',
     location: 'Seattle, WA'
   },
   {
@@ -64,12 +64,12 @@ const sampleCreators = [
     username: 'study_with_james',
     platform: 'tiktok' as const,
     displayName: 'James Wilson',
-    bio: 'Medical student sharing study tips 📚 Making learning fun',
+    overallAssessment: 'Educational content with authentic student perspective. Excellent for educational tools and study resources.',
     isVerified: false,
     followerCount: 9100,
     followingCount: 67,
     category: 'education',
-    engagementRate: 11.2,
+    aiScore: '11.2',
     location: 'Boston, MA'
   },
   {
@@ -77,12 +77,12 @@ const sampleCreators = [
     username: 'thrift_finds_lucy',
     platform: 'instagram' as const,
     displayName: 'Lucy Johnson',
-    bio: 'Thrift store treasure hunter 👗 Sustainable fashion on a budget',
+    overallAssessment: 'Sustainable fashion advocate with budget-conscious audience. Perfect for eco-friendly and affordable fashion brands.',
     isVerified: false,
     followerCount: 4600,
     followingCount: 312,
     category: 'fashion',
-    engagementRate: 10.1,
+    aiScore: '10.1',
     location: 'Nashville, TN'
   },
 
@@ -92,12 +92,12 @@ const sampleCreators = [
     username: 'fitnessjenna',
     platform: 'instagram' as const,
     displayName: 'Jenna Martinez',
-    bio: 'Personal trainer & wellness coach 💪 Helping you reach your fitness goals',
+    overallAssessment: 'Professional fitness expertise with proven results. Ideal for fitness equipment and supplement partnerships.',
     isVerified: false,
     followerCount: 45300,
     followingCount: 1200,
     category: 'fitness',
-    engagementRate: 4.2,
+    aiScore: '4.2',
     location: 'Los Angeles, CA'
   },
   {
@@ -105,12 +105,12 @@ const sampleCreators = [
     username: 'foodiesamuel',
     platform: 'instagram' as const,
     displayName: 'Samuel Chen',
-    bio: 'Food enthusiast sharing recipes from around the world 🍜',
+    overallAssessment: 'Global food expertise with diverse recipe content. Great for international food brands and cooking tools.',
     isVerified: false,
     followerCount: 28700,
     followingCount: 890,
     category: 'food',
-    engagementRate: 5.8,
+    aiScore: '5.8',
     location: 'New York, NY'
   },
   {
@@ -118,12 +118,12 @@ const sampleCreators = [
     username: 'techreviews_alex',
     platform: 'tiktok' as const,
     displayName: 'Alex Rodriguez',
-    bio: 'Breaking down the latest tech in 60 seconds or less ⚡',
+    overallAssessment: 'Clear tech communication with viral potential. Perfect for tech product launches and reviews.',
     isVerified: true,
     followerCount: 67800,
     followingCount: 234,
     category: 'tech',
-    engagementRate: 6.4,
+    aiScore: '6.4',
     location: 'San Francisco, CA'
   },
   {
@@ -131,12 +131,12 @@ const sampleCreators = [
     username: 'beautybyemma',
     platform: 'instagram' as const,
     displayName: 'Emma Thompson',
-    bio: 'Makeup artist & beauty content creator ✨ Clean beauty advocate',
+    overallAssessment: 'Professional makeup artistry with clean beauty focus. Excellent for beauty brand partnerships.',
     isVerified: false,
     followerCount: 52100,
     followingCount: 1567,
     category: 'beauty',
-    engagementRate: 7.1,
+    aiScore: '7.1',
     location: 'Miami, FL'
   },
   {
@@ -144,12 +144,12 @@ const sampleCreators = [
     username: 'wanderlust_maya',
     platform: 'instagram' as const,
     displayName: 'Maya Patel',
-    bio: 'Solo female traveler 🌍 Budget travel tips & hidden gems',
+    overallAssessment: 'Authentic solo travel content with budget focus. Great for travel gear and budget accommodation brands.',
     isVerified: false,
     followerCount: 34600,
     followingCount: 2100,
     category: 'travel',
-    engagementRate: 4.9,
+    aiScore: '4.9',
     location: 'Austin, TX'
   },
   {
@@ -157,12 +157,12 @@ const sampleCreators = [
     username: 'comedy_mike',
     platform: 'tiktok' as const,
     displayName: 'Mike Johnson',
-    bio: 'Daily dose of laughs 😂 Making your day better one joke at a time',
+    overallAssessment: 'Consistent comedy content with high engagement. Perfect for entertainment and lifestyle brand partnerships.',
     isVerified: false,
     followerCount: 89200,
     followingCount: 156,
     category: 'comedy',
-    engagementRate: 8.2,
+    aiScore: '8.2',
     location: 'Chicago, IL'
   },
   {
@@ -170,12 +170,12 @@ const sampleCreators = [
     username: 'fashionista_lily',
     platform: 'instagram' as const,
     displayName: 'Lily Chang',
-    bio: 'Sustainable fashion advocate 👗 Thrift finds & style tips',
+    overallAssessment: 'Sustainable fashion expertise with style authority. Ideal for eco-conscious fashion and accessory brands.',
     isVerified: false,
     followerCount: 41800,
     followingCount: 987,
     category: 'fashion',
-    engagementRate: 5.3,
+    aiScore: '5.3',
     location: 'Portland, OR'
   },
   {
@@ -183,12 +183,12 @@ const sampleCreators = [
     username: 'gamer_noah',
     platform: 'tiktok' as const,
     displayName: 'Noah Kim',
-    bio: 'Gaming highlights & tips 🎮 Fortnite pro player',
+    overallAssessment: 'Professional gaming content with competitive expertise. Great for gaming hardware and software partnerships.',
     isVerified: true,
     followerCount: 72300,
     followingCount: 89,
     category: 'gaming',
-    engagementRate: 9.1,
+    aiScore: '9.1',
     location: 'Seattle, WA'
   },
   {
@@ -196,12 +196,12 @@ const sampleCreators = [
     username: 'lifestyle_sarah',
     platform: 'instagram' as const,
     displayName: 'Sarah Wilson',
-    bio: 'Minimalist living & self-care tips 🌱 Mom of 2',
+    overallAssessment: 'Authentic lifestyle content with family perspective. Perfect for home goods and wellness brands.',
     isVerified: false,
     followerCount: 38900,
     followingCount: 1334,
     category: 'lifestyle',
-    engagementRate: 4.7,
+    aiScore: '4.7',
     location: 'Denver, CO'
   },
   {
@@ -209,12 +209,12 @@ const sampleCreators = [
     username: 'pet_lover_carlos',
     platform: 'instagram' as const,
     displayName: 'Carlos Rodriguez',
-    bio: 'Dog trainer & pet care expert 🐕 Helping pets live their best life',
+    overallAssessment: 'Professional pet care expertise with training focus. Excellent for pet product and service partnerships.',
     isVerified: false,
     followerCount: 29400,
     followingCount: 567,
     category: 'pets',
-    engagementRate: 6.8,
+    aiScore: '6.8',
     location: 'Phoenix, AZ'
   },
   {
@@ -222,12 +222,12 @@ const sampleCreators = [
     username: 'music_producer_jade',
     platform: 'tiktok' as const,
     displayName: 'Jade Mitchell',
-    bio: 'Music producer sharing beats & studio sessions 🎵',
+    overallAssessment: 'Creative music production content with industry insights. Perfect for music software and audio equipment partnerships.',
     isVerified: false,
     followerCount: 55600,
     followingCount: 234,
     category: 'music',
-    engagementRate: 7.3,
+    aiScore: '7.3',
     location: 'Nashville, TN'
   },
   {
@@ -235,12 +235,12 @@ const sampleCreators = [
     username: 'business_coach_david',
     platform: 'instagram' as const,
     displayName: 'David Park',
-    bio: 'Entrepreneur & business coach 💼 Helping you scale your business',
+    overallAssessment: 'Professional business expertise with proven scaling strategies. Excellent for B2B tools and business service partnerships.',
     isVerified: true,
     followerCount: 63700,
     followingCount: 445,
     category: 'business',
-    engagementRate: 3.9,
+    aiScore: '3.9',
     location: 'Dallas, TX'
   },
   {
@@ -248,12 +248,12 @@ const sampleCreators = [
     username: 'art_by_sofia',
     platform: 'instagram' as const,
     displayName: 'Sofia Martinez',
-    bio: 'Digital artist & illustrator 🎨 Commissions open',
+    overallAssessment: 'Professional digital artistry with strong creative community. Great for design software and creative tool partnerships.',
     isVerified: false,
     followerCount: 47200,
     followingCount: 1890,
     category: 'art',
-    engagementRate: 8.4,
+    aiScore: '8.4',
     location: 'San Diego, CA'
   },
   {
@@ -261,12 +261,12 @@ const sampleCreators = [
     username: 'educator_kevin',
     platform: 'tiktok' as const,
     displayName: 'Kevin Lee',
-    bio: 'Making science fun & accessible 🧪 High school chemistry teacher',
+    overallAssessment: 'Educational expertise with engaging science content. Perfect for educational tools and STEM learning platform partnerships.',
     isVerified: false,
     followerCount: 43800,
     followingCount: 167,
     category: 'education',
-    engagementRate: 6.2,
+    aiScore: '6.2',
     location: 'Boston, MA'
   },
   {
@@ -274,12 +274,12 @@ const sampleCreators = [
     username: 'family_fun_rachel',
     platform: 'instagram' as const,
     displayName: 'Rachel Davis',
-    bio: 'Family activities & parenting tips 👨‍👩‍👧‍👦 Making memories together',
+    overallAssessment: 'Authentic family content with parenting expertise. Ideal for family products and educational toy partnerships.',
     isVerified: false,
     followerCount: 36500,
     followingCount: 2234,
     category: 'family',
-    engagementRate: 5.1,
+    aiScore: '5.1',
     location: 'Orlando, FL'
   },
   {
@@ -287,12 +287,12 @@ const sampleCreators = [
     username: 'workout_with_mike',
     platform: 'instagram' as const,
     displayName: 'Mike Thompson',
-    bio: 'Certified personal trainer 🏋️‍♂️ Home workouts & nutrition tips',
+    overallAssessment: 'Certified fitness expertise with home workout focus. Great for fitness equipment and nutrition supplement partnerships.',
     isVerified: false,
     followerCount: 76400,
     followingCount: 567,
     category: 'fitness',
-    engagementRate: 5.7,
+    aiScore: '5.7',
     location: 'Miami, FL'
   },
   {
@@ -300,12 +300,12 @@ const sampleCreators = [
     username: 'skincare_guru_lisa',
     platform: 'instagram' as const,
     displayName: 'Lisa Park',
-    bio: 'Licensed esthetician 🧴 Skincare routines for every budget',
+    overallAssessment: 'Professional skincare expertise with budget-conscious approach. Perfect for skincare brands and beauty tool partnerships.',
     isVerified: false,
     followerCount: 84300,
     followingCount: 1123,
     category: 'beauty',
-    engagementRate: 6.9,
+    aiScore: '6.9',
     location: 'Los Angeles, CA'
   },
   {
@@ -313,12 +313,12 @@ const sampleCreators = [
     username: 'diy_home_projects',
     platform: 'tiktok' as const,
     displayName: 'Jake Miller',
-    bio: 'DIY home improvement on a budget 🔨 Weekend warrior projects',
+    overallAssessment: 'Practical DIY expertise with budget-friendly solutions. Excellent for home improvement tools and hardware partnerships.',
     isVerified: false,
     followerCount: 92800,
     followingCount: 89,
     category: 'lifestyle',
-    engagementRate: 7.8,
+    aiScore: '7.8',
     location: 'Denver, CO'
   },
   {
@@ -326,12 +326,12 @@ const sampleCreators = [
     username: 'plant_mom_jenny',
     platform: 'instagram' as const,
     displayName: 'Jenny Rodriguez',
-    bio: 'Indoor plant enthusiast 🌱 Helping you grow your green thumb',
+    overallAssessment: 'Plant care expertise with growing community engagement. Great for gardening supplies and plant care product partnerships.',
     isVerified: false,
     followerCount: 59200,
     followingCount: 1456,
     category: 'lifestyle',
-    engagementRate: 6.3,
+    aiScore: '6.3',
     location: 'Portland, OR'
   },
   {
@@ -339,12 +339,12 @@ const sampleCreators = [
     username: 'budget_travel_tom',
     platform: 'instagram' as const,
     displayName: 'Tom Wilson',
-    bio: 'Backpacker exploring the world on $50/day 🎒 Budget travel hacks',
+    overallAssessment: 'Budget travel expertise with practical travel hacks. Perfect for travel gear and budget accommodation partnerships.',
     isVerified: false,
     followerCount: 67900,
     followingCount: 2890,
     category: 'travel',
-    engagementRate: 4.1,
+    aiScore: '4.1',
     location: 'Austin, TX'
   },
 
@@ -354,12 +354,12 @@ const sampleCreators = [
     username: 'cooking_with_maria',
     platform: 'instagram' as const,
     displayName: 'Maria Gonzalez',
-    bio: 'Professional chef sharing family recipes 👩‍🍳 3 generations of tradition',
+    overallAssessment: 'Professional culinary expertise with traditional recipe authority. Excellent for cooking equipment and ingredient partnerships.',
     isVerified: true,
     followerCount: 234500,
     followingCount: 2345,
     category: 'food',
-    engagementRate: 3.2,
+    aiScore: '3.2',
     location: 'Los Angeles, CA'
   },
   {
@@ -367,12 +367,12 @@ const sampleCreators = [
     username: 'tech_explained_simple',
     platform: 'tiktok' as const,
     displayName: 'David Chang',
-    bio: 'Software engineer explaining tech for everyone 💻 No jargon, just clarity',
+    overallAssessment: 'Clear tech communication with mass appeal. Perfect for tech product launches and software service partnerships.',
     isVerified: true,
     followerCount: 456700,
     followingCount: 456,
     category: 'tech',
-    engagementRate: 4.8,
+    aiScore: '4.8',
     location: 'San Francisco, CA'
   },
   {
@@ -380,12 +380,12 @@ const sampleCreators = [
     username: 'fashion_week_insider',
     platform: 'instagram' as const,
     displayName: 'Isabella Romano',
-    bio: 'Fashion industry insider 👗 Behind the scenes of fashion week',
+    overallAssessment: 'Fashion industry authority with insider access. Ideal for high-end fashion and luxury brand partnerships.',
     isVerified: true,
     followerCount: 189300,
     followingCount: 1234,
     category: 'fashion',
-    engagementRate: 2.9,
+    aiScore: '2.9',
     location: 'New York, NY'
   },
   {
@@ -393,12 +393,12 @@ const sampleCreators = [
     username: 'gaming_highlights_pro',
     platform: 'tiktok' as const,
     displayName: 'Tyler Brooks',
-    bio: 'Professional esports player 🎮 Valorant & Apex Legends highlights',
+    overallAssessment: 'Professional gaming expertise with competitive credibility. Great for gaming hardware and esports brand partnerships.',
     isVerified: true,
     followerCount: 678900,
     followingCount: 234,
     category: 'gaming',
-    engagementRate: 5.4,
+    aiScore: '5.4',
     location: 'Las Vegas, NV'
   },
   {
@@ -406,12 +406,12 @@ const sampleCreators = [
     username: 'wellness_journey_complete',
     platform: 'instagram' as const,
     displayName: 'Dr. Amanda Smith',
-    bio: 'Licensed therapist & wellness coach 🧘‍♀️ Mental health awareness',
+    overallAssessment: 'Professional wellness expertise with mental health authority. Perfect for wellness apps and self-care product partnerships.',
     isVerified: true,
     followerCount: 312800,
     followingCount: 890,
     category: 'lifestyle',
-    engagementRate: 3.7,
+    aiScore: '3.7',
     location: 'Chicago, IL'
   },
 
@@ -421,12 +421,12 @@ const sampleCreators = [
     username: 'comedy_central_mark',
     platform: 'tiktok' as const,
     displayName: 'Mark Stevens',
-    bio: 'Stand-up comedian & content creator 😂 Making millions laugh daily',
+    overallAssessment: 'Mainstream comedy appeal with massive reach. Excellent for entertainment brands and lifestyle product partnerships.',
     isVerified: true,
     followerCount: 2340000,
     followingCount: 567,
     category: 'comedy',
-    engagementRate: 2.1,
+    aiScore: '2.1',
     location: 'Los Angeles, CA'
   },
   {
@@ -434,12 +434,12 @@ const sampleCreators = [
     username: 'beauty_empire_queen',
     platform: 'instagram' as const,
     displayName: 'Samantha Lee',
-    bio: 'Beauty entrepreneur & MUA 💄 CEO of SL Beauty | Tutorials & reviews',
+    overallAssessment: 'Beauty industry leader with entrepreneurial credibility. Perfect for beauty brand collaborations and product launches.',
     isVerified: true,
     followerCount: 1890000,
     followingCount: 1234,
     category: 'beauty',
-    engagementRate: 1.8,
+    aiScore: '1.8',
     location: 'Miami, FL'
   },
   {
@@ -447,12 +447,12 @@ const sampleCreators = [
     username: 'fitness_transformation',
     platform: 'instagram' as const,
     displayName: 'Chris Johnson',
-    bio: 'Certified trainer transforming lives 💪 300+ client success stories',
+    overallAssessment: 'Proven fitness transformation expertise with documented results. Great for fitness brands and supplement partnerships.',
     isVerified: true,
     followerCount: 1456000,
     followingCount: 2890,
     category: 'fitness',
-    engagementRate: 2.3,
+    aiScore: '2.3',
     location: 'Dallas, TX'
   },
   {
@@ -460,12 +460,12 @@ const sampleCreators = [
     username: 'travel_the_world_now',
     platform: 'instagram' as const,
     displayName: 'Adventure Alex',
-    bio: 'Full-time traveler ✈️ Visited 95+ countries | Travel tips & inspiration',
+    overallAssessment: 'Global travel authority with extensive experience. Perfect for travel brands and destination marketing partnerships.',
     isVerified: true,
     followerCount: 3200000,
     followingCount: 4567,
     category: 'travel',
-    engagementRate: 1.9,
+    aiScore: '1.9',
     location: 'Nomadic'
   },
   {
@@ -473,12 +473,12 @@ const sampleCreators = [
     username: 'business_mogul_mentor',
     platform: 'instagram' as const,
     displayName: 'Robert Kim',
-    bio: 'Serial entrepreneur & investor 💼 Building 7-figure businesses',
+    overallAssessment: 'High-level business expertise with proven success record. Excellent for B2B services and investment platform partnerships.',
     isVerified: true,
     followerCount: 2780000,
     followingCount: 1890,
     category: 'business',
-    engagementRate: 1.6,
+    aiScore: '1.6',
     location: 'New York, NY'
   }
 ];
@@ -530,7 +530,7 @@ export async function GET(request: NextRequest) {
         case 'followers':
           return b.followerCount - a.followerCount;
         case 'engagement':
-          return b.engagementRate - a.engagementRate;
+          return parseFloat(b.aiScore) - parseFloat(a.aiScore);
         case 'recent':
           // For now, just return by follower count (could add lastActive field later)
           return b.followerCount - a.followerCount;
