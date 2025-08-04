@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { User, Settings, LogOut, ChevronDown } from "lucide-react";
@@ -18,6 +18,7 @@ import {
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, profile, session, signOut } = useSupabaseAuth();
   const isAuthenticated = !!session;
 
@@ -28,7 +29,20 @@ export function Navbar() {
   ];
 
   const handleLogout = async () => {
-    await signOut();
+    try {
+      console.log('Attempting to sign out...');
+      const { error } = await signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+      } else {
+        console.log('Sign out successful');
+        // Use router for better navigation
+        router.push('/');
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+    }
   };
 
   return (
@@ -89,7 +103,14 @@ export function Navbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLogout();
+                  }} 
+                  className="text-red-600 cursor-pointer"
+                >
                   <LogOut className="w-4 h-4 mr-2" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
