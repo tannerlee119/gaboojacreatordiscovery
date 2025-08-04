@@ -32,16 +32,30 @@ export function Navbar() {
     try {
       console.log('Attempting to sign out...');
       const { error } = await signOut();
+      
+      // Always redirect to login page regardless of whether signOut had an error
+      // This handles cases where the session is already invalid but UI still shows user as logged in
       if (error) {
-        console.error('Sign out error:', error);
+        console.log('Sign out had an error (possibly session already expired), but proceeding with logout:', error.message);
       } else {
         console.log('Sign out successful');
-        // Use router for better navigation
-        router.push('/');
-        router.refresh();
       }
+      
+      // Clear any local storage or cached data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Redirect to login page
+      router.push('/login');
+      router.refresh();
+      
     } catch (error) {
       console.error('Unexpected error during sign out:', error);
+      // Even if there's an error, clear local state and redirect
+      localStorage.clear();
+      sessionStorage.clear();
+      router.push('/login');
+      router.refresh();
     }
   };
 

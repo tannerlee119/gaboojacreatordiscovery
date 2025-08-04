@@ -183,8 +183,31 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      // If there's an "Auth session missing" error, treat it as successful
+      // since the user is effectively already signed out
+      if (error && error.message.includes('Auth session missing')) {
+        console.log('Session already expired, clearing local state');
+        // Manually clear the local state
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setSettings(null);
+        return { error: null }; // Return success
+      }
+      
+      return { error };
+    } catch (err) {
+      console.error('Sign out error:', err);
+      // Clear local state regardless of error
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setSettings(null);
+      return { error: err as AuthError };
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
