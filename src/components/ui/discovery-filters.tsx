@@ -125,6 +125,30 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
           </div>
         </div>
 
+        {/* Sort By Filter */}
+        <div>
+          <h3 className="text-sm font-medium mb-3">Sort By</h3>
+          <div className="space-y-2">
+            {[
+              { value: 'followers', label: 'Follower Count' },
+              { value: 'engagement', label: 'Engagement Rate' },
+              { value: 'recent', label: 'Recently Active' }
+            ].map((sort) => (
+              <label key={sort.value} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sortBy"
+                  value={sort.value}
+                  checked={tempFilters.sortBy === sort.value}
+                  onChange={() => handleSortByChange(sort.value as 'followers' | 'engagement' | 'recent')}
+                  className="text-primary"
+                />
+                <span className="text-sm">{sort.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Follower Range Filter */}
         <div>
           <h3 className="text-sm font-medium mb-3">Follower Count</h3>
@@ -207,30 +231,6 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   className="text-primary"
                 />
                 <span className="text-sm">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Sort By Filter */}
-        <div>
-          <h3 className="text-sm font-medium mb-3">Sort By</h3>
-          <div className="space-y-2">
-            {[
-              { value: 'followers', label: 'Follower Count' },
-              { value: 'engagement', label: 'Engagement Rate' },
-              { value: 'recent', label: 'Recently Active' }
-            ].map((sort) => (
-              <label key={sort.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="sortBy"
-                  value={sort.value}
-                  checked={tempFilters.sortBy === sort.value}
-                  onChange={() => handleSortByChange(sort.value as 'followers' | 'engagement' | 'recent')}
-                  className="text-primary"
-                />
-                <span className="text-sm">{sort.label}</span>
               </label>
             ))}
           </div>
