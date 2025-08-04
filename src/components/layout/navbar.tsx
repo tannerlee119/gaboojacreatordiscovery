@@ -50,15 +50,15 @@ export function Navbar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "text-base font-medium transition-all duration-200 px-4 py-2 rounded-full relative",
+                "text-base font-medium transition-all duration-200 px-4 py-2 rounded-full relative cursor-pointer",
                 pathname === item.href
-                  ? "gabooja-accent bg-primary/8 shadow-sm"
+                  ? "text-foreground bg-primary/8 shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-primary/4"
               )}
             >
               {item.name}
               {pathname === item.href && (
-                <div className="absolute inset-x-0 -bottom-3 h-0.5 gabooja-accent-bg rounded-full" />
+                <div className="absolute inset-x-0 -bottom-3 h-0.5 bg-primary rounded-full" />
               )}
             </Link>
           ))}
@@ -66,7 +66,7 @@ export function Navbar() {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2">
+                <Button variant="ghost" className="flex items-center space-x-2 cursor-pointer hover:bg-primary/4 hover:text-foreground transition-all duration-200">
                   <User className="w-4 h-4" />
                   <span>{profile?.username || user?.email?.split('@')[0]}</span>
                   <ChevronDown className="w-3 h-3" />
