@@ -7,19 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Gabooja Creator Discovery Platform - A Next.js application for discovering and analyzing social media creators across Instagram, TikTok, and YouTube. The platform provides AI-powered analysis, real-time engagement metrics, and creator discovery tools for marketing professionals.
 
 ## Development Commands
-
-**Note**: This project is missing essential configuration files. For a complete setup, reference the parallel directory `/Users/tannerlee/Documents/gabooja/gaboojacreatordiscovery` which contains all necessary configuration files.
-
-### Essential Missing Files
-- `package.json` - Dependencies and scripts
-- `next.config.ts` - Next.js configuration 
-- `tsconfig.json` - TypeScript configuration
-- `eslint.config.mjs` - Linting rules
-- `postcss.config.mjs` - CSS processing with Tailwind
-- `components.json` - Shadcn/ui configuration
-- `.env.local` - Environment variables
-
-### Standard Commands (when configured)
 ```bash
 # Development server with Turbo mode
 npm run dev
@@ -30,12 +17,20 @@ npm run build
 # Start production server
 npm start
 
-# Code linting
+# Code linting (includes TypeScript checking)
 npm run lint
 
 # Install Playwright for web scraping
 npm run postinstall
 ```
+
+### Environment Setup
+Ensure these environment variables are configured in `.env.local`:
+- `OPENAI_API_KEY` - OpenAI API access for creator analysis
+- `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Database connection
+- `SUPABASE_SERVICE_ROLE_KEY` - For server-side database operations
+- `INSTAGRAM_SESSION_ID` - Instagram scraping (optional)
+- `NODE_ENV` - Set to 'development' for local development
 
 ## Core Architecture
 
@@ -98,11 +93,18 @@ npm run postinstall
 ### API Routes Structure
 ```
 /api/
-├── analyze-creator/ - Main creator analysis endpoint
-├── discover-creators/ - Creator discovery with filtering
-├── ai-metrics/ - AI usage tracking
-└── data-quality/ - Data validation endpoints
+├── analyze-creator/ - Main creator analysis endpoint (POST)
+├── discover-creators/ - Creator discovery with filtering (GET)
+├── ai-metrics/ - AI usage tracking (GET)
+└── data-quality/ - Data validation endpoints (GET)
 ```
+
+**Key API Features:**
+- Rate limiting (10 requests per window) via `rate-limiter.ts`
+- CORS configuration in `cors.ts`
+- Input validation with Zod schemas
+- Data quality scoring and normalization
+- Comprehensive error handling with user-friendly messages
 
 ### Security & Rate Limiting
 - CORS configuration in `src/lib/security/cors.ts`
@@ -118,35 +120,121 @@ npm run postinstall
 
 ### Working with the Codebase
 
-1. **Before Starting**: Copy configuration files from the complete version at `/Users/tannerlee/Documents/gabooja/gaboojacreatordiscovery/`
+1. **Configuration**: All essential configuration files are present:
+   - `package.json` - Dependencies and scripts
+   - `next.config.ts` - Next.js configuration with image domains
+   - `tsconfig.json` - TypeScript configuration with path aliases
+   - `eslint.config.mjs` - ESLint rules with Next.js standards
+   - `postcss.config.mjs` - PostCSS with Tailwind CSS
+   - `components.json` - Shadcn/ui configuration
 
-2. **Environment Setup**: Ensure these environment variables are configured:
-   - `OPENAI_API_KEY` - OpenAI API access
-   - `SUPABASE_URL` & `SUPABASE_ANON_KEY` - Database connection
-   - `INSTAGRAM_SESSION_ID` - Instagram scraping (optional)
+2. **Database Schema**: Requires Supabase setup with creator analysis tables
 
-3. **Database Schema**: Use `database-schema-refined.sql` for Supabase setup
+3. **Scraping Architecture**: 
+   - Playwright with Chromium for dynamic content extraction
+   - `@sparticuz/chromium` optimized for serverless deployment
+   - Base scraper class with retry logic and error handling
+   - Platform-specific scrapers for Instagram and TikTok
+   - Anti-detection measures and rate limiting
 
-4. **Scraping Considerations**: 
-   - Playwright requires Chromium installation
-   - Production uses `@sparticuz/chromium` for serverless
-   - Implements anti-detection measures and retry logic
-
-5. **AI Cost Management**:
-   - Uses complexity-based model selection
-   - Implements response caching
-   - Optimizes image quality based on creator metrics
+4. **AI Cost Management**:
+   - `cost-optimizer.ts` implements intelligent model selection
+   - Response caching to reduce API costs
+   - Image quality optimization based on creator metrics
+   - Cost tracking headers in API responses
 
 ### Common Patterns
 
-- Context providers for global state management
-- Custom hooks for data fetching and state
-- Compound component patterns for complex UI
-- Error boundaries with fallback UI
-- Progressive enhancement for authenticated features
+- **Context Providers**: `SupabaseAuthProvider` and `CreatorProvider` for global state
+- **Data Quality Pipeline**: Validation → Normalization → Quality Scoring → Storage
+- **Progressive Enhancement**: Features work for both authenticated and guest users
+- **Error Handling**: User-friendly error messages with internal error logging
+- **Security**: Input sanitization, rate limiting, and CORS protection
+- **Cost Optimization**: AI analysis caching and complexity-based model selection
 
 ### File Structure Conventions
-- `/src/app/` - Next.js App Router pages and layouts
-- `/src/components/` - React components (features/, ui/, layout/)
-- `/src/lib/` - Utility functions, services, and business logic
-- Type definitions centralized in `/src/lib/types.ts`
+- `/src/app/` - Next.js App Router pages, layouts, and API routes
+- `/src/components/` - React components organized by purpose:
+  - `features/` - High-level feature components (creator-analyzer, creator-discovery)
+  - `ui/` - Reusable Shadcn/ui components
+  - `layout/` - Navigation and layout components
+- `/src/lib/` - Business logic organized by domain:
+  - `ai-analysis/` - OpenAI integration and cost optimization
+  - `data-quality/` - Validation, normalization, and quality scoring
+  - `database/` - Supabase services and creator operations
+  - `scraping/` - Platform-specific scrapers with base class
+  - `security/` - Rate limiting and CORS configuration
+  - `validation/` - Input validation schemas
+- Type definitions centralized in `/src/lib/types.ts` with platform-specific interfaces
+
+## Important Implementation Details
+
+### Data Flow Architecture Deep Dive
+
+1. **Request Processing** (`/api/analyze-creator/route.ts`):
+   - Rate limiting and CORS validation
+   - Zod schema validation for input sanitization
+   - Platform-specific scraping with error handling
+   - Data quality validation and normalization
+   - AI analysis with cost optimization
+   - Comprehensive database storage
+
+2. **Scraping Implementation**:
+   - Base class `PlaywrightBaseScraper` with retry logic and error handling
+   - Platform-specific implementations extend base class
+   - Screenshot capture for AI analysis
+   - Anti-detection measures and user agent rotation
+
+3. **Data Quality System**:
+   - `validator.ts` - Comprehensive validation with quality scoring
+   - `normalizer.ts` - Data standardization and cleanup
+   - `quality-scorer.ts` - Multi-dimensional quality assessment
+   - `duplicate-detector.ts` - Intelligent duplicate detection
+
+4. **AI Analysis Pipeline**:
+   - `openai-analyzer.ts` - GPT integration with image analysis
+   - `cost-optimizer.ts` - Model selection based on complexity
+   - Response caching to minimize API costs
+   - Structured JSON output with quality metrics
+
+### Key Configuration Files
+
+- **ESLint**: Extends Next.js standards with TypeScript support
+- **Next.js**: Configured for social media image domains and optimization
+- **TypeScript**: Strict mode with path aliases (`@/*` → `./src/*`)
+- **Tailwind**: PostCSS integration for CSS processing
+
+### Security Implementation
+
+- **Rate Limiting**: 10 requests per sliding window in `rate-limiter.ts`
+- **CORS**: Configured for cross-origin requests in `cors.ts`
+- **Input Sanitization**: Zod schemas with HTML sanitization
+- **Error Handling**: User-friendly messages without exposing internals
+
+## Vercel Deployment
+
+### Quick Deploy
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy to Vercel
+vercel --prod
+```
+
+### Environment Variables (Vercel Dashboard)
+Set these in your Vercel project settings:
+- `OPENAI_API_KEY` - OpenAI API key for creator analysis
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `INSTAGRAM_SESSION_ID` - Instagram session (optional)
+- `INSTAGRAM_COOKIES_JSON` - Instagram cookies (optional)
+- `NODE_ENV` - Set to `production`
+
+### Configuration Details
+- **Function Timeouts**: Creator analysis endpoint set to 60s, discovery to 30s
+- **Playwright**: Uses `@sparticuz/chromium` for serverless compatibility
+- **Build Optimization**: Skips Playwright browser download on Vercel
+- **CORS**: Configured for API routes with proper headers
+- **Rate Limiting**: Implemented in-memory (consider Redis for production scale)
