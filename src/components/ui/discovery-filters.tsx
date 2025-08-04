@@ -174,7 +174,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
         {/* Category Filter */}
         <div>
           <h3 className="text-sm font-medium mb-3">Categories</h3>
-          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2">
             {categories.map((category) => (
               <label key={category.value} className="flex items-center space-x-2 cursor-pointer">
                 <input
