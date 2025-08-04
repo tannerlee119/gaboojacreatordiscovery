@@ -161,7 +161,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full cursor-pointer"
+              className="w-full cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
               onClick={handleGuestLogin}
             >
               <UserX className="w-4 h-4 mr-2" />
