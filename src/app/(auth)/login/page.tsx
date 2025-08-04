@@ -134,7 +134,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full cursor-pointer"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
@@ -161,7 +161,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full cursor-pointer"
               onClick={handleGuestLogin}
             >
               <UserX className="w-4 h-4 mr-2" />

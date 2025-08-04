@@ -132,7 +132,7 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <Link href="/login">
-              <Button variant="outline" className="flex items-center space-x-2">
+              <Button variant="outline" className="flex items-center space-x-2 cursor-pointer hover:bg-primary/4 hover:text-foreground transition-all duration-200">
                 <User className="w-4 h-4" />
                 <span>Sign in</span>
               </Button>

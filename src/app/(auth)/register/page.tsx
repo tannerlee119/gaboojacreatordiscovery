@@ -190,7 +190,7 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full cursor-pointer"
               disabled={isLoading}
             >
               {isLoading ? 'Creating account...' : 'Create Account'}
