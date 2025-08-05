@@ -306,7 +306,7 @@ export function CreatorAnalyzer() {
                   variant={platform === p.value ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handlePlatformChange(p.value)}
-                  className="flex-1"
+                  className="flex-1 cursor-pointer hover:scale-105 transition-all duration-200"
                   disabled={isLoading}
                 >
                   {p.label}
@@ -319,7 +319,7 @@ export function CreatorAnalyzer() {
             onClick={handleAnalyze}
             disabled={!username.trim() || isLoading}
             size="lg"
-            className="w-full"
+            className="w-full cursor-pointer hover:scale-105 transition-all duration-200 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {isLoading ? 'Analyzing... (This may take 30-60 seconds)' : 'Analyze Creator'}
           </Button>
@@ -381,7 +381,7 @@ export function CreatorAnalyzer() {
                   variant={bookmarkedStatus ? "default" : "outline"}
                   size="sm"
                   onClick={handleBookmarkToggle}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-all duration-200"
                 >
                   {bookmarkedStatus ? (
                     <>

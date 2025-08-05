@@ -213,7 +213,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                   variant={bookmarkedStatus ? "default" : "outline"}
                   size="sm"
                   onClick={handleBookmarkToggle}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-all duration-200"
                 >
                   {bookmarkedStatus ? (
                     <>
