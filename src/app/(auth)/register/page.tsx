@@ -52,11 +52,11 @@ export default function RegisterPage() {
         return;
       }
 
-      const { error: signUpError } = await signUp(formData.username.trim(), formData.password);
+      const result = await signUp(formData.username.trim(), formData.password);
       
-      if (signUpError) {
+      if (result.error) {
         // Handle string error (our simple auth returns strings, not error objects)
-        setError(typeof signUpError === 'string' ? signUpError : signUpError.message || 'Registration failed');
+        setError(result.error);
       } else {
         // Registration successful - redirect to analyze page
         router.push('/analyze');
