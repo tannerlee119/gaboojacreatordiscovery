@@ -87,7 +87,7 @@ export default function SettingsPage() {
     try {
       const { error } = await updateProfile({ username: newUsername.trim() });
       if (error) {
-        setMessage('Failed to update username: ' + error.message);
+        setMessage('Failed to update username: ' + (error instanceof Error ? error.message : error));
       } else {
         setMessage('Username updated successfully!');
         setShowEditUsernameModal(false);
@@ -141,7 +141,7 @@ export default function SettingsPage() {
       const { error } = await changePassword(newPassword);
       
       if (error) {
-        setMessage('Failed to change password: ' + error.message);
+        setMessage('Failed to change password: ' + error);
       } else {
         setMessage('Password changed successfully!');
         setShowChangePasswordModal(false);
