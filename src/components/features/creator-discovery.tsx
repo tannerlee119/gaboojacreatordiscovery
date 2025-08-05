@@ -16,7 +16,7 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
-const DISCOVERY_STATE_KEY = 'gabooja-discovery-state';
+const DISCOVERY_STATE_KEY = 'gabooja-discovery-state-v2'; // Incremented to clear old invalid data
 const RECENT_ANALYSES_COLLAPSED_KEY = 'gabooja-recent-analyses-collapsed';
 
 interface DiscoveryState {
@@ -146,11 +146,13 @@ export function CreatorDiscovery() {
   
   useEffect(() => {
     try {
+      // Clean up old localStorage key
+      localStorage.removeItem('gabooja-discovery-state');
+      
       // Load discovery state
       const savedState = localStorage.getItem(DISCOVERY_STATE_KEY);
       if (savedState) {
         const state: DiscoveryState = JSON.parse(savedState);
-
         setSearchTerm(state.searchTerm);
         setFilters(state.filters);
         setCurrentPage(state.currentPage);
