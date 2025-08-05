@@ -10,7 +10,7 @@ export interface DiscoveryFilters {
   minFollowers: number;
   maxFollowers: number;
   verified?: boolean;
-  sortBy: 'followers' | 'engagement' | 'recent';
+  sortBy: 'followers-desc' | 'followers-asc';
 }
 
 interface DiscoveryFiltersProps {
@@ -78,7 +78,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
     onApplyFilters();
   };
 
-  const handleSortByChange = (sortBy: 'followers' | 'engagement' | 'recent') => {
+  const handleSortByChange = (sortBy: 'followers-desc' | 'followers-asc') => {
     const newFilters = { ...filters, sortBy };
     onFiltersChange(newFilters);
     onApplyFilters();
@@ -102,7 +102,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
       minFollowers: 0,
       maxFollowers: 10000000,
       verified: undefined,
-      sortBy: 'followers'
+      sortBy: 'followers-desc'
     };
     onFiltersChange(resetFilters);
     onApplyFilters();
@@ -143,9 +143,8 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
           <h3 className="text-sm font-medium mb-3">Sort By</h3>
           <div className="space-y-2">
             {[
-              { value: 'followers', label: 'Follower Count' },
-              { value: 'engagement', label: 'Engagement Rate' },
-              { value: 'recent', label: 'Recently Active' }
+              { value: 'followers-desc', label: 'Highest to Lowest Followers' },
+              { value: 'followers-asc', label: 'Lowest to Highest Followers' }
             ].map((sort) => (
               <label key={sort.value} className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -153,7 +152,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   name="sortBy"
                   value={sort.value}
                   checked={filters.sortBy === sort.value}
-                  onChange={() => handleSortByChange(sort.value as 'followers' | 'engagement' | 'recent')}
+                  onChange={() => handleSortByChange(sort.value as 'followers-desc' | 'followers-asc')}
                   className="text-primary"
                 />
                 <span className="text-sm">{sort.label}</span>

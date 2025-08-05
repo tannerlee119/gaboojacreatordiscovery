@@ -95,7 +95,7 @@ export function CreatorDiscovery() {
     minFollowers: 0,
     maxFollowers: 10000000,
     verified: undefined,
-    sortBy: 'followers'
+    sortBy: 'followers-desc'
   });
   const [discoveryData, setDiscoveryData] = useState<DiscoveryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);

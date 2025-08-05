@@ -13,7 +13,7 @@ const discoveryFiltersSchema = z.object({
   minFollowers: z.number().min(0).optional().default(0),
   maxFollowers: z.number().min(0).optional().default(10000000),
   verified: z.boolean().optional(),
-  sortBy: z.enum(['followers', 'engagement', 'recent']).optional().default('followers'),
+  sortBy: z.enum(['followers-desc', 'followers-asc']).optional().default('followers-desc'),
   page: z.number().min(1).optional().default(1),
   limit: z.number().min(1).max(50).optional().default(12)
 });
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       minFollowers: searchParams.get('minFollowers') ? parseInt(searchParams.get('minFollowers')!) : undefined,
       maxFollowers: searchParams.get('maxFollowers') ? parseInt(searchParams.get('maxFollowers')!) : undefined,
       verified: searchParams.get('verified') ? searchParams.get('verified') === 'true' : undefined,
-      sortBy: searchParams.get('sortBy') || 'followers',
+      sortBy: searchParams.get('sortBy') || 'followers-desc',
       page: searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 12
     });
@@ -91,14 +91,11 @@ export async function GET(request: NextRequest) {
 
     // Add sorting
     switch (filters.sortBy) {
-      case 'followers':
+      case 'followers-desc':
         query = query.order('follower_count', { ascending: false });
         break;
-      case 'engagement':
-        query = query.order('engagement_rate', { ascending: false });
-        break;
-      case 'recent':
-        query = query.order('last_analysis_date', { ascending: false });
+      case 'followers-asc':
+        query = query.order('follower_count', { ascending: true });
         break;
     }
 
