@@ -18,8 +18,34 @@ const discoveryFiltersSchema = z.object({
   limit: z.number().min(1).max(50).optional().default(12)
 });
 
+// Database creator type from Supabase
+interface DatabaseCreator {
+  id: string;
+  username: string;
+  platform: string;
+  display_name?: string;
+  ai_overall_assessment?: string;
+  is_verified?: boolean;
+  follower_count?: number;
+  following_count?: number;
+  category?: string;
+  ai_creator_score?: string;
+  location?: string;
+  website?: string;
+  bio?: string;
+  profile_image_url?: string;
+  engagement_rate?: number;
+  ai_brand_potential?: string;
+  ai_key_strengths?: string;
+  ai_engagement_quality?: string;
+  ai_content_style?: string;
+  ai_audience_demographics?: string;
+  ai_collaboration_potential?: string;
+  last_analysis_date?: string;
+}
+
 // Helper function to map database results to frontend interface
-function mapDatabaseCreatorToDiscoveryCreator(dbCreator: any) {
+function mapDatabaseCreatorToDiscoveryCreator(dbCreator: DatabaseCreator) {
   return {
     id: dbCreator.id,
     username: dbCreator.username,

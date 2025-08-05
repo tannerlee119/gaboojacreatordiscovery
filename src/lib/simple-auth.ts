@@ -65,7 +65,7 @@ export class SimpleAuthService {
       const userId = crypto.randomUUID();
 
       // First create a simple users table entry for authentication
-      const { data: authUser, error: authError } = await supabase
+      const { error: authError } = await supabase
         .from('auth_users')
         .insert({
           id: userId,

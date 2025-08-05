@@ -11,7 +11,7 @@ import { setCorsHeaders, handleCorsPreFlight } from '@/lib/security/cors';
 import { ZodError } from 'zod';
 
 // Helper function to safely parse large numbers
-function parseToSafeBigInt(value: any): number {
+function parseToSafeBigInt(value: unknown): number {
   try {
     if (value === null || value === undefined || value === '') {
       return 0;
