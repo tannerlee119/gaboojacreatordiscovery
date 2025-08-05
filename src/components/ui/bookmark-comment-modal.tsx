@@ -83,6 +83,7 @@ export function BookmarkCommentModal({
           <Button
             onClick={handleSave}
             disabled={isSaving}
+            className="text-xs hover:bg-primary/90 hover:text-primary-foreground transition-all duration-200"
           >
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Notes'}
@@ -91,6 +92,7 @@ export function BookmarkCommentModal({
             variant="outline"
             onClick={handleClose}
             disabled={isSaving}
+            className="text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel

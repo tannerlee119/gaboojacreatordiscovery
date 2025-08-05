@@ -495,6 +495,7 @@ export function CreatorDiscovery() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewAnalysis(analysis)}
+                      className="text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
                     >
                       View Analysis
                     </Button>

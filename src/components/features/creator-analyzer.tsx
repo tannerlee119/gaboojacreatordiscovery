@@ -306,7 +306,11 @@ export function CreatorAnalyzer() {
                   variant={platform === p.value ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handlePlatformChange(p.value)}
-                  className="flex-1 cursor-pointer hover:scale-105 transition-all duration-200"
+                  className={`flex-1 text-xs transition-all duration-200 ${
+                    platform === p.value 
+                      ? '' // No hover effects for selected platform
+                      : 'hover:bg-primary/10 hover:text-foreground hover:border-primary/30'
+                  }`}
                   disabled={isLoading}
                 >
                   {p.label}
@@ -381,7 +385,7 @@ export function CreatorAnalyzer() {
                   variant={bookmarkedStatus ? "default" : "outline"}
                   size="sm"
                   onClick={handleBookmarkToggle}
-                  className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-all duration-200"
+                  className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
                 >
                   {bookmarkedStatus ? (
                     <>
