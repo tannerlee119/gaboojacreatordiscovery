@@ -33,11 +33,10 @@ export default function LoginPage() {
 
       console.log('Attempting username login');
       const result = await signIn(username.trim(), password);
-      const signInError = result.error;
       
-      if (signInError) {
+      if (result.error) {
         // Handle string error (our simple auth returns strings, not error objects)
-        setError(typeof signInError === 'string' ? signInError : signInError.message || 'Login failed');
+        setError(result.error);
       } else {
         // Redirect to analyze page
         router.push('/analyze');
