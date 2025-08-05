@@ -70,10 +70,12 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState(analysisData.profile.aiAnalysis?.category || 'other');
   
+  const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
+
   // Check bookmark status based on user authentication
-  const getBookmarkStatus = useCallback(() => {
+  const getBookmarkStatus = useCallback(async () => {
     if (isAuthenticated && user) {
-      return UserBookmarksService.isUserBookmarked(
+      return await UserBookmarksService.isUserBookmarked(
         user.id, 
         analysisData.profile.username, 
         analysisData.profile.platform as 'instagram' | 'tiktok'
@@ -82,21 +84,23 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
       return isBookmarked(analysisData.profile.platform, analysisData.profile.username);
     }
   }, [isAuthenticated, user, analysisData.profile.username, analysisData.profile.platform]);
-  
-  const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(getBookmarkStatus());
 
   // Update bookmark status when analysis data or user changes
   useEffect(() => {
-    setBookmarkedStatus(getBookmarkStatus());
+    const updateBookmarkStatus = async () => {
+      const status = await getBookmarkStatus();
+      setBookmarkedStatus(status);
+    };
+    updateBookmarkStatus();
   }, [getBookmarkStatus]);
 
-  const handleBookmarkToggle = () => {
+  const handleBookmarkToggle = async () => {
     if (!user) return;
 
     if (bookmarkedStatus) {
       // Remove bookmark
       if (isAuthenticated) {
-        UserBookmarksService.removeUserBookmark(
+        await UserBookmarksService.removeUserBookmark(
           user.id, 
           analysisData.profile.username, 
           analysisData.profile.platform as 'instagram' | 'tiktok'
@@ -124,7 +128,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
       };
       
       if (isAuthenticated) {
-        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+        await UserBookmarksService.addUserBookmark(user.id, bookmarkData);
       } else {
         addBookmark(bookmarkData);
       }
@@ -140,7 +144,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
     
     try {
       if (isAuthenticated) {
-        UserBookmarksService.updateUserBookmarkComments(
+        await UserBookmarksService.updateUserBookmarkComments(
           user.id,
           analysisData.profile.username,
           analysisData.profile.platform as 'instagram' | 'tiktok',

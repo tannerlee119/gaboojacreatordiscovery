@@ -10,14 +10,14 @@ import { Eye, EyeOff, Lock, User, UserX } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 export default function LoginPage() {
-  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const { signIn, signInWithUsername } = useSupabaseAuth();
+  const { signIn } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,27 +26,18 @@ export default function LoginPage() {
 
     try {
       // Simple validation
-      if (!emailOrUsername.trim() || !password.trim()) {
-        setError('Please enter both email/username and password');
+      if (!username.trim() || !password.trim()) {
+        setError('Please enter both username and password');
         return;
       }
 
-      const trimmedInput = emailOrUsername.trim();
-      let signInError;
-
-      // Check if input looks like an email (contains @)
-      if (trimmedInput.includes('@')) {
-        // Try email login
-        const result = await signIn(trimmedInput, password);
-        signInError = result.error;
-      } else {
-        // Try username login
-        const result = await signInWithUsername(trimmedInput, password);
-        signInError = result.error;
-      }
+      console.log('Attempting username login');
+      const result = await signIn(username.trim(), password);
+      const signInError = result.error;
       
       if (signInError) {
-        setError(signInError.message);
+        // Handle string error (our simple auth returns strings, not error objects)
+        setError(typeof signInError === 'string' ? signInError : signInError.message || 'Login failed');
       } else {
         // Redirect to analyze page
         router.push('/analyze');
@@ -79,17 +70,17 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="emailOrUsername" className="text-sm font-medium">
-                Email or Username
+              <label htmlFor="username" className="text-sm font-medium">
+                Username
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="emailOrUsername"
+                  id="username"
                   type="text"
-                  placeholder="Enter your email or username"
-                  value={emailOrUsername}
-                  onChange={(e) => setEmailOrUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
                   disabled={isLoading}
                 />

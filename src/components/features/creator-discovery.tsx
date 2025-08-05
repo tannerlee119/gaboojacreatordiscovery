@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -216,13 +216,13 @@ export function CreatorDiscovery() {
     if (!user) return;
 
     const isCurrentlyBookmarked = isAuthenticated ? 
-      UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform) : 
+      await UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform) : 
       isBookmarked(creator.platform, creator.username);
     
     if (isCurrentlyBookmarked) {
       // Remove bookmark
       if (isAuthenticated) {
-        UserBookmarksService.removeUserBookmark(user.id, creator.username, creator.platform);
+        await UserBookmarksService.removeUserBookmark(user.id, creator.username, creator.platform);
       } else {
         removeBookmark(creator.platform, creator.username);
       }
@@ -244,7 +244,7 @@ export function CreatorDiscovery() {
       };
       
       if (isAuthenticated) {
-        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+        await UserBookmarksService.addUserBookmark(user.id, bookmarkData);
       } else {
         addBookmark(bookmarkData);
       }
@@ -263,7 +263,7 @@ export function CreatorDiscovery() {
     
     try {
       if (isAuthenticated) {
-        UserBookmarksService.updateUserBookmarkComments(
+        await UserBookmarksService.updateUserBookmarkComments(
           user.id,
           selectedCreatorForComment.username,
           selectedCreatorForComment.platform,
@@ -288,22 +288,51 @@ export function CreatorDiscovery() {
     setIsModalOpen(true);
   };
 
+  const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<string, boolean>>({});
+
+  const filteredCreators = useMemo(() => {
+    return discoveryData?.creators.filter(creator =>
+      searchTerm === '' || 
+      creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      creator.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
+  }, [discoveryData?.creators, searchTerm]);
+
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // Use bookmarkUpdate to ensure component re-renders when bookmarks change
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _forceRerender = bookmarkUpdate;
-    if (isAuthenticated && user) {
-      return UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
-    } else {
-      return isBookmarked(creator.platform, creator.username);
-    }
+    const key = `${creator.username}_${creator.platform}`;
+    return bookmarkStatuses[key] || false;
   };
 
-  const filteredCreators = discoveryData?.creators.filter(creator =>
-    searchTerm === '' || 
-    creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    creator.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Load bookmark statuses when creators change
+  const updateBookmarkStatuses = useCallback(async () => {
+    if (!filteredCreators.length) return;
+    
+    const statuses: Record<string, boolean> = {};
+    
+    if (isAuthenticated && user) {
+      // Load from database for authenticated users
+      for (const creator of filteredCreators) {
+        const key = `${creator.username}_${creator.platform}`;
+        statuses[key] = await UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
+      }
+    } else {
+      // Load from localStorage for non-authenticated users
+      for (const creator of filteredCreators) {
+        const key = `${creator.username}_${creator.platform}`;
+        statuses[key] = isBookmarked(creator.platform, creator.username);
+      }
+    }
+    
+    setBookmarkStatuses(statuses);
+  }, [filteredCreators, isAuthenticated, user]);
+
+  // Update bookmark statuses when creators or bookmark state changes
+  useEffect(() => {
+    updateBookmarkStatuses();
+  }, [updateBookmarkStatuses, bookmarkUpdate]);
 
   return (
     <div className="space-y-6">

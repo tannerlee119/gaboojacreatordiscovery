@@ -66,9 +66,9 @@ export default function BookmarksPage() {
 
   // Load bookmarks on component mount
   useEffect(() => {
-    const loadBookmarks = () => {
+    const loadBookmarks = async () => {
       if (isAuthenticated && user) {
-        const userBookmarks = UserBookmarksService.getUserBookmarks(user.id);
+        const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
         setBookmarks(userBookmarks);
       } else {
         // Fallback to global bookmarks for non-authenticated users

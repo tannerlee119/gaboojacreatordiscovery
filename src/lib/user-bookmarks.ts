@@ -1,4 +1,5 @@
 import { BookmarkedCreator } from './bookmarks';
+import { DatabaseBookmarkService } from './database/bookmark-service';
 
 // Define a simplified analysis result type to avoid circular imports
 interface AnalysisResult {
@@ -57,10 +58,34 @@ export class UserBookmarksService {
     return `user_${userId}_${type}`;
   }
 
+  /**
+   * Check if we should use database (for authenticated users) or localStorage (fallback)
+   */
+  private static shouldUseDatabase(): boolean {
+    // For now, always try to use database for authenticated users
+    // You could add additional checks here (e.g., feature flags, user preferences)
+    return typeof window !== 'undefined';
+  }
+
   // Bookmarks
-  static getUserBookmarks(userId: string): UserBookmark[] {
+  static async getUserBookmarks(userId: string): Promise<UserBookmark[]> {
     if (typeof window === 'undefined') return [];
     
+    if (this.shouldUseDatabase()) {
+      try {
+        const dbBookmarks = await DatabaseBookmarkService.getUserBookmarks(userId);
+        return dbBookmarks.map(dbBookmark => ({
+          ...DatabaseBookmarkService.convertToBookmarkedCreator(dbBookmark),
+          userId: dbBookmark.user_id,
+          bookmarkedAt: dbBookmark.bookmarked_at
+        }));
+      } catch (error) {
+        console.error('Error loading user bookmarks from database, falling back to localStorage:', error);
+        // Fall back to localStorage
+      }
+    }
+    
+    // localStorage fallback
     try {
       const key = this.getStorageKey(userId, 'bookmarks');
       const data = localStorage.getItem(key);
@@ -71,11 +96,27 @@ export class UserBookmarksService {
     }
   }
 
-  static addUserBookmark(userId: string, creator: BookmarkedCreator): void {
+  static async addUserBookmark(userId: string, creator: BookmarkedCreator): Promise<void> {
     if (typeof window === 'undefined') return;
     
+    if (this.shouldUseDatabase()) {
+      try {
+        const success = await DatabaseBookmarkService.addUserBookmark(
+          userId, 
+          creator.username, 
+          creator.platform as 'instagram' | 'tiktok',
+          creator.comments
+        );
+        if (success) return;
+        console.error('Failed to add bookmark to database, falling back to localStorage');
+      } catch (error) {
+        console.error('Error adding user bookmark to database, falling back to localStorage:', error);
+      }
+    }
+    
+    // localStorage fallback
     try {
-      const bookmarks = this.getUserBookmarks(userId);
+      const bookmarks = await this.getUserBookmarks(userId);
       const existingIndex = bookmarks.findIndex(
         bookmark => bookmark.username === creator.username && bookmark.platform === creator.platform
       );
@@ -101,11 +142,22 @@ export class UserBookmarksService {
     }
   }
 
-  static removeUserBookmark(userId: string, username: string, platform: 'instagram' | 'tiktok'): void {
+  static async removeUserBookmark(userId: string, username: string, platform: 'instagram' | 'tiktok'): Promise<void> {
     if (typeof window === 'undefined') return;
     
+    if (this.shouldUseDatabase()) {
+      try {
+        const success = await DatabaseBookmarkService.removeUserBookmark(userId, username, platform as 'instagram' | 'tiktok');
+        if (success) return;
+        console.error('Failed to remove bookmark from database, falling back to localStorage');
+      } catch (error) {
+        console.error('Error removing user bookmark from database, falling back to localStorage:', error);
+      }
+    }
+    
+    // localStorage fallback
     try {
-      const bookmarks = this.getUserBookmarks(userId);
+      const bookmarks = await this.getUserBookmarks(userId);
       const filteredBookmarks = bookmarks.filter(
         bookmark => !(bookmark.username === username && bookmark.platform === platform)
       );
@@ -117,18 +169,36 @@ export class UserBookmarksService {
     }
   }
 
-  static isUserBookmarked(userId: string, username: string, platform: 'instagram' | 'tiktok'): boolean {
-    const bookmarks = this.getUserBookmarks(userId);
+  static async isUserBookmarked(userId: string, username: string, platform: 'instagram' | 'tiktok'): Promise<boolean> {
+    if (this.shouldUseDatabase()) {
+      try {
+        return await DatabaseBookmarkService.isUserBookmarked(userId, username, platform as 'instagram' | 'tiktok');
+      } catch (error) {
+        console.error('Error checking bookmark status from database, falling back to localStorage:', error);
+      }
+    }
+    
+    // localStorage fallback
+    const bookmarks = await this.getUserBookmarks(userId);
     return bookmarks.some(
       bookmark => bookmark.username === username && bookmark.platform === platform
     );
   }
 
-  static updateUserBookmarkComments(userId: string, username: string, platform: 'instagram' | 'tiktok', comments: string): boolean {
+  static async updateUserBookmarkComments(userId: string, username: string, platform: 'instagram' | 'tiktok', comments: string): Promise<boolean> {
     if (typeof window === 'undefined') return false;
     
+    if (this.shouldUseDatabase()) {
+      try {
+        return await DatabaseBookmarkService.updateUserBookmarkComments(userId, username, platform as 'instagram' | 'tiktok', comments);
+      } catch (error) {
+        console.error('Error updating bookmark comments in database, falling back to localStorage:', error);
+      }
+    }
+    
+    // localStorage fallback
     try {
-      const bookmarks = this.getUserBookmarks(userId);
+      const bookmarks = await this.getUserBookmarks(userId);
       const bookmarkIndex = bookmarks.findIndex(
         bookmark => bookmark.username === username && bookmark.platform === platform
       );
@@ -151,9 +221,25 @@ export class UserBookmarksService {
     }
   }
 
-  static clearUserBookmarks(userId: string): void {
+  static async clearUserBookmarks(userId: string): Promise<void> {
     if (typeof window === 'undefined') return;
     
+    if (this.shouldUseDatabase()) {
+      try {
+        const success = await DatabaseBookmarkService.clearUserBookmarks(userId);
+        if (success) {
+          // Also clear localStorage
+          const key = this.getStorageKey(userId, 'bookmarks');
+          localStorage.removeItem(key);
+          return;
+        }
+        console.error('Failed to clear bookmarks from database');
+      } catch (error) {
+        console.error('Error clearing user bookmarks from database:', error);
+      }
+    }
+    
+    // localStorage fallback
     try {
       const key = this.getStorageKey(userId, 'bookmarks');
       localStorage.removeItem(key);
@@ -272,9 +358,9 @@ export class UserBookmarksService {
   }
 
   // User Data Export
-  static exportUserData(userId: string): UserDataExport {
+  static async exportUserData(userId: string): Promise<UserDataExport> {
     return {
-      bookmarks: this.getUserBookmarks(userId),
+      bookmarks: await this.getUserBookmarks(userId),
       recentSearches: this.getUserRecentSearches(userId, 50),
       settings: this.getUserSettings(userId),
       exportedAt: new Date().toISOString()

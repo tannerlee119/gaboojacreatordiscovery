@@ -171,15 +171,20 @@ export function CreatorAnalyzer() {
 
   // Check bookmark status when result changes
   useEffect(() => {
-    if (result && user) {
-      if (isAuthenticated) {
-        setBookmarkedStatus(UserBookmarksService.isUserBookmarked(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok'));
+    const checkBookmarkStatus = async () => {
+      if (result && user) {
+        if (isAuthenticated) {
+          const bookmarked = await UserBookmarksService.isUserBookmarked(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok');
+          setBookmarkedStatus(bookmarked);
+        } else {
+          setBookmarkedStatus(isBookmarked(result.profile.platform, result.profile.username));
+        }
       } else {
-        setBookmarkedStatus(isBookmarked(result.profile.platform, result.profile.username));
+        setBookmarkedStatus(false);
       }
-    } else {
-      setBookmarkedStatus(false);
-    }
+    };
+
+    checkBookmarkStatus();
   }, [result, user, isAuthenticated]);
 
   // Update category when result changes
@@ -208,13 +213,13 @@ export function CreatorAnalyzer() {
   };
 
   // Handle bookmark toggle
-  const handleBookmarkToggle = () => {
+  const handleBookmarkToggle = async () => {
     if (!result || !user) return;
 
     if (bookmarkedStatus) {
       // Remove bookmark
       if (isAuthenticated) {
-        UserBookmarksService.removeUserBookmark(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok');
+        await UserBookmarksService.removeUserBookmark(user.id, result.profile.username, result.profile.platform as 'instagram' | 'tiktok');
       } else {
         removeBookmark(result.profile.platform, result.profile.username);
       }
@@ -238,7 +243,7 @@ export function CreatorAnalyzer() {
       };
       
       if (isAuthenticated) {
-        UserBookmarksService.addUserBookmark(user.id, bookmarkData);
+        await UserBookmarksService.addUserBookmark(user.id, bookmarkData);
       } else {
         addBookmark(bookmarkData);
       }
@@ -254,7 +259,7 @@ export function CreatorAnalyzer() {
     
     try {
       if (isAuthenticated) {
-        UserBookmarksService.updateUserBookmarkComments(
+        await UserBookmarksService.updateUserBookmarkComments(
           user.id,
           result.profile.username,
           result.profile.platform as 'instagram' | 'tiktok',

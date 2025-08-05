@@ -12,7 +12,6 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -39,7 +38,7 @@ export default function RegisterPage() {
     try {
       // Validation
       if (!formData.username.trim() || !formData.password) {
-        setError('Please fill in all fields');
+        setError('Please fill in all required fields');
         return;
       }
 
@@ -53,10 +52,11 @@ export default function RegisterPage() {
         return;
       }
 
-      const { error: signUpError } = await signUp(formData.email.trim(), formData.password, formData.username.trim());
+      const { error: signUpError } = await signUp(formData.username.trim(), formData.password);
       
       if (signUpError) {
-        setError(signUpError.message);
+        // Handle string error (our simple auth returns strings, not error objects)
+        setError(typeof signUpError === 'string' ? signUpError : signUpError.message || 'Registration failed');
       } else {
         // Registration successful - redirect to analyze page
         router.push('/analyze');
@@ -101,24 +101,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email <span className="text-muted-foreground text-xs">(optional)</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email (optional)"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">

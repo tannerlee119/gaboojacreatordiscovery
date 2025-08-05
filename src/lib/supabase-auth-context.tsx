@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session, AuthError, AuthResponse } from '@supabase/supabase-js';
+import { SimpleAuthService, SimpleUser, SimpleSession } from './simple-auth';
 import { supabase } from './supabase';
 
 interface Profile {
@@ -27,84 +27,69 @@ interface UserSettings {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: SimpleUser | null;
   profile: Profile | null;
   settings: UserSettings | null;
-  session: Session | null;
+  session: SimpleSession | null;
   loading: boolean;
-  signUp: (email: string, password: string, username: string) => Promise<{ error: AuthError | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signInWithUsername: (username: string, password: string) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
+  signUp: (username: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (username: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<{ error: string | null }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   updateSettings: (updates: Partial<UserSettings>) => Promise<{ error: Error | null }>;
-  changePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
+  changePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SimpleUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<SimpleSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session with timeout protection
+    // Get initial session from simple auth
     const getInitialSession = async () => {
       try {
-        // Add timeout to prevent hanging
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 5000)
-        );
+        console.log('Loading initial session...');
         
-        const result = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]);
-        const { data: { session: initialSession } } = result as AuthResponse;
+        const currentSession = SimpleAuthService.getSession();
         
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        if (initialSession?.user) {
-          // Load user data in background, don't block
-          loadUserData(initialSession.user.id).catch(console.error);
+        if (currentSession) {
+          console.log('Session found:', currentSession.user.username);
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          // Load profile data
+          loadUserData(currentSession.user.id, currentSession.user).catch((error) => {
+            console.warn('Failed to load user profile/settings:', error);
+          });
+        } else {
+          console.log('No active session');
+          setSession(null);
+          setUser(null);
         }
         
         setLoading(false);
+        console.log('Auth initialization complete');
+        
       } catch (error) {
-        console.error('Error loading session:', error);
+        console.error('Unexpected error during auth initialization:', error);
+        setSession(null);
+        setUser(null);
         setLoading(false);
       }
     };
 
     getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadUserData(session.user.id);
-        } else {
-          setProfile(null);
-          setSettings(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, currentUser?: SimpleUser) => {
     try {
+      console.log('Loading user data for:', userId);
+      
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -112,10 +97,29 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error loading profile:', profileError);
+      if (profileError) {
+        if (profileError.code === 'PGRST116') {
+          console.log('No profile found for user, this is normal for new users');
+          setProfile(null);
+        } else {
+          console.error('Error loading profile:', profileError);
+          setProfile(null);
+        }
       } else {
+        console.log('Profile loaded:', profileData);
         setProfile(profileData);
+      }
+
+      // If no profile found, create a minimal profile object from the user data
+      if (!profileData && currentUser) {
+        console.log('Creating minimal profile from user data');
+        setProfile({
+          id: currentUser.id,
+          username: currentUser.username,
+          display_name: currentUser.username,
+          created_at: currentUser.created_at,
+          updated_at: currentUser.updated_at
+        });
       }
 
       // Load settings
@@ -125,80 +129,108 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single();
 
-      if (settingsError && settingsError.code !== 'PGRST116') {
-        console.error('Error loading settings:', settingsError);
+      if (settingsError) {
+        if (settingsError.code === 'PGRST116') {
+          console.log('No settings found for user, this is normal for new users');
+          setSettings(null);
+        } else {
+          console.error('Error loading settings:', settingsError);
+          setSettings(null);
+        }
       } else {
+        console.log('Settings loaded:', settingsData);
         setSettings(settingsData);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Unexpected error loading user data:', error);
+      setProfile(null);
+      setSettings(null);
     }
   };
 
-  const signUp = async (email: string, password: string, username: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: undefined, // Disable email verification for now
-        data: {
-          username,
-          display_name: username
-        }
-      }
-    });
-
-    return { error };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    return { error };
-  };
-
-  const signInWithUsername = async (username: string, password: string) => {
+  const signUp = async (username: string, password: string) => {
     try {
-      // Use RPC function to get email by username
-      const { data: emailData, error: emailError } = await supabase
-        .rpc('get_email_by_username', { username_input: username });
-
-      if (emailError || !emailData) {
-        return { error: new Error('Username not found') as AuthError };
+      console.log('Creating account for username:', username);
+      
+      const { user, error } = await SimpleAuthService.signUp(username, password);
+      
+      if (error) {
+        return { error };
       }
 
-      // Now sign in with the email and password
-      const { error } = await supabase.auth.signInWithPassword({
-        email: emailData,
-        password
-      });
+      if (user) {
+        console.log('User created:', user.id);
+        
+        // Create session automatically after signup
+        const { session, error: sessionError } = await SimpleAuthService.signIn(username, password);
+        
+        if (sessionError || !session) {
+          console.error('Failed to create session after signup:', sessionError);
+          return { error: sessionError || 'Failed to create session' };
+        }
+        
+        // Set the auth state
+        setUser(session.user);
+        setSession(session);
+        
+        // Load profile data
+        loadUserData(session.user.id, session.user).catch((error) => {
+          console.warn('Failed to load profile after signup:', error);
+        });
+        
+        console.log('Signup and login successful');
+      }
 
-      return { error };
-    } catch {
-      return { error: new Error('Login failed') as AuthError };
+      return { error: null };
+    } catch (err) {
+      console.error('Unexpected signup error:', err);
+      return { error: err instanceof Error ? err.message : 'Signup failed' };
+    }
+  };
+
+  const signIn = async (username: string, password: string) => {
+    try {
+      console.log('Attempting username login for:', username);
+      
+      const { session, error } = await SimpleAuthService.signIn(username, password);
+      
+      if (error) {
+        return { error };
+      }
+
+      if (session) {
+        console.log('Login successful');
+        setUser(session.user);
+        setSession(session);
+        
+        // Load profile data
+        loadUserData(session.user.id, session.user).catch((error) => {
+          console.warn('Failed to load profile after login:', error);
+        });
+      }
+
+      return { error: null };
+
+    } catch (err) {
+      console.error('Unexpected error in signIn:', err);
+      return { error: err instanceof Error ? err.message : 'Login failed' };
     }
   };
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      console.log('Signing out...');
       
-      // If there's an "Auth session missing" error, treat it as successful
-      // since the user is effectively already signed out
-      if (error && error.message.includes('Auth session missing')) {
-        console.log('Session already expired, clearing local state');
-        // Manually clear the local state
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setSettings(null);
-        return { error: null }; // Return success
-      }
+      SimpleAuthService.signOut();
       
-      return { error };
+      // Clear local state
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setSettings(null);
+      
+      console.log('Sign out successful');
+      return { error: null };
     } catch (err) {
       console.error('Sign out error:', err);
       // Clear local state regardless of error
@@ -206,7 +238,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setProfile(null);
       setSettings(null);
-      return { error: err as AuthError };
+      return { error: err instanceof Error ? err.message : 'Sign out failed' };
     }
   };
 
@@ -271,7 +303,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signIn,
-      signInWithUsername,
       signOut,
       updateProfile,
       updateSettings,
