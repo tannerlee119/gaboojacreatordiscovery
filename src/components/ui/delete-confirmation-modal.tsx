@@ -81,7 +81,7 @@ export function DeleteConfirmationModal({
 
         <DialogFooter className="justify-start gap-2">
           <Button
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-500 hover:bg-red-600 text-white text-xs transition-all duration-200"
             onClick={handleConfirm}
             disabled={isDeleting}
           >
@@ -92,6 +92,7 @@ export function DeleteConfirmationModal({
             variant="outline"
             onClick={onClose}
             disabled={isDeleting}
+            className="text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel

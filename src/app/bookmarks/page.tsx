@@ -256,7 +256,7 @@ export default function BookmarksPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteClick(bookmark)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -333,7 +333,7 @@ export default function BookmarksPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewAnalysis(bookmark)}
-                        className="flex-1 flex items-center gap-2"
+                        className="flex-1 flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
                       >
                         <Eye className="h-3 w-3" />
                         View Analysis
@@ -345,7 +345,7 @@ export default function BookmarksPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditNotes(bookmark)}
-                      className="flex-1 flex items-center gap-2"
+                      className="flex-1 flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
                     >
                       <Edit3 className="h-3 w-3" />
                       {bookmark.comments ? 'Edit Notes' : 'Add Notes'}
