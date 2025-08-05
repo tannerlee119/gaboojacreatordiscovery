@@ -31,7 +31,7 @@ export function CategoryEditor({ currentCategory, onCategoryChange, disabled = f
             size="sm" 
             variant="ghost" 
             onClick={() => setIsModalOpen(true)}
-            className="absolute top-0 right-0 h-5 w-5 p-0 opacity-50 hover:opacity-100 transition-opacity"
+            className="absolute top-0 right-0 h-5 w-5 p-0 opacity-50 hover:opacity-100 hover:bg-primary/10 transition-all duration-200"
           >
             <Edit3 className="h-2.5 w-2.5" />
           </Button>

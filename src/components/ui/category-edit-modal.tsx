@@ -84,10 +84,17 @@ export function CategoryEditModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={handleCancel}>
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            className="text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button 
+            onClick={handleSave}
+            className="text-xs hover:bg-primary/90 hover:text-primary-foreground transition-all duration-200"
+          >
             Save Category
           </Button>
         </div>
