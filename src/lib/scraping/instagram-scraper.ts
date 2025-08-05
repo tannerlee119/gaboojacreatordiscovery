@@ -770,22 +770,42 @@ class InstagramScraper extends PlaywrightBaseScraper {
 
   private parseCount(countStr: string): number {
     try {
+      console.log(`🔢 Parsing count: "${countStr}"`);
+      
       const suffixMatch = countStr.match(/[KMB]$/i);
       const suffix = suffixMatch ? suffixMatch[0].toUpperCase() : '';
       const numericPart = countStr.replace(/[^\d.,]/g, '').replace(/,/g, '');
       const num = parseFloat(numericPart);
-      if (isNaN(num)) return 0;
+      
+      if (isNaN(num)) {
+        console.log(`❌ Failed to parse numeric part: "${numericPart}"`);
+        return 0;
+      }
+      
+      let result: number;
       switch (suffix) {
         case 'K':
-          return Math.round(num * 1_000);
+          result = Math.round(num * 1_000);
+          break;
         case 'M':
-          return Math.round(num * 1_000_000);
+          result = Math.round(num * 1_000_000);
+          break;
         case 'B':
-          return Math.round(num * 1_000_000_000);
+          result = Math.round(num * 1_000_000_000);
+          break;
         default:
-          return Math.round(num);
+          result = Math.round(num);
       }
-    } catch {
+      
+      // Check for JavaScript number precision issues
+      if (result > Number.MAX_SAFE_INTEGER) {
+        console.log(`⚠️ Number ${result} exceeds MAX_SAFE_INTEGER, precision may be lost`);
+      }
+      
+      console.log(`✅ Parsed "${countStr}" -> ${result.toLocaleString()}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Error parsing count "${countStr}":`, error);
       return 0;
     }
   }

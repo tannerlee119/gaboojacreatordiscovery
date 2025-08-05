@@ -10,6 +10,34 @@ import { apiRateLimiter, getClientIdentifier } from '@/lib/security/rate-limiter
 import { setCorsHeaders, handleCorsPreFlight } from '@/lib/security/cors';
 import { ZodError } from 'zod';
 
+// Helper function to safely parse large numbers
+function parseToSafeBigInt(value: any): number {
+  try {
+    if (value === null || value === undefined || value === '') {
+      return 0;
+    }
+    
+    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+    
+    if (isNaN(num)) {
+      console.log(`⚠️ Failed to parse follower count: ${value} -> defaulting to 0`);
+      return 0;
+    }
+    
+    if (num > Number.MAX_SAFE_INTEGER) {
+      console.log(`⚠️ Large number ${num} exceeds MAX_SAFE_INTEGER, may lose precision`);
+      // Still return the number, but log the warning
+    }
+    
+    const result = Math.floor(num);
+    console.log(`✅ Parsed follower count: ${value} -> ${result.toLocaleString()}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ Error parsing follower count "${value}":`, error);
+    return 0;
+  }
+}
+
 // Handle CORS preflight requests
 export async function OPTIONS() {
   return handleCorsPreFlight();
@@ -212,7 +240,7 @@ export async function POST(request: NextRequest) {
       console.log('Analyzing screenshot with OpenAI...');
       try {
         const profileDataForAI = {
-          followerCount: Number(finalData.followerCount) || 0,
+          followerCount: parseToSafeBigInt(finalData.followerCount),
           isVerified: Boolean(finalData.isVerified),
           website: (finalData.website as string) || undefined
         };
@@ -257,8 +285,8 @@ export async function POST(request: NextRequest) {
         profileImageUrl: (finalData.profileImageUrl as string) || undefined,
         profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
         isVerified: Boolean(finalData.isVerified),
-        followerCount: Number(finalData.followerCount) || 0,
-        followingCount: Number(finalData.followingCount) || 0,
+        followerCount: parseToSafeBigInt(finalData.followerCount),
+        followingCount: parseToSafeBigInt(finalData.followingCount),
         location: (finalData.location as string) || undefined,
         website: (finalData.website as string) || undefined,
         metrics: finalData.metrics || {},
@@ -331,8 +359,8 @@ export async function POST(request: NextRequest) {
           profileImageUrl: (finalData.profileImageUrl as string) || undefined,
           profileImageBase64: screenshotBuffer ? screenshotBuffer.toString('base64') : undefined,
           isVerified: Boolean(finalData.isVerified),
-          followerCount: Number(finalData.followerCount) || 0,
-          followingCount: Number(finalData.followingCount) || 0,
+          followerCount: parseToSafeBigInt(finalData.followerCount),
+          followingCount: parseToSafeBigInt(finalData.followingCount),
           location: (finalData.location as string) || undefined,
           website: (finalData.website as string) || undefined,
           metrics: finalData.metrics || {},

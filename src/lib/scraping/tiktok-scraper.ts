@@ -333,14 +333,39 @@ class TikTokScraper extends PlaywrightBaseScraper {
   }
 
   private parseNumber(str: string): number {
-    const cleaned = str.replace(/,/g, '').toLowerCase();
-    const number = parseFloat(cleaned);
-    
-    if (cleaned.includes('k')) return Math.floor(number * 1000);
-    if (cleaned.includes('m')) return Math.floor(number * 1000000);
-    if (cleaned.includes('b')) return Math.floor(number * 1000000000);
-    
-    return Math.floor(number);
+    try {
+      console.log(`🔢 TikTok parsing count: "${str}"`);
+      
+      const cleaned = str.replace(/,/g, '').toLowerCase();
+      const number = parseFloat(cleaned);
+      
+      if (isNaN(number)) {
+        console.log(`❌ Failed to parse TikTok number: "${str}"`);
+        return 0;
+      }
+      
+      let result: number;
+      if (cleaned.includes('k')) {
+        result = Math.floor(number * 1000);
+      } else if (cleaned.includes('m')) {
+        result = Math.floor(number * 1000000);
+      } else if (cleaned.includes('b')) {
+        result = Math.floor(number * 1000000000);
+      } else {
+        result = Math.floor(number);
+      }
+      
+      // Check for JavaScript number precision issues
+      if (result > Number.MAX_SAFE_INTEGER) {
+        console.log(`⚠️ TikTok number ${result} exceeds MAX_SAFE_INTEGER, precision may be lost`);
+      }
+      
+      console.log(`✅ TikTok parsed "${str}" -> ${result.toLocaleString()}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Error parsing TikTok count "${str}":`, error);
+      return 0;
+    }
   }
 
   private parseFromPageText(pageText: string, username: string): TikTokScrapingResult['data'] | null {
