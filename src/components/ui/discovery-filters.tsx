@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,35 +48,50 @@ const followerRanges = [
 ];
 
 export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: DiscoveryFiltersProps) {
-  const [tempFilters, setTempFilters] = useState<DiscoveryFilters>(filters);
-
+  // Remove tempFilters state - apply changes immediately
   const handlePlatformChange = (platform: 'all' | 'instagram' | 'tiktok') => {
-    setTempFilters(prev => ({ ...prev, platform }));
+    const newFilters = { ...filters, platform };
+    onFiltersChange(newFilters);
+    onApplyFilters();
   };
 
   const handleCategoryToggle = (category: string) => {
-    setTempFilters(prev => ({
-      ...prev,
-      category: prev.category.includes(category)
-        ? prev.category.filter(c => c !== category)
-        : [...prev.category, category]
-    }));
+    const newFilters = {
+      ...filters,
+      category: filters.category.includes(category)
+        ? filters.category.filter(c => c !== category)
+        : [...filters.category, category]
+    };
+    onFiltersChange(newFilters);
+    onApplyFilters();
   };
 
   const handleFollowerRangeChange = (min: number, max: number) => {
-    setTempFilters(prev => ({ ...prev, minFollowers: min, maxFollowers: max }));
+    const newFilters = { ...filters, minFollowers: min, maxFollowers: max };
+    onFiltersChange(newFilters);
+    onApplyFilters();
   };
 
   const handleVerifiedChange = (verified?: boolean) => {
-    setTempFilters(prev => ({ ...prev, verified }));
+    const newFilters = { ...filters, verified };
+    onFiltersChange(newFilters);
+    onApplyFilters();
   };
 
   const handleSortByChange = (sortBy: 'followers' | 'engagement' | 'recent') => {
-    setTempFilters(prev => ({ ...prev, sortBy }));
+    const newFilters = { ...filters, sortBy };
+    onFiltersChange(newFilters);
+    onApplyFilters();
+  };
+
+  const handleCustomFollowerChange = (field: 'minFollowers' | 'maxFollowers', value: number) => {
+    const newFilters = { ...filters, [field]: value };
+    onFiltersChange(newFilters);
+    // Don't auto-apply for custom input changes to avoid too many API calls while typing
   };
 
   const handleApply = () => {
-    onFiltersChange(tempFilters);
+    // This is now mainly for custom follower range inputs
     onApplyFilters();
   };
 
@@ -90,7 +104,6 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
       verified: undefined,
       sortBy: 'followers'
     };
-    setTempFilters(resetFilters);
     onFiltersChange(resetFilters);
     onApplyFilters();
   };
@@ -115,7 +128,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   type="radio"
                   name="platform"
                   value={platform.value}
-                  checked={tempFilters.platform === platform.value}
+                  checked={filters.platform === platform.value}
                   onChange={() => handlePlatformChange(platform.value as 'all' | 'instagram' | 'tiktok')}
                   className="text-primary"
                 />
@@ -139,7 +152,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                   type="radio"
                   name="sortBy"
                   value={sort.value}
-                  checked={tempFilters.sortBy === sort.value}
+                  checked={filters.sortBy === sort.value}
                   onChange={() => handleSortByChange(sort.value as 'followers' | 'engagement' | 'recent')}
                   className="text-primary"
                 />
@@ -158,7 +171,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                 <input
                   type="radio"
                   name="followerRange"
-                  checked={tempFilters.minFollowers === range.min && tempFilters.maxFollowers === range.max}
+                  checked={filters.minFollowers === range.min && filters.maxFollowers === range.max}
                   onChange={() => handleFollowerRangeChange(range.min, range.max)}
                   className="text-primary"
                 />
@@ -174,21 +187,15 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
               <Input
                 type="number"
                 placeholder="Min"
-                value={tempFilters.minFollowers || ''}
-                onChange={(e) => setTempFilters(prev => ({ 
-                  ...prev, 
-                  minFollowers: parseInt(e.target.value) || 0 
-                }))}
+                value={filters.minFollowers || ''}
+                onChange={(e) => handleCustomFollowerChange('minFollowers', parseInt(e.target.value) || 0)}
                 className="text-xs"
               />
               <Input
                 type="number"
                 placeholder="Max"
-                value={tempFilters.maxFollowers === 10000000 ? '' : tempFilters.maxFollowers}
-                onChange={(e) => setTempFilters(prev => ({ 
-                  ...prev, 
-                  maxFollowers: parseInt(e.target.value) || 10000000 
-                }))}
+                value={filters.maxFollowers === 10000000 ? '' : filters.maxFollowers}
+                onChange={(e) => handleCustomFollowerChange('maxFollowers', parseInt(e.target.value) || 10000000)}
                 className="text-xs"
               />
             </div>
@@ -203,7 +210,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
               <label key={category.value} className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={tempFilters.category.includes(category.value)}
+                  checked={filters.category.includes(category.value)}
                   onChange={() => handleCategoryToggle(category.value)}
                   className="text-primary"
                 />
@@ -226,7 +233,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
                 <input
                   type="radio"
                   name="verified"
-                  checked={tempFilters.verified === option.value}
+                  checked={filters.verified === option.value}
                   onChange={() => handleVerifiedChange(option.value)}
                   className="text-primary"
                 />
@@ -238,10 +245,10 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-4 border-t">
-          <Button onClick={handleApply} className="w-full" size="sm">
-            Apply Filters
+          <Button onClick={handleApply} className="w-full text-xs" size="sm">
+            Apply Custom Range
           </Button>
-          <Button onClick={handleReset} variant="outline" className="w-full" size="sm">
+          <Button onClick={handleReset} variant="outline" className="w-full text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200" size="sm">
             Reset All
           </Button>
         </div>

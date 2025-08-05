@@ -368,11 +368,16 @@ export function CreatorDiscovery() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Discover Creators</span>
-                {discoveryData && (
-                  <span className="text-sm text-muted-foreground font-normal">
-                    {discoveryData.totalCount} creators found
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {isLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                  {discoveryData && (
+                    <span className="text-sm text-muted-foreground font-normal">
+                      {discoveryData.totalCount} creators found
+                    </span>
+                  )}
+                </div>
               </CardTitle>
               <CardDescription>
                 Find creators across all tiers - from nano influencers to mega creators (focus on mid-tier 10K-100K)
