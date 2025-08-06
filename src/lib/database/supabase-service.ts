@@ -323,7 +323,7 @@ export async function logUserSearch(
 
     if (error) {
       console.error('Error logging search:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Database error' };
     }
 
     return { success: true };
@@ -397,7 +397,7 @@ export async function getDiscoveryCreators(
 
     if (error) {
       console.error('Error fetching discovery creators:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Database error' };
     }
 
     return { success: true, creators: data || [] };
@@ -428,7 +428,7 @@ export async function getTrendingCreators(
 
     if (error) {
       console.error('Error fetching trending creators:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Database error' };
     }
 
     return { success: true, creators: data || [] };

@@ -36,7 +36,7 @@ export function Navbar() {
       // Always redirect to login page regardless of whether signOut had an error
       // This handles cases where the session is already invalid but UI still shows user as logged in
       if (error) {
-        console.log('Sign out had an error (possibly session already expired), but proceeding with logout:', error.message);
+        console.log('Sign out had an error (possibly session already expired), but proceeding with logout:', error);
       } else {
         console.log('Sign out successful');
       }
@@ -96,16 +96,16 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 cursor-pointer hover:bg-primary/4 hover:text-foreground transition-all duration-200">
                   <User className="w-4 h-4" />
-                  <span>{profile?.username || user?.email?.split('@')[0]}</span>
+                  <span>{profile?.username || user?.username}</span>
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{profile?.username || user?.email?.split('@')[0]}</p>
+                    <p className="text-sm font-medium leading-none">{profile?.username || user?.username}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
+                      {user?.username}
                     </p>
                   </div>
                 </DropdownMenuLabel>

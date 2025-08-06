@@ -291,7 +291,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       password: newPassword
     });
 
-    return { error };
+    return { error: error ? error.message : null };
   };
 
   return (
