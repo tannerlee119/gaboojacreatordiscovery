@@ -237,13 +237,6 @@ export default function SettingsPage() {
                       disabled 
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Last Login</label>
-                    <Input 
-                      value={user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'} 
-                      disabled 
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>
