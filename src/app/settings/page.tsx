@@ -18,20 +18,17 @@ export default function SettingsPage() {
   
   // Modal states
   const [showEditUsernameModal, setShowEditUsernameModal] = useState(false);
-  const [showEditEmailModal, setShowEditEmailModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showLoginHistoryModal, setShowLoginHistoryModal] = useState(false);
   
   // Form states
   const [newUsername, setNewUsername] = useState('');
-  const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Settings state
   const [settings, setSettings] = useState({
-    emailNotifications: true,
     darkMode: false,
     autoSave: true,
     showBookmarks: true,
@@ -101,23 +98,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle email update  
-  const handleUpdateEmail = async () => {
-    if (!newEmail.trim()) return;
-    
-    setIsLoading(true);
-    try {
-      // Email updates in Supabase require verification
-      setMessage('Email updates require verification - feature coming soon!');
-      setShowEditEmailModal(false);
-      setNewEmail('');
-      setTimeout(() => setMessage(''), 3000);
-    } catch {
-      setMessage('Failed to update email');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Handle password change
   const handleChangePassword = async () => {
@@ -246,24 +226,7 @@ export default function SettingsPage() {
                         <Edit3 className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Input value={profile?.username || user?.email?.split('@')[0]} disabled />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium">Email</label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setNewEmail(user?.email || '');
-                          setShowEditEmailModal(true);
-                        }}
-                      >
-                        <Edit3 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <Input value={user?.email || 'Not provided'} disabled />
+                    <Input value={profile?.username || user?.username} disabled />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -433,21 +396,6 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium">Email Notifications</label>
-                    <p className="text-xs text-muted-foreground">
-                      Receive updates via email
-                    </p>
-                  </div>
-                  <Button
-                    variant={settings.emailNotifications ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleSettingChange('emailNotifications', !settings.emailNotifications)}
-                  >
-                    {settings.emailNotifications ? 'On' : 'Off'}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -525,37 +473,6 @@ export default function SettingsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Email Modal */}
-        <Dialog open={showEditEmailModal} onOpenChange={setShowEditEmailModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Email</DialogTitle>
-              <DialogDescription>
-                Update your email address
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="new-email">New Email</Label>
-                <Input
-                  id="new-email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Enter new email"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditEmailModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateEmail} disabled={isLoading}>
-                {isLoading ? 'Updating...' : 'Update Email'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Change Password Modal */}
         <Dialog open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
