@@ -76,69 +76,13 @@ export async function saveCreatorAnalysis(
     
     console.log('🚀 Starting analysis record for:', analysisData.profile.username, analysisData.profile.platform);
     
-    // Try RPC first, but fallback to direct table operations if RPC functions don't exist
-    try {
-      const { data: analysisId, error: startError } = await supabase
-        .rpc('start_creator_analysis', {
-          p_username: analysisData.profile.username,
-          p_platform: analysisData.profile.platform,
-          p_user_id: userId || null
-        });
-
-      if (startError) {
-        throw new Error(`RPC start_creator_analysis failed: ${startError.message}`);
-      }
-      
-      console.log('✅ Analysis started with ID:', analysisId);
-
-      // Prepare data for completion function
-      const completionData = {
-        profile: {
-          username: analysisData.profile.username,
-          platform: analysisData.profile.platform,
-          displayName: analysisData.profile.displayName,
-          bio: analysisData.profile.bio,
-          profileImageUrl: analysisData.profile.profileImageUrl,
-          profileImageBase64: analysisData.profile.profileImageBase64,
-          isVerified: analysisData.profile.isVerified,
-          followerCount: analysisData.profile.followerCount,
-          followingCount: analysisData.profile.followingCount,
-          location: analysisData.profile.location,
-          website: analysisData.profile.website,
-          metrics: analysisData.profile.metrics,
-          aiAnalysis: analysisData.profile.aiAnalysis
-        },
-        scrapingDetails: analysisData.scrapingDetails,
-        aiMetrics: analysisData.aiMetrics || { model: 'none', cost: 0, cached: false },
-        dataQuality: analysisData.dataQuality || { 
-          score: 100, 
-          isValid: true, 
-          breakdown: { completeness: 100, consistency: 100, reliability: 100 }
-        },
-        processingTime: analysisData.processingTime || 0
-      };
-
-      console.log('🔄 Completing analysis with ID:', analysisId);
-      
-      const { error: completeError } = await supabase
-        .rpc('complete_creator_analysis', {
-          p_analysis_id: analysisId,
-          p_data: completionData
-        });
-
-      if (completeError) {
-        throw new Error(`RPC complete_creator_analysis failed: ${completeError.message}`);
-      }
-      
-      console.log('✅ Analysis completed successfully via RPC');
-      return { success: true, analysisId };
-      
-    } catch (rpcError) {
-      console.warn('⚠️ RPC functions failed, falling back to direct table operations:', rpcError);
-      
-      // Fallback: Direct table operations
-      // First, insert or update the creator record (basic info only)
-      const { data: creator, error: creatorError } = await supabase
+    // Always use direct table operations for more reliable saving
+    // (RPC functions can be complex and prone to JSON/type issues)
+    console.log('💾 Using direct table operations for reliable data saving...');
+    
+    // Direct table operations
+    // First, insert or update the creator record (basic info only)
+    const { data: creator, error: creatorError } = await supabase
         .from('creators')
         .upsert({
           username: analysisData.profile.username,
@@ -158,15 +102,15 @@ export async function saveCreatorAnalysis(
         .select('id')
         .single();
 
-      if (creatorError) {
-        console.error('❌ Error upserting creator:', creatorError);
-        return { success: false, error: creatorError.message };
-      }
+    if (creatorError) {
+      console.error('❌ Error upserting creator:', creatorError);
+      return { success: false, error: creatorError.message };
+    }
 
-      console.log('✅ Creator record saved with ID:', creator.id);
+    console.log('✅ Creator record saved with ID:', creator.id);
 
-      // Now insert the detailed analysis record
-      const analysisRecord = {
+    // Now insert the detailed analysis record
+    const analysisRecord = {
         creator_id: creator.id,
         analysis_status: 'completed',
         analyzed_by_user_id: userId || null,
@@ -286,9 +230,8 @@ export async function saveCreatorAnalysis(
         }
       }
       
-      console.log('✅ Analysis saved successfully via direct table operations');
-      return { success: true, analysisId: creator.id };
-    }
+    console.log('✅ Analysis saved successfully via direct table operations');
+    return { success: true, analysisId: creator.id };
 
   } catch (error) {
     console.error('💥 Error saving creator analysis:', error);
