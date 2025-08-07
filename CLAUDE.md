@@ -238,3 +238,60 @@ Set these in your Vercel project settings:
 - **Build Optimization**: Skips Playwright browser download on Vercel
 - **CORS**: Configured for API routes with proper headers
 - **Rate Limiting**: Implemented in-memory (consider Redis for production scale)
+
+## Common Issues & Troubleshooting
+
+### TikTok Creators Not Appearing in Discovery Page (RESOLVED)
+
+**Issue**: TikTok creators were being analyzed successfully but not showing up in the discovery page, while Instagram creators worked fine.
+
+**Root Causes & Solutions**:
+
+1. **localStorage Filter State Persistence (Primary Issue)**
+   - **Problem**: The discovery page persisted user filter preferences in localStorage. If users had previously filtered to show only Instagram creators, this setting persisted and prevented TikTok creators from displaying.
+   - **Solution**: Updated localStorage key from `'gabooja-discovery-state-v2'` to `'gabooja-discovery-state-v3'` and added cleanup of old keys to force reset to defaults.
+   - **File Modified**: `src/components/features/creator-discovery.tsx` (lines 19, 150-151)
+
+2. **Database Schema Mismatches (Secondary Issue)**
+   - **Problem**: TikTok metrics saving failed due to missing database columns, preventing proper data storage.
+   - **Solution**: Fixed `supabase-service.ts` to use only existing table columns and handle platform-specific metrics properly.
+   - **File Modified**: `src/lib/database/supabase-service.ts`
+
+### TikTok Bookmark Functionality Not Working (RESOLVED)
+
+**Issue**: TikTok creators couldn't be bookmarked from the analysis page, while Instagram bookmark functionality worked correctly.
+
+**Root Cause & Solution**:
+- **Problem**: The `getOrCreateCreator` function in bookmark service relied solely on a database RPC function `get_or_create_creator` that wasn't handling TikTok creators properly.
+- **Solution**: Enhanced `getOrCreateCreator` with a robust three-tier approach:
+  1. First tries to find existing creator in database
+  2. Falls back to RPC function if creator not found
+  3. If RPC fails, manually creates creator record
+- **File Modified**: `src/lib/database/bookmark-service.ts` (lines 281-329)
+
+### Data Flow Verification Process
+
+When debugging platform-specific issues (Instagram vs TikTok):
+
+1. **API Layer Check**: Test discovery API directly: `curl "http://localhost:3000/api/discover-creators?platform=all"`
+2. **Database Layer Check**: Verify creators table has both Instagram and TikTok entries
+3. **Frontend Filter Check**: Clear localStorage and check default platform setting is `'all'`
+4. **Bookmark Service Check**: Test both database and localStorage fallback paths
+
+### Key Learning Points
+
+- **localStorage Persistence**: Frontend state persistence can mask platform-specific bugs by preserving invalid filter states
+- **Database Resilience**: Always implement fallback strategies for database operations, especially for user-facing features like bookmarks  
+- **Platform Parity**: When one platform works and another doesn't, check both data flow differences and frontend state management
+- **API vs Frontend Debugging**: Always test API endpoints directly to isolate whether issues are in backend logic or frontend display
+
+### Database Schema Notes
+
+The system uses multiple tables for creator data:
+- `creators` - Basic creator information (username, platform, display_name)
+- `creator_analyses` - Detailed analysis results with AI data
+- `creator_discovery` - View/table for discovery page with optimized fields
+- `instagram_metrics` / `tiktok_metrics` - Platform-specific metrics
+- `user_bookmarks` - User bookmark relationships
+
+When adding new platforms or modifying data structures, ensure all layers (scraping → analysis → storage → discovery → bookmarks) are updated consistently.
