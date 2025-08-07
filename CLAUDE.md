@@ -22,6 +22,10 @@ npm run lint
 
 # Install Playwright for web scraping
 npm run postinstall
+
+# Database cleanup utilities
+npm run cleanup-db          # Preview cleanup operations
+npm run cleanup-db:confirm  # Execute cleanup operations
 ```
 
 ### Environment Setup
@@ -66,6 +70,7 @@ Ensure these environment variables are configured in `.env.local`:
 4. **Database Layer** (`src/lib/database/`)
    - `supabase-service.ts` - Main database operations
    - `creator-service.ts` - Creator-specific database functions
+   - `bookmark-service.ts` - Bookmark persistence for authenticated users
    - Supports both RPC functions and direct table operations
 
 ### Core Features
@@ -85,10 +90,11 @@ Ensure these environment variables are configured in `.env.local`:
 - Pagination and search functionality
 
 ### Authentication & Context
-- Supabase authentication with conditional features
-- `SupabaseAuthProvider` - Global auth state management  
+- **Custom Authentication**: `CustomAuthService` in `src/lib/custom-auth.ts` - Username/password auth with bcrypt hashing
+- **Supabase Authentication**: Alternative auth provider with conditional features  
+- `SupabaseAuthProvider` - Global auth state management
 - `CreatorProvider` - Analysis history and state management
-- Supports both authenticated and guest users
+- Supports both authenticated and guest users with graceful fallbacks
 
 ### API Routes Structure
 ```
@@ -161,10 +167,12 @@ Ensure these environment variables are configured in `.env.local`:
 - `/src/lib/` - Business logic organized by domain:
   - `ai-analysis/` - OpenAI integration and cost optimization
   - `data-quality/` - Validation, normalization, and quality scoring
-  - `database/` - Supabase services and creator operations
+  - `database/` - Supabase services, creator operations, and bookmarks
   - `scraping/` - Platform-specific scrapers with base class
   - `security/` - Rate limiting and CORS configuration
   - `validation/` - Input validation schemas
+  - `custom-auth.ts` - Custom username/password authentication system
+  - `user-bookmarks.ts` - Bookmark management with database/localStorage hybrid
 - Type definitions centralized in `/src/lib/types.ts` with platform-specific interfaces
 
 ## Important Implementation Details
