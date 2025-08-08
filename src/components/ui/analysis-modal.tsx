@@ -373,20 +373,8 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                   </TabsContent>
                   
                   <TabsContent value="metrics" className="space-y-6">
-                    {/* Basic Metrics */}
-                    <div className="grid md:grid-cols-4 gap-4 mb-6">
-                      <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 border border-gray-200 dark:border-gray-800 text-center">
-                        <div className="text-lg font-bold gabooja-accent">
-                          {formatNumber(analysisData.profile.followerCount)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Followers</div>
-                      </div>
-                      <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 border border-gray-200 dark:border-gray-800 text-center">
-                        <div className="text-lg font-bold gabooja-accent">
-                          {formatNumber(analysisData.profile.followingCount)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Following</div>
-                      </div>
+                    {/* Platform-specific Metrics */}
+                    <div className="grid gap-4 mb-6">
                       {analysisData.profile.platform === 'instagram' && analysisData.profile.metrics.postCount && (
                         <div className="p-4 rounded-lg bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 border border-pink-200 dark:border-pink-800 text-center">
                           <div className="text-lg font-bold text-pink-700 dark:text-pink-300">
