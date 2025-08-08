@@ -30,6 +30,11 @@ export interface DiscoveryCreator {
   audienceDemographics?: string;
   collaborationPotential?: string;
   lastAnalysisDate?: string;
+  // Growth data
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
 }
 
 interface DiscoveryCreatorCardProps {

@@ -42,6 +42,9 @@ interface DatabaseCreator {
   ai_audience_demographics?: string;
   ai_collaboration_potential?: string;
   last_analysis_date?: string;
+  // Growth data fields (calculated)
+  previous_follower_count?: number;
+  growth_percentage?: number;
 }
 
 // Helper function to map database results to frontend interface
@@ -69,7 +72,12 @@ function mapDatabaseCreatorToDiscoveryCreator(dbCreator: DatabaseCreator) {
     contentStyle: dbCreator.ai_content_style,
     audienceDemographics: dbCreator.ai_audience_demographics,
     collaborationPotential: dbCreator.ai_collaboration_potential,
-    lastAnalysisDate: dbCreator.last_analysis_date
+    lastAnalysisDate: dbCreator.last_analysis_date,
+    // Include growth data if available
+    growthData: (dbCreator.previous_follower_count && dbCreator.growth_percentage !== undefined) ? {
+      previousFollowerCount: dbCreator.previous_follower_count,
+      growthPercentage: dbCreator.growth_percentage
+    } : undefined
   };
 }
 

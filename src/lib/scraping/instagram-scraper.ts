@@ -272,20 +272,20 @@ class InstagramScraper extends PlaywrightBaseScraper {
   private checkForErrors(pageContent: string, currentUrl: string, username: string): InstagramScrapingResult {
     console.log('🔍 Checking for error conditions...');
     
-    // Check for "Page Not Found" or similar
+    // Check for "Page Not Found" or similar (be more specific to avoid false positives)
     const notFoundIndicators = [
       'Sorry, this page isn\'t available',
       'The link you followed may be broken',
       'Page Not Found',
-      '404',
-      'Sorry, this page isn\'t available',
       'This page isn\'t available right now'
     ];
     
     const accountNotFoundIndicators = [
       'User not found',
       'This account doesn\'t exist',
-      'Account not found'
+      'Account not found',
+      'This username isn\'t available',
+      'The username you entered doesn\'t appear to belong to an account'
     ];
     
     const privateAccountIndicators = [
@@ -309,15 +309,24 @@ class InstagramScraper extends PlaywrightBaseScraper {
     // Check page content for error messages
     const lowerContent = pageContent.toLowerCase();
     
-    // Check for account doesn't exist
-    if (notFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase())) ||
-        accountNotFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
-      console.log('❌ Account does not exist');
+    // Check for account doesn't exist - but be more careful about false positives
+    const hasNotFoundIndicators = notFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()));
+    const hasAccountNotFoundIndicators = accountNotFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()));
+    const hasUsernameInContent = lowerContent.includes(username.toLowerCase());
+    
+    // Only declare account doesn't exist if we have clear indicators AND the username isn't found in content
+    if ((hasNotFoundIndicators || hasAccountNotFoundIndicators) && !hasUsernameInContent) {
+      console.log('❌ Account does not exist (no username found in content)');
       return {
         success: false,
         error: `Instagram account @${username} does not exist`,
         method: 'Playwright with Sparticuz Chromium'
       };
+    }
+    
+    // If we see error indicators but the username IS in the content, it might be a temporary issue
+    if ((hasNotFoundIndicators || hasAccountNotFoundIndicators) && hasUsernameInContent) {
+      console.log('⚠️ Error indicators found but username is in content - might be temporary issue, continuing...');
     }
     
     // Check for private account

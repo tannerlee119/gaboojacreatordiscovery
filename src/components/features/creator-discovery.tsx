@@ -65,6 +65,12 @@ interface AnalysisData {
     method: string;
     timestamp: string;
   };
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
+  lastAnalyzed?: string;
+  cached?: boolean;
 }
 
 interface DiscoveryResponse {
@@ -383,6 +389,10 @@ export function CreatorDiscovery() {
         method: 'From Discovery',
         timestamp: creator.lastAnalysisDate || new Date().toISOString(),
       },
+      // Pass through growth data if available
+      growthData: creator.growthData,
+      lastAnalyzed: creator.lastAnalysisDate,
+      cached: true, // Data from discovery is considered cached
     };
     
     setSelectedAnalysis(analysisData);
@@ -402,7 +412,7 @@ export function CreatorDiscovery() {
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // Use bookmarkUpdate to ensure component re-renders when bookmarks change
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _forceRerender = bookmarkUpdate;
+    const _forceRerender = bookmarkUpdate; // Intentionally unused to trigger re-renders
     const key = `${creator.username}_${creator.platform}`;
     return bookmarkStatuses[key] || false;
   };
