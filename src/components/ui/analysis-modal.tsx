@@ -375,7 +375,9 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                   <TabsContent value="metrics" className="space-y-6">
                     {/* Platform-specific Metrics */}
                     <div className="grid gap-4 mb-6">
-                      {analysisData.profile.platform === 'instagram' && analysisData.profile.metrics.postCount && (
+                      {analysisData.profile.platform === 'instagram' && 
+                       analysisData.profile.metrics && 
+                       typeof analysisData.profile.metrics.postCount === 'number' && (
                         <div className="p-4 rounded-lg bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 border border-pink-200 dark:border-pink-800 text-center">
                           <div className="text-lg font-bold text-pink-700 dark:text-pink-300">
                             {formatNumber(analysisData.profile.metrics.postCount)}
@@ -383,7 +385,9 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                           <div className="text-xs text-pink-600 dark:text-pink-400">Posts</div>
                         </div>
                       )}
-                      {analysisData.profile.platform === 'tiktok' && analysisData.profile.metrics.likeCount && (
+                      {analysisData.profile.platform === 'tiktok' && 
+                       analysisData.profile.metrics && 
+                       typeof analysisData.profile.metrics.likeCount === 'number' && (
                         <div className="p-4 rounded-lg bg-gradient-to-r from-black/5 to-black/10 dark:from-white/5 dark:to-white/10 border border-black/20 dark:border-white/20 text-center">
                           <div className="text-lg font-bold">
                             {formatNumber(analysisData.profile.metrics.likeCount)}
@@ -391,7 +395,9 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                           <div className="text-xs text-muted-foreground">Total Likes</div>
                         </div>
                       )}
-                      {analysisData.profile.platform === 'tiktok' && analysisData.profile.metrics.videoCount && (
+                      {analysisData.profile.platform === 'tiktok' && 
+                       analysisData.profile.metrics && 
+                       typeof analysisData.profile.metrics.videoCount === 'number' && (
                         <div className="p-4 rounded-lg bg-gradient-to-r from-black/5 to-black/10 dark:from-white/5 dark:to-white/10 border border-black/20 dark:border-white/20 text-center">
                           <div className="text-lg font-bold">
                             {formatNumber(analysisData.profile.metrics.videoCount)}
