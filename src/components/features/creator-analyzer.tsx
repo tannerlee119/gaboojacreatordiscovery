@@ -13,6 +13,7 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { useCreator } from '@/lib/creator-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
+import { GrowthChart } from '@/components/ui/growth-chart';
 import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
 import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw } from 'lucide-react';
@@ -83,6 +84,12 @@ interface AnalysisResult {
     transformations: number;
     recommendations: string[];
   };
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
+  lastAnalyzed?: string;
+  cached?: boolean;
 }
 
 // Type guard functions
@@ -105,6 +112,7 @@ export function CreatorAnalyzer() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showGrowthChart, setShowGrowthChart] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string>('other');
   
   // Cache for storing last results per platform
@@ -449,6 +457,26 @@ export function CreatorAnalyzer() {
                     {formatNumber(result.profile.followerCount)}
                   </div>
                   <div className="text-sm text-muted-foreground">Followers</div>
+                  {result.growthData && (
+                    <button
+                      onClick={() => setShowGrowthChart(true)}
+                      className={`text-xs px-2 py-1 rounded-full mt-1 transition-colors hover:opacity-80 cursor-pointer ${
+                        result.growthData.growthPercentage > 0
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          : result.growthData.growthPercentage < 0
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                      }`}
+                    >
+                      {result.growthData.growthPercentage > 0 ? '+' : ''}
+                      {result.growthData.growthPercentage.toFixed(1)}%
+                    </button>
+                  )}
+                  {result.cached && (
+                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      📋 Cached
+                    </div>
+                  )}
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">
@@ -846,6 +874,23 @@ export function CreatorAnalyzer() {
           platform={result.profile.platform}
           initialComments=""
           isEditing={false}
+        />
+      )}
+
+      {/* Growth Chart Modal */}
+      {result && result.growthData && (
+        <GrowthChart
+          isOpen={showGrowthChart}
+          onClose={() => setShowGrowthChart(false)}
+          growthData={{
+            previousFollowerCount: result.growthData.previousFollowerCount,
+            growthPercentage: result.growthData.growthPercentage,
+            currentFollowerCount: result.profile.followerCount,
+            lastAnalyzed: result.lastAnalyzed || result.scrapingDetails.timestamp,
+            previousAnalyzed: undefined // We could add this if we store more historical data
+          }}
+          username={result.profile.username}
+          platform={result.profile.platform}
         />
       )}
     </div>
