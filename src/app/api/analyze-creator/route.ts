@@ -384,6 +384,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate growth data after saving the new analysis
+    let growthData;
+    if (analysisId) {
+      console.log('🔍 Calculating growth data after fresh analysis...');
+      const latestWithGrowth = await getLatestCreatorAnalysis(username, platform);
+      if (latestWithGrowth.success && latestWithGrowth.data?.growthData) {
+        growthData = latestWithGrowth.data.growthData;
+        console.log('✅ Growth data calculated:', growthData);
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
       data: {
@@ -423,7 +434,10 @@ export async function POST(request: NextRequest) {
           transformations: qualityReport.normalization.transformations.length,
           recommendations: qualityReport.recommendations.slice(0, 3) // Top 3 recommendations
         },
-        processingTime
+        processingTime,
+        // Include growth data if calculated
+        growthData: growthData,
+        lastAnalyzed: new Date().toISOString()
       }
     });
 

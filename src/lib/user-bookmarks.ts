@@ -221,6 +221,40 @@ export class UserBookmarksService {
     }
   }
 
+  static async updateUserBookmark(userId: string, updatedBookmark: UserBookmark): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    
+    if (this.shouldUseDatabase()) {
+      try {
+        // TODO: Add database method for updating full bookmark data
+        // For now, fallback to localStorage
+      } catch (error) {
+        console.error('Error updating bookmark in database, falling back to localStorage:', error);
+      }
+    }
+    
+    // localStorage implementation
+    try {
+      const bookmarks = await this.getUserBookmarks(userId);
+      const bookmarkIndex = bookmarks.findIndex(
+        bookmark => bookmark.username === updatedBookmark.username && bookmark.platform === updatedBookmark.platform
+      );
+      
+      if (bookmarkIndex >= 0) {
+        bookmarks[bookmarkIndex] = updatedBookmark;
+        
+        const key = this.getStorageKey(userId, 'bookmarks');
+        localStorage.setItem(key, JSON.stringify(bookmarks));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error updating bookmark:', error);
+      return false;
+    }
+  }
+
   static async clearUserBookmarks(userId: string): Promise<void> {
     if (typeof window === 'undefined') return;
     

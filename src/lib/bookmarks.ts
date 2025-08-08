@@ -11,6 +11,7 @@ export interface BookmarkedCreator {
   followingCount: number;
   website?: string;
   bio?: string;
+  location?: string;
   bookmarkedAt: string; // ISO timestamp
   comments?: string; // User-added notes/comments
   metrics?: {

@@ -472,11 +472,6 @@ export function CreatorAnalyzer() {
                       {result.growthData.growthPercentage.toFixed(1)}%
                     </button>
                   )}
-                  {result.cached && (
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      📋 Cached
-                    </div>
-                  )}
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">

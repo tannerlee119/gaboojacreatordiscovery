@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
-import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-react';
+import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3, RefreshCw } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
@@ -51,6 +51,12 @@ interface AnalysisData {
     method: string;
     timestamp: string;
   };
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
+  lastAnalyzed?: string;
+  cached?: boolean;
 }
 
 export default function BookmarksPage() {
@@ -63,6 +69,7 @@ export default function BookmarksPage() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedBookmark, setSelectedBookmark] = useState<UserBookmark | null>(null);
+  const [refreshingBookmarks, setRefreshingBookmarks] = useState<Set<string>>(new Set());
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -175,30 +182,194 @@ export default function BookmarksPage() {
     }
   };
 
-  const handleViewAnalysis = (bookmark: UserBookmark) => {
-    // Convert bookmark data to analysis format
-    const analysisData: AnalysisData = {
+  const handleRefreshBookmark = async (bookmark: UserBookmark) => {
+    const bookmarkKey = `${bookmark.username}_${bookmark.platform}`;
+    setRefreshingBookmarks(prev => new Set([...prev, bookmarkKey]));
+
+    try {
+      // Fetch latest data from discovery API
+      const response = await fetch(`/api/discover-creators?platform=${bookmark.platform}&search=${bookmark.username}&limit=1`);
+      const data = await response.json();
+      
+      if (data.creators && data.creators.length > 0) {
+        const updatedCreator = data.creators[0];
+        
+        // Update the bookmark with latest data
+        const updatedBookmark: UserBookmark = {
+          ...bookmark,
+          displayName: updatedCreator.displayName || bookmark.displayName,
+          followerCount: updatedCreator.followerCount || bookmark.followerCount,
+          followingCount: updatedCreator.followingCount || bookmark.followingCount,
+          bio: updatedCreator.bio || bookmark.bio,
+          website: updatedCreator.website || bookmark.website,
+          metrics: updatedCreator.engagementRate ? {
+            ...bookmark.metrics,
+            engagementRate: updatedCreator.engagementRate
+          } : bookmark.metrics,
+          aiAnalysis: {
+            creator_score: updatedCreator.aiScore || bookmark.aiAnalysis?.creator_score || '0',
+            category: updatedCreator.category || bookmark.aiAnalysis?.category || 'other',
+            brand_potential: updatedCreator.brandPotential || bookmark.aiAnalysis?.brand_potential || '',
+            key_strengths: updatedCreator.keyStrengths || bookmark.aiAnalysis?.key_strengths || '',
+            engagement_quality: updatedCreator.engagementQuality || bookmark.aiAnalysis?.engagement_quality || '',
+            content_style: updatedCreator.contentStyle || bookmark.aiAnalysis?.content_style || '',
+            audience_demographics: updatedCreator.audienceDemographics || bookmark.aiAnalysis?.audience_demographics || '',
+            collaboration_potential: updatedCreator.collaborationPotential || bookmark.aiAnalysis?.collaboration_potential || '',
+            overall_assessment: updatedCreator.overallAssessment || bookmark.aiAnalysis?.overall_assessment || '',
+          }
+        };
+
+        // Update local state
+        setBookmarks(prev => prev.map(b => 
+          b.username === bookmark.username && b.platform === bookmark.platform 
+            ? updatedBookmark 
+            : b
+        ));
+
+        // Update storage
+        if (isAuthenticated && user) {
+          await UserBookmarksService.updateUserBookmark(user.id, updatedBookmark);
+        } else {
+          // Update localStorage for non-authenticated users
+          const storedBookmarks = getBookmarkedCreators();
+          const updatedStoredBookmarks = storedBookmarks.map(b =>
+            b.username === bookmark.username && b.platform === bookmark.platform
+              ? updatedBookmark
+              : b
+          );
+          localStorage.setItem('gabooja_bookmarked_creators', JSON.stringify(updatedStoredBookmarks));
+        }
+        
+        console.log('✅ Bookmark data refreshed successfully');
+      } else {
+        console.warn('⚠️ No updated data found for this creator');
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing bookmark data:', error);
+    } finally {
+      setRefreshingBookmarks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(bookmarkKey);
+        return newSet;
+      });
+    }
+  };
+
+  const handleViewAnalysis = async (bookmark: UserBookmark) => {
+    // Convert bookmark data to complete analysis format - ensure ALL fields are populated
+    let analysisData: AnalysisData = {
       profile: {
         username: bookmark.username,
-        platform: bookmark.platform as 'instagram' | 'tiktok' | 'youtube',
+        platform: bookmark.platform as 'instagram' | 'tiktok',
         displayName: bookmark.displayName,
         bio: bookmark.bio,
         profileImageUrl: bookmark.profileImageUrl || '',
         isVerified: bookmark.isVerified,
         followerCount: bookmark.followerCount,
         followingCount: bookmark.followingCount,
+        location: bookmark.location, // Add missing location field
         website: bookmark.website,
-        metrics: bookmark.metrics || {},
-        aiAnalysis: bookmark.aiAnalysis,
+        metrics: {
+          followerCount: bookmark.followerCount,
+          followingCount: bookmark.followingCount,
+          postCount: bookmark.metrics?.postCount,
+          engagementRate: bookmark.metrics?.engagementRate,
+          likeCount: bookmark.metrics?.likeCount,
+          videoCount: bookmark.metrics?.videoCount,
+          averageViews: bookmark.metrics?.averageViews,
+          averageLikes: bookmark.metrics?.averageLikes,
+          ...bookmark.metrics // Spread any other metrics
+        },
+        aiAnalysis: bookmark.aiAnalysis ? {
+          creator_score: bookmark.aiAnalysis.creator_score || '0',
+          category: bookmark.aiAnalysis.category || 'other',
+          brand_potential: bookmark.aiAnalysis.brand_potential || 'Not analyzed',
+          key_strengths: bookmark.aiAnalysis.key_strengths || 'Not analyzed',
+          engagement_quality: bookmark.aiAnalysis.engagement_quality || 'Not analyzed',
+          content_style: bookmark.aiAnalysis.content_style || 'Not analyzed',
+          audience_demographics: bookmark.aiAnalysis.audience_demographics || 'Not analyzed',
+          collaboration_potential: bookmark.aiAnalysis.collaboration_potential || 'Not analyzed',
+          overall_assessment: bookmark.aiAnalysis.overall_assessment || 'Creator profile analysis'
+        } : {
+          creator_score: '0',
+          category: 'other',
+          brand_potential: 'Not analyzed',
+          key_strengths: 'Not analyzed',
+          engagement_quality: 'Not analyzed',
+          content_style: 'Not analyzed',
+          audience_demographics: 'Not analyzed',
+          collaboration_potential: 'Not analyzed',
+          overall_assessment: 'Creator profile - analysis pending'
+        },
       },
       scrapingDetails: {
         method: 'Bookmarked Creator',
         timestamp: bookmark.bookmarkedAt,
       },
+      // Add missing fields that Analysis Modal expects
+      growthData: undefined, // TODO: Could add growth data for bookmarks in the future
+      lastAnalyzed: bookmark.bookmarkedAt,
+      cached: true, // Bookmark data is considered cached
     };
-    
+
+    // If AI fields are incomplete, enrich with cached full analysis from API (no forced refresh)
+    const needsEnrichment = !bookmark.aiAnalysis || (
+      !bookmark.aiAnalysis.brand_potential ||
+      !bookmark.aiAnalysis.key_strengths ||
+      !bookmark.aiAnalysis.engagement_quality ||
+      !bookmark.aiAnalysis.content_style ||
+      !bookmark.aiAnalysis.audience_demographics ||
+      !bookmark.aiAnalysis.collaboration_potential ||
+      !bookmark.aiAnalysis.overall_assessment
+    );
+
+    if (needsEnrichment) {
+      try {
+        const response = await fetch('/api/analyze-creator', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: bookmark.username,
+            platform: bookmark.platform,
+            forceRefresh: false
+          })
+        });
+        const data = await response.json();
+        if (data?.success && data.data) {
+          analysisData = {
+            ...data.data,
+            cached: true
+          } as AnalysisData;
+        }
+      } catch (error) {
+        console.error('Error enriching analysis from API:', error);
+      }
+    }
+
     setSelectedAnalysis(analysisData);
     setIsModalOpen(true);
+  };
+
+  const handleRefreshFromModal = async (username: string, platform: string) => {
+    // Trigger a fresh analysis for the creator (same behavior as discovery modal)
+    const response = await fetch('/api/analyze-creator', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        username, 
+        platform,
+        forceRefresh: true 
+      }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      setSelectedAnalysis(data.data);
+    } else {
+      throw new Error(data.error || 'Failed to refresh analysis');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -352,22 +523,20 @@ export default function BookmarksPage() {
                 
                 {/* Action Buttons */}
                 <div className="pt-2 border-t border-border space-y-2">
-                  {/* Horizontal Button Row */}
+                  {/* Action Buttons in one row */}
                   <div className="flex gap-2">
-                    {/* View Analysis Button - only show if AI analysis exists */}
-                    {bookmark.aiAnalysis && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewAnalysis(bookmark)}
-                        className="flex-1 flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
-                      >
-                        <Eye className="h-3 w-3" />
-                        View Analysis
-                      </Button>
-                    )}
-                    
-                    {/* Edit Notes Button */}
+                    {/* View Analysis */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewAnalysis(bookmark)}
+                      className="flex-1 flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                    >
+                      <Eye className="h-3 w-3" />
+                      View Analysis
+                    </Button>
+
+                    {/* Edit Notes */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -409,6 +578,7 @@ export default function BookmarksPage() {
             setSelectedAnalysis(null);
           }}
           analysisData={selectedAnalysis}
+          onRefresh={handleRefreshFromModal}
         />
       )}
 
