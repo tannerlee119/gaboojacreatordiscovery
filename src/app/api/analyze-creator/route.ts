@@ -195,10 +195,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (!scrapingResult.success) {
-      // Check if it's a user-friendly error (private/non-existent account)
+      // Check if it's a user-friendly error (private/non-existent account/restricted access)
       if (scrapingResult.error?.includes('private') || 
           scrapingResult.error?.includes('does not exist') ||
-          scrapingResult.error?.includes('doesn\'t exist')) {
+          scrapingResult.error?.includes('doesn\'t exist') ||
+          scrapingResult.error?.includes('is private') ||
+          scrapingResult.error?.includes('requires login') ||
+          scrapingResult.error?.includes('age verification') ||
+          scrapingResult.error?.includes('Only the account holder') ||
+          scrapingResult.error?.includes('Only approved followers')) {
         const response = NextResponse.json(
           { success: false, error: scrapingResult.error },
           { status: 400 } // Bad request for user issues

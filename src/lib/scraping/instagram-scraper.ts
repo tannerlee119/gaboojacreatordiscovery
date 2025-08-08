@@ -110,6 +110,12 @@ class InstagramScraper extends PlaywrightBaseScraper {
         console.log(`📍 Current URL: ${currentUrl}`);
         console.log(`📄 Page content length: ${pageContent.length} characters`);
         
+        // Check for specific error conditions first
+        const errorChecks = this.checkForErrors(pageContent, currentUrl, username);
+        if (!errorChecks.success) {
+          return errorChecks;
+        }
+        
         // Check if we got the profile content directly
         const hasProfileContent = (
           pageContent.includes('posts') ||
@@ -139,8 +145,16 @@ class InstagramScraper extends PlaywrightBaseScraper {
             
             await this.page.waitForTimeout(3000); // Give more time to load
             
-            // Check if we have profile content now
+            // Check for errors after login
             const postLoginContent = await this.page.textContent('body') || '';
+            const postLoginUrl = this.page.url();
+            const postLoginErrorCheck = this.checkForErrors(postLoginContent, postLoginUrl, username);
+            
+            if (!postLoginErrorCheck.success) {
+              console.log('❌ Error detected after login');
+              return postLoginErrorCheck;
+            }
+            
             const hasPostLoginContent = (
               postLoginContent.includes('posts') ||
               postLoginContent.includes('followers') ||
@@ -155,7 +169,6 @@ class InstagramScraper extends PlaywrightBaseScraper {
               console.log('❌ Profile still not accessible after login');
               
               // Log more details for debugging
-              const postLoginUrl = this.page.url();
               console.log(`📍 Post-login URL: ${postLoginUrl}`);
               console.log(`📄 Post-login content snippet: ${postLoginContent.substring(0, 200)}...`);
             }
@@ -254,6 +267,71 @@ class InstagramScraper extends PlaywrightBaseScraper {
       error: `Instagram analysis failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}. This may be due to Vercel timeout limits, memory constraints, or Instagram blocking.`,
       method: 'Playwright with Sparticuz Chromium'
     };
+  }
+
+  private checkForErrors(pageContent: string, currentUrl: string, username: string): InstagramScrapingResult {
+    console.log('🔍 Checking for error conditions...');
+    
+    // Check for "Page Not Found" or similar
+    const notFoundIndicators = [
+      'Sorry, this page isn\'t available',
+      'The link you followed may be broken',
+      'Page Not Found',
+      '404',
+      'Sorry, this page isn\'t available',
+      'This page isn\'t available right now'
+    ];
+    
+    const accountNotFoundIndicators = [
+      'User not found',
+      'This account doesn\'t exist',
+      'Account not found'
+    ];
+    
+    const privateAccountIndicators = [
+      'This Account is Private',
+      'This account is private',
+      'Follow to see their photos and videos',
+      'Follow this account to see their photos and videos',
+      'Account is private'
+    ];
+    
+    // Check URL patterns for errors
+    if (currentUrl.includes('404') || currentUrl.includes('error')) {
+      console.log('❌ URL indicates error page');
+      return {
+        success: false,
+        error: `Instagram account @${username} does not exist`,
+        method: 'Playwright with Sparticuz Chromium'
+      };
+    }
+    
+    // Check page content for error messages
+    const lowerContent = pageContent.toLowerCase();
+    
+    // Check for account doesn't exist
+    if (notFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase())) ||
+        accountNotFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
+      console.log('❌ Account does not exist');
+      return {
+        success: false,
+        error: `Instagram account @${username} does not exist`,
+        method: 'Playwright with Sparticuz Chromium'
+      };
+    }
+    
+    // Check for private account
+    if (privateAccountIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
+      console.log('🔒 Account is private');
+      return {
+        success: false,
+        error: `Instagram account @${username} is private. Only the account holder can see their content.`,
+        method: 'Playwright with Sparticuz Chromium'
+      };
+    }
+    
+    console.log('✅ No error conditions detected');
+    return { success: true, method: 'Playwright with Sparticuz Chromium' };
   }
 
   private async attemptLogin(): Promise<boolean> {

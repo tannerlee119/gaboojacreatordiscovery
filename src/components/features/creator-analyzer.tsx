@@ -177,14 +177,6 @@ export function CreatorAnalyzer() {
     }
   };
 
-  const handleRefreshAnalysis = async (refreshUsername: string, refreshPlatform: string) => {
-    // Set the form to match the creator being refreshed
-    setUsername(refreshUsername);
-    setPlatform(refreshPlatform as Platform);
-    
-    // Trigger a forced refresh
-    await handleAnalyze(true);
-  };
 
   // Check bookmark status when result changes
   useEffect(() => {

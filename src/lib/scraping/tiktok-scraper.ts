@@ -87,21 +87,20 @@ class TikTokScraper extends PlaywrightBaseScraper {
         console.log('⚠️ Profile subtitle not found – may be blocked or non-existent');
       }
 
-      // Check for error states
-      const errorMessages = [
-        'Couldn\'t find this account',
-        'Something went wrong',
-        'This user doesn\'t exist',
-        'User not found'
-      ];
-
       const pageText = (await this.page.textContent('body')) || '';
+      const currentUrl = this.page.url();
 
       // Debug: log what we actually see
-      console.log(`📄 Page URL: ${this.page.url()}`);
+      console.log(`📄 Page URL: ${currentUrl}`);
       console.log(`📄 Page title: ${await this.page.title()}`);
       console.log(`📄 Page text length: ${pageText.length}`);
       console.log(`📄 Page text sample: ${pageText.substring(0, 300)}...`);
+
+      // Check for specific error conditions first
+      const errorCheck = this.checkForErrors(pageText, currentUrl, username);
+      if (!errorCheck.success) {
+        return errorCheck;
+      }
 
       // First, try to extract data from page text (even if login prompts are present)
       console.log('🔍 Attempting to parse profile data from page text...');
@@ -123,15 +122,6 @@ class TikTokScraper extends PlaywrightBaseScraper {
           data: textData,
           screenshot,
           method: 'text-parsing'
-        };
-      }
-
-      // If HTTP 404 or known text indicates not-found, return error
-      if (this.page.url().includes('404') || errorMessages.some(msg => pageText.includes(msg))) {
-        return {
-          success: false,
-          error: `TikTok account @${username} does not exist`,
-          method: 'scraping'
         };
       }
 
@@ -201,6 +191,84 @@ class TikTokScraper extends PlaywrightBaseScraper {
     } finally {
       await this.cleanup();
     }
+  }
+
+  private checkForErrors(pageText: string, currentUrl: string, username: string): TikTokScrapingResult {
+    console.log('🔍 Checking for TikTok error conditions...');
+    
+    const notFoundIndicators = [
+      'Couldn\'t find this account',
+      'This user doesn\'t exist',
+      'User not found',
+      'Page Not Found',
+      '404',
+      'Something went wrong',
+      'Account not found',
+      'This account cannot be found',
+      'No such user exists'
+    ];
+    
+    const privateAccountIndicators = [
+      'This account is private',
+      'Account is private',
+      'Private account',
+      'This user\'s account is private'
+    ];
+    
+    const restrictedAccessIndicators = [
+      'Log in to TikTok',
+      'Sign up for TikTok', 
+      'You must be 18 or older',
+      'This content is age-restricted',
+      'Age verification required',
+      'Create an account or log in'
+    ];
+    
+    // Check URL patterns for errors
+    if (currentUrl.includes('404') || currentUrl.includes('error') || currentUrl.includes('not-found')) {
+      console.log('❌ URL indicates error page');
+      return {
+        success: false,
+        error: `TikTok account @${username} does not exist`,
+        method: 'scraping'
+      };
+    }
+    
+    // Check page content for error messages
+    const lowerContent = pageText.toLowerCase();
+    
+    // Check for account doesn't exist
+    if (notFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
+      console.log('❌ Account does not exist');
+      return {
+        success: false,
+        error: `TikTok account @${username} does not exist`,
+        method: 'scraping'
+      };
+    }
+    
+    // Check for private account
+    if (privateAccountIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
+      console.log('🔒 Account is private');
+      return {
+        success: false,
+        error: `TikTok account @${username} is private. Only approved followers can see their content.`,
+        method: 'scraping'
+      };
+    }
+    
+    // Check for restricted access (requires login/age verification)
+    if (restrictedAccessIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
+      console.log('🚫 Content is restricted or requires login');
+      return {
+        success: false,
+        error: `TikTok account @${username} requires login or age verification to view`,
+        method: 'scraping'
+      };
+    }
+    
+    console.log('✅ No error conditions detected');
+    return { success: true, method: 'scraping' };
   }
 
   private async extractProfileData(username: string) {
@@ -289,14 +357,34 @@ class TikTokScraper extends PlaywrightBaseScraper {
         }
       }) : null);
 
+      if (!res || res.status === 404) {
+        console.log(`❌ JSON API returned 404 - account doesn't exist`);
+        return {
+          success: false,
+          error: `TikTok account @${username} does not exist`,
+          method: 'public-json'
+        };
+      }
+      
       if (!res || res.status !== 200) {
         console.log(`🔍 JSON API returned status ${res?.status}`);
         return null;
       }
 
       const json = await res.json();
-      if (!json || !json.userInfo || !json.userInfo.user) {
-        console.log('⚠️ JSON payload missing userInfo');
+      
+      // Check if the response indicates the account doesn't exist
+      if (!json || !json.userInfo) {
+        console.log(`❌ JSON API indicates account doesn't exist`);
+        return {
+          success: false,
+          error: `TikTok account @${username} does not exist`,
+          method: 'public-json'
+        };
+      }
+      
+      if (!json.userInfo.user) {
+        console.log('⚠️ JSON payload missing user data');
         return null;
       }
 
