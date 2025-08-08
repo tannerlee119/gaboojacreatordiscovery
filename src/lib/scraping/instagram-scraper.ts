@@ -200,9 +200,8 @@ class InstagramScraper extends PlaywrightBaseScraper {
         let screenshot: Buffer | undefined;
         try {
           screenshot = await this.page.screenshot({
-            type: 'jpeg',
-            quality: 70,
-            clip: { x: 0, y: 0, width: 1000, height: 800 },
+            fullPage: true,
+            type: 'png',
             timeout: 30000 // Extended timeout for screenshot
           });
           console.log('📸 Screenshot captured successfully');
