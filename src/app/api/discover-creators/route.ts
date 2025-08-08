@@ -176,8 +176,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Calculate growth data for each creator
+    const creatorsWithGrowth = await Promise.all((creators || []).map(async (creator) => {
+      // Get previous analysis for this creator to calculate growth
+      const { data: previousAnalysis } = await supabase
+        .from('creator_analyses')
+        .select('follower_count, created_at')
+        .eq('creator_id', creator.id)
+        .lt('created_at', creator.last_analysis_date || new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      let growthData = null;
+      if (previousAnalysis && previousAnalysis.follower_count) {
+        const currentCount = creator.follower_count || 0;
+        const previousCount = previousAnalysis.follower_count || 0;
+        const growthPercentage = previousCount > 0 
+          ? ((currentCount - previousCount) / previousCount) * 100 
+          : 0;
+        
+        growthData = {
+          previous_follower_count: previousCount,
+          growth_percentage: Math.round(growthPercentage * 100) / 100 // Round to 2 decimal places
+        };
+      }
+
+      return {
+        ...creator,
+        previous_follower_count: growthData?.previous_follower_count,
+        growth_percentage: growthData?.growth_percentage
+      };
+    }));
+
     // Map database results to frontend interface
-    const mappedCreators = (creators || []).map(mapDatabaseCreatorToDiscoveryCreator);
+    const mappedCreators = creatorsWithGrowth.map(mapDatabaseCreatorToDiscoveryCreator);
 
     const totalCount = count || 0;
     const totalPages = Math.ceil(totalCount / filters.limit);

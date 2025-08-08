@@ -165,6 +165,18 @@ export function DiscoveryCreatorCard({
             <div>
               <p className="text-muted-foreground">Followers</p>
               <p className="font-medium">{formatNumber(creator.followerCount)}</p>
+              {creator.growthData && (
+                <div className={`text-xs px-1.5 py-0.5 rounded-full mt-1 inline-block ${
+                  creator.growthData.growthPercentage > 0
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    : creator.growthData.growthPercentage < 0
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                }`}>
+                  {creator.growthData.growthPercentage > 0 ? '+' : ''}
+                  {creator.growthData.growthPercentage.toFixed(1)}%
+                </div>
+              )}
             </div>
             <div>
               <p className="text-muted-foreground">AI Score</p>
