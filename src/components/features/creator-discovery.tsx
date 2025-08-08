@@ -315,6 +315,33 @@ export function CreatorDiscovery() {
     fetchDiscoveryData(page);
   };
 
+  const handleRefreshFromModal = async (username: string, platform: string) => {
+    // Trigger a fresh analysis for the creator
+    const response = await fetch('/api/analyze-creator', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        username, 
+        platform,
+        forceRefresh: true 
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // Update the selected analysis with the new data
+      setSelectedAnalysis(data.data);
+      
+      // Optionally refresh the discovery data to show updated info
+      fetchDiscoveryData(currentPage);
+    } else {
+      throw new Error(data.error || 'Failed to refresh analysis');
+    }
+  };
+
 
   const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
@@ -598,6 +625,7 @@ export function CreatorDiscovery() {
             setSelectedAnalysis(null);
           }}
           analysisData={selectedAnalysis}
+          onRefresh={handleRefreshFromModal}
         />
       )}
 

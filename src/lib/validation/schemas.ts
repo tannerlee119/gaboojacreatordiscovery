@@ -15,6 +15,7 @@ export const platformSchema = z.enum(['instagram', 'tiktok', 'youtube'] as const
 export const analyzeCreatorRequestSchema = z.object({
   username: usernameSchema,
   platform: platformSchema,
+  forceRefresh: z.boolean().optional().default(false),
 });
 
 // Input sanitization utilities

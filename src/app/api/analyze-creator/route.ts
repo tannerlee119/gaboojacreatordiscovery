@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeInstagramProfile } from '@/lib/scraping/instagram-scraper';
 import { analyzeTikTokProfile } from '@/lib/scraping/tiktok-scraper';
 import { analyzeWithOpenAI } from '@/lib/ai-analysis/openai-analyzer';
-import { saveCreatorAnalysis } from '@/lib/database/supabase-service';
+import { saveCreatorAnalysis, getLatestCreatorAnalysis } from '@/lib/database/supabase-service';
 import { logUserSearch } from '@/lib/database/supabase-service';
 import { createServerClient } from '@/lib/supabase';
 import { analyzeCreatorRequestSchema, InputSanitizer } from '@/lib/validation/schemas';
@@ -128,9 +128,50 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(response);
     }
 
-    const { username, platform } = validatedData;
+    const { username, platform, forceRefresh } = validatedData;
 
-    console.log(`Starting analysis for ${platform} user: ${username}`);
+    console.log(`Starting analysis for ${platform} user: ${username}${forceRefresh ? ' (forced refresh)' : ''}`);
+
+    // Get user ID from request headers (if authenticated)
+    let userId: string | undefined;
+    try {
+      const supabase = createServerClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+    } catch {
+      // Continue without user ID for anonymous analysis
+    }
+
+    // Check for existing analysis first (unless forced refresh)
+    if (!forceRefresh) {
+      console.log('🔍 Checking for existing analysis...');
+      const existingAnalysis = await getLatestCreatorAnalysis(username, platform);
+      
+      if (existingAnalysis.success && existingAnalysis.data) {
+        const analysisAge = Date.now() - new Date(existingAnalysis.data.lastAnalyzed).getTime();
+        const maxAgeHours = 24; // Consider analysis fresh for 24 hours
+        const isAnalysisFresh = analysisAge < (maxAgeHours * 60 * 60 * 1000);
+        
+        if (isAnalysisFresh) {
+          console.log(`✅ Using cached analysis from ${existingAnalysis.data.lastAnalyzed}`);
+          
+          // Log the search for analytics
+          if (userId) {
+            await logUserSearch(username, platform, userId, true);
+          }
+          
+          const response = NextResponse.json({
+            success: true,
+            data: existingAnalysis.data,
+            cached: true,
+            processingTime: Date.now() - startTime
+          });
+          return setCorsHeaders(response);
+        } else {
+          console.log(`⏰ Existing analysis is ${Math.round(analysisAge / (1000 * 60 * 60))} hours old, performing fresh analysis...`);
+        }
+      }
+    }
 
     let scrapingResult;
     let screenshotBuffer: Buffer | null = null;
@@ -262,16 +303,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Data will be structured in the analysisData object below
-
-    // Get user ID from request headers (if authenticated)
-    let userId: string | undefined;
-    try {
-      const supabase = createServerClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      userId = session?.user?.id;
-    } catch {
-      // Continue without user ID for anonymous analysis
-    }
 
     // Prepare complete analysis data for Supabase
     const processingTime = Date.now() - startTime;

@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatNumber } from '@/lib/utils';
-import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw } from 'lucide-react';
 import { addBookmark, removeBookmark, isBookmarked, BookmarkedCreator } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
 import { CreatorCategory } from '@/lib/types';
+import { GrowthChart } from '@/components/ui/growth-chart';
 import Image from 'next/image';
 
 interface AnalysisData {
@@ -54,21 +55,30 @@ interface AnalysisData {
     method: string;
     timestamp: string;
   };
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
+  lastAnalyzed?: string;
+  cached?: boolean;
 }
 
 interface AnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
   analysisData: AnalysisData;
+  onRefresh?: (username: string, platform: string) => Promise<void>;
 }
 
-export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalProps) {
+export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: AnalysisModalProps) {
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState(analysisData.profile.aiAnalysis?.category || 'other');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showGrowthChart, setShowGrowthChart] = useState(false);
   
   const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
 
@@ -173,6 +183,19 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
     console.log(`Category changed from ${currentCategory} to ${newCategory} for @${analysisData.profile.username}`);
   };
 
+  const handleRefresh = async () => {
+    if (!onRefresh || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await onRefresh(analysisData.profile.username, analysisData.profile.platform);
+    } catch (error) {
+      console.error('Error refreshing analysis:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -209,24 +232,38 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Profile Overview</span>
-                <Button
-                  variant={bookmarkedStatus ? "default" : "outline"}
-                  size="sm"
-                  onClick={handleBookmarkToggle}
-                  className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
-                >
-                  {bookmarkedStatus ? (
-                    <>
-                      <BookmarkCheck className="h-4 w-4" />
-                      Bookmarked
-                    </>
-                  ) : (
-                    <>
-                      <Bookmark className="h-4 w-4" />
-                      Bookmark
-                    </>
+                <div className="flex items-center gap-2">
+                  {onRefresh && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    variant={bookmarkedStatus ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleBookmarkToggle}
+                    className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                  >
+                    {bookmarkedStatus ? (
+                      <>
+                        <BookmarkCheck className="h-4 w-4" />
+                        Bookmarked
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4" />
+                        Bookmark
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -256,6 +293,26 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
                     {formatNumber(analysisData.profile.followerCount)}
                   </div>
                   <div className="text-sm text-muted-foreground">Followers</div>
+                  {analysisData.growthData && (
+                    <button
+                      onClick={() => setShowGrowthChart(true)}
+                      className={`text-xs px-2 py-1 rounded-full mt-1 transition-colors hover:opacity-80 cursor-pointer ${
+                        analysisData.growthData.growthPercentage > 0
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          : analysisData.growthData.growthPercentage < 0
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                      }`}
+                    >
+                      {analysisData.growthData.growthPercentage > 0 ? '+' : ''}
+                      {analysisData.growthData.growthPercentage.toFixed(1)}%
+                    </button>
+                  )}
+                  {analysisData.cached && (
+                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      📋 Cached
+                    </div>
+                  )}
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">
@@ -561,6 +618,23 @@ export function AnalysisModal({ isOpen, onClose, analysisData }: AnalysisModalPr
         initialComments=""
         isEditing={false}
       />
+
+      {/* Growth Chart Modal */}
+      {analysisData.growthData && (
+        <GrowthChart
+          isOpen={showGrowthChart}
+          onClose={() => setShowGrowthChart(false)}
+          growthData={{
+            previousFollowerCount: analysisData.growthData.previousFollowerCount,
+            growthPercentage: analysisData.growthData.growthPercentage,
+            currentFollowerCount: analysisData.profile.followerCount,
+            lastAnalyzed: analysisData.lastAnalyzed || analysisData.scrapingDetails.timestamp,
+            previousAnalyzed: undefined // We could add this if we store more historical data
+          }}
+          username={analysisData.profile.username}
+          platform={analysisData.profile.platform}
+        />
+      )}
     </Dialog>
   );
 } 

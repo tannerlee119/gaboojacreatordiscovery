@@ -67,6 +67,131 @@ interface CreatorAnalysisData {
 /**
  * Save complete creator analysis to Supabase using our database functions
  */
+export async function getLatestCreatorAnalysis(
+  username: string,
+  platform: 'instagram' | 'tiktok'
+): Promise<{ success: boolean; data?: CreatorAnalysisData & { analysisId: string; lastAnalyzed: string; growthData?: { previousFollowerCount: number; growthPercentage: number } }; error?: string }> {
+  try {
+    const supabase = createServerClient();
+    
+    console.log('🔍 Looking for existing analysis:', username, platform);
+    
+    // Get the latest analysis for this creator from the same view Discovery uses
+    const { data: analysis, error } = await supabase
+      .from('creator_discovery')
+      .select('*')
+      .eq('username', username)
+      .eq('platform', platform)
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows returned
+        console.log('📝 No existing analysis found for:', username, platform);
+        return { success: false, error: 'No existing analysis found' };
+      }
+      console.error('❌ Error fetching analysis:', error);
+      return { success: false, error: error.message };
+    }
+
+    if (!analysis) {
+      return { success: false, error: 'No existing analysis found' };
+    }
+
+    console.log('✅ Found existing analysis from:', analysis.created_at);
+    console.log('🔍 Analysis AI fields:', {
+      ai_creator_score: analysis.ai_creator_score,
+      ai_brand_potential: analysis.ai_brand_potential,
+      ai_key_strengths: analysis.ai_key_strengths,
+      ai_engagement_quality: analysis.ai_engagement_quality,
+      ai_content_style: analysis.ai_content_style,
+      ai_audience_demographics: analysis.ai_audience_demographics,
+      ai_collaboration_potential: analysis.ai_collaboration_potential,
+      ai_overall_assessment: analysis.ai_overall_assessment,
+    });
+    
+    // Get growth data by comparing with previous analysis
+    // Since creator_discovery is a view, we'll get previous analysis from creator_analyses table
+    let growthData;
+    const { data: previousAnalysis } = await supabase
+      .from('creator_analyses')
+      .select('follower_count, created_at')
+      .eq('creator_id', analysis.id) // Use the creator ID from the view
+      .lt('created_at', analysis.last_analysis_date || new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (previousAnalysis && previousAnalysis.follower_count) {
+      const currentCount = analysis.follower_count || 0;
+      const previousCount = previousAnalysis.follower_count || 0;
+      const growthPercentage = previousCount > 0 
+        ? ((currentCount - previousCount) / previousCount) * 100 
+        : 0;
+      
+      growthData = {
+        previousFollowerCount: previousCount,
+        growthPercentage: Math.round(growthPercentage * 100) / 100 // Round to 2 decimal places
+      };
+    }
+
+    // Convert database format back to API format (using creator_discovery view structure)
+    const analysisData: CreatorAnalysisData & { analysisId: string; lastAnalyzed: string; growthData?: typeof growthData } = {
+      analysisId: analysis.id,
+      lastAnalyzed: analysis.last_analysis_date || new Date().toISOString(),
+      growthData,
+      profile: {
+        username: analysis.username || username,
+        platform: platform,
+        displayName: analysis.display_name || username,
+        bio: analysis.bio,
+        profileImageUrl: analysis.profile_image_url,
+        isVerified: analysis.is_verified || false,
+        followerCount: analysis.follower_count || 0,
+        followingCount: analysis.following_count || 0,
+        location: analysis.location,
+        website: analysis.website,
+        metrics: {
+          followerCount: analysis.follower_count,
+          followingCount: analysis.following_count,
+          postCount: analysis.post_count,
+          likeCount: analysis.like_count,
+          videoCount: analysis.video_count,
+          engagementRate: analysis.engagement_rate,
+          averageLikes: analysis.average_likes,
+          averageComments: analysis.average_comments,
+          averageViews: analysis.average_views,
+        },
+        aiAnalysis: {
+          creator_score: analysis.ai_creator_score || '',
+          category: analysis.category || 'other', // Should now pull correctly from creator_discovery view
+          brand_potential: analysis.ai_brand_potential || '',
+          key_strengths: analysis.ai_key_strengths || '',
+          engagement_quality: analysis.ai_engagement_quality || '',
+          content_style: analysis.ai_content_style || '',
+          audience_demographics: analysis.ai_audience_demographics || '',
+          collaboration_potential: analysis.ai_collaboration_potential || '',
+          overall_assessment: analysis.ai_overall_assessment || '',
+        },
+      },
+      scrapingDetails: {
+        method: 'Database Lookup (Cached)',
+        timestamp: analysis.last_analysis_date || new Date().toISOString(),
+      },
+      aiMetrics: analysis.ai_cost ? {
+        model: analysis.ai_model || 'Unknown',
+        cost: analysis.ai_cost,
+        cached: true,
+      } : undefined,
+    };
+
+    return { success: true, data: analysisData };
+  } catch (error) {
+    console.error('❌ Error in getLatestCreatorAnalysis:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export async function saveCreatorAnalysis(
   analysisData: CreatorAnalysisData,
   userId?: string
