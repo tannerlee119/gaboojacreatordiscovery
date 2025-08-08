@@ -301,11 +301,6 @@ export function CreatorDiscovery() {
     }
   };
 
-  const handleAnalyzeCreator = async (creator: DiscoveryCreator) => {
-    // Trigger analysis - for now, just show a message
-    // In the future, this would call the analysis API
-    alert(`Analysis for @${creator.username} would be triggered here`);
-  };
 
   const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
@@ -474,7 +469,6 @@ export function CreatorDiscovery() {
                         creator={creator}
                         isBookmarked={isCreatorBookmarked(creator)}
                         onBookmark={handleBookmarkCreator}
-                        onAnalyze={handleAnalyzeCreator}
                         onViewAnalysis={handleViewCreatorAnalysis}
                       />
                     ))}

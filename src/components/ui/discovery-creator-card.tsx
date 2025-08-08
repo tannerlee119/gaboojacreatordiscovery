@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
-import { Bookmark, BookmarkCheck, BarChart3, ExternalLink, Eye } from 'lucide-react';
+import { Bookmark, BookmarkCheck, ExternalLink, Eye } from 'lucide-react';
 
 export interface DiscoveryCreator {
   id: string;
@@ -36,7 +36,6 @@ interface DiscoveryCreatorCardProps {
   creator: DiscoveryCreator;
   isBookmarked: boolean;
   onBookmark: (creator: DiscoveryCreator) => void;
-  onAnalyze: (creator: DiscoveryCreator) => void;
   onViewAnalysis?: (creator: DiscoveryCreator) => void;
 }
 
@@ -44,11 +43,9 @@ export function DiscoveryCreatorCard({
   creator, 
   isBookmarked, 
   onBookmark, 
-  onAnalyze,
   onViewAnalysis
 }: DiscoveryCreatorCardProps) {
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
-  const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
 
   const handleBookmark = async () => {
     setIsBookmarkLoading(true);
@@ -59,14 +56,6 @@ export function DiscoveryCreatorCard({
     }
   };
 
-  const handleAnalyze = async () => {
-    setIsAnalyzeLoading(true);
-    try {
-      await onAnalyze(creator);
-    } finally {
-      setIsAnalyzeLoading(false);
-    }
-  };
 
   const handleViewProfile = () => {
     const profileUrl = creator.platform === 'instagram' 
@@ -182,7 +171,7 @@ export function DiscoveryCreatorCard({
 
 
           {/* Action buttons */}
-          <div className={`grid gap-2 pt-2 ${hasAnalysisData ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className={`grid gap-2 pt-2 ${hasAnalysisData && onViewAnalysis ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {hasAnalysisData && onViewAnalysis && (
               <Button
                 variant="outline"
@@ -194,16 +183,6 @@ export function DiscoveryCreatorCard({
                 View Analysis
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAnalyze}
-              disabled={isAnalyzeLoading}
-              className="text-xs cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
-            >
-              <BarChart3 className="h-3 w-3 mr-1" />
-              {isAnalyzeLoading ? 'Analyzing...' : 'Analyze'}
-            </Button>
             <Button
               variant="outline"
               size="sm"
