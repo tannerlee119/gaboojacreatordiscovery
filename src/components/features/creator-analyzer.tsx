@@ -332,7 +332,7 @@ export function CreatorAnalyzer() {
             onClick={handleAnalyze}
             disabled={!username.trim() || isLoading}
             size="lg"
-            className="w-full cursor-pointer hover:scale-105 transition-all duration-200 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full cursor-pointer hover:bg-primary/90 transition-colors duration-200 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Analyzing... (This may take 30-60 seconds)' : 'Analyze Creator'}
           </Button>
