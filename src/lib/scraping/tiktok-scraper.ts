@@ -264,6 +264,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
     };
 
     return {
+      username,
       displayName: displayName.trim(),
       bio: bio.trim(),
       profileImageUrl,
@@ -316,6 +317,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       return {
         success: true,
         data: {
+          username,
           displayName: user.nickname || username,
           bio: user.signature || '',
           profileImageUrl: user.avatarLarger || '',
@@ -413,6 +415,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
         };
         
         return {
+          username,
           displayName: username, // Fallback to username
           bio: '',
           profileImageUrl: '',
@@ -453,6 +456,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       console.log(`📊 Parsed: ${displayName.trim()}, ${followingCount} following, ${followerCount} followers, ${likeCount} likes`);
 
     return {
+        username,
         displayName: displayName.trim(),
         bio: bio,
         profileImageUrl: '',

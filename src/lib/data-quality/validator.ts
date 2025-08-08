@@ -63,7 +63,7 @@ export class DataQualityValidator {
     
     // Reject test/invalid usernames
     const username = String(data.username).toLowerCase();
-    if (username.includes('test') || username.includes('demo') || username.length < 2) {
+    if (username === 'test' || username === 'demo' || username.startsWith('test') || username.startsWith('demo') || username.length < 2) {
       return { acceptable: false, reason: 'Test or invalid username detected' };
     }
     

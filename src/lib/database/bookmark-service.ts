@@ -276,23 +276,52 @@ export class DatabaseBookmarkService {
   /**
    * Helper function to get or create a creator in the database
    * This ensures we can bookmark creators even if they haven't been fully analyzed yet
-   * Uses database function for proper concurrency handling
+   * First tries to find existing creator, then falls back to creating one
    */
   private static async getOrCreateCreator(username: string, platform: 'instagram' | 'tiktok'): Promise<string | null> {
     try {  
-      // Use the database function which handles concurrency properly
+      // First try to find existing creator
+      const { data: existingCreator, error: findError } = await supabase
+        .from('creators')
+        .select('id')
+        .eq('username', username)
+        .eq('platform', platform)
+        .limit(1);
+
+      if (!findError && existingCreator && existingCreator.length > 0) {
+        return existingCreator[0].id;
+      }
+
+      // Try to use RPC function for creating
       const { data, error } = await supabase
         .rpc('get_or_create_creator', {
           p_username: username,
           p_platform: platform
         });
 
-      if (error) {
-        console.error('Error calling get_or_create_creator function:', error);
+      if (!error && data) {
+        return data as string;
+      }
+
+      // Fallback: create creator manually
+      console.warn('RPC function failed, creating creator manually:', error);
+      const { data: newCreator, error: createError } = await supabase
+        .from('creators')
+        .insert({
+          username: username,
+          platform: platform,
+          display_name: username,
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Error creating creator manually:', createError);
         return null;
       }
 
-      return data as string;
+      return newCreator.id;
     } catch (error) {
       console.error('Error in getOrCreateCreator:', error);
       return null;

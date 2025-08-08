@@ -89,12 +89,6 @@ export async function saveCreatorAnalysis(
           platform: analysisData.profile.platform,
           display_name: analysisData.profile.displayName,
           bio: analysisData.profile.bio,
-          profile_image_url: analysisData.profile.profileImageUrl,
-          is_verified: analysisData.profile.isVerified,
-          location: analysisData.profile.location,
-          website: analysisData.profile.website,
-          category: analysisData.profile.aiAnalysis?.category,
-          last_analyzed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }, { 
           onConflict: 'username,platform'

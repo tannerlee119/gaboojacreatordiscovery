@@ -16,7 +16,7 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Storage keys for state persistence
-const DISCOVERY_STATE_KEY = 'gabooja-discovery-state-v2'; // Incremented to clear old invalid data
+const DISCOVERY_STATE_KEY = 'gabooja-discovery-state-v3'; // Incremented to clear old invalid data and fix TikTok display
 const RECENT_ANALYSES_COLLAPSED_KEY = 'gabooja-recent-analyses-collapsed';
 
 interface DiscoveryState {
@@ -146,8 +146,9 @@ export function CreatorDiscovery() {
   
   useEffect(() => {
     try {
-      // Clean up old localStorage key
+      // Clean up old localStorage keys to fix TikTok display issue
       localStorage.removeItem('gabooja-discovery-state');
+      localStorage.removeItem('gabooja-discovery-state-v2');
       
       // Load discovery state
       const savedState = localStorage.getItem(DISCOVERY_STATE_KEY);
