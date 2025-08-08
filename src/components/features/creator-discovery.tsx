@@ -10,6 +10,7 @@ import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
+import { PaginationComponent } from '@/components/ui/pagination-component';
 import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
@@ -301,6 +302,19 @@ export function CreatorDiscovery() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    // Scroll to top of the results section
+    const resultsSection = document.querySelector('[data-results-section]');
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // Fallback - scroll to top of page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    fetchDiscoveryData(page);
+  };
+
 
   const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
@@ -423,7 +437,7 @@ export function CreatorDiscovery() {
         </div>
 
         {/* Discovery Results */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3" data-results-section>
           <Card className="gabooja-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -461,6 +475,17 @@ export function CreatorDiscovery() {
                 </div>
               ) : (
                 <>
+                  {/* Top Pagination */}
+                  {discoveryData && discoveryData.totalPages > 1 && (
+                    <div className="mb-6">
+                      <PaginationComponent 
+                        currentPage={currentPage}
+                        totalPages={discoveryData.totalPages}
+                        onPageChange={handlePageChange}
+                        isLoading={isLoading}
+                      />
+                    </div>
+                  )}
                   {/* Creator Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
                     {filteredCreators.map((creator) => (
@@ -474,28 +499,15 @@ export function CreatorDiscovery() {
                     ))}
                   </div>
 
-                  {/* Pagination */}
+                  {/* Bottom Pagination */}
                   {discoveryData && discoveryData.totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === 1 || isLoading}
-                        onClick={() => fetchDiscoveryData(currentPage - 1)}
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Page {currentPage} of {discoveryData.totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!discoveryData.hasNextPage || isLoading}
-                        onClick={() => fetchDiscoveryData(currentPage + 1)}
-                      >
-                        Next
-                      </Button>
+                    <div className="mt-6">
+                      <PaginationComponent 
+                        currentPage={currentPage}
+                        totalPages={discoveryData.totalPages}
+                        onPageChange={handlePageChange}
+                        isLoading={isLoading}
+                      />
                     </div>
                   )}
                 </>

@@ -104,7 +104,7 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isAuthenticated]);
 
-  // Save current analysis to localStorage whenever it changes
+  // Save current analysis to localStorage whenever it changes (excluding large data)
   const setCurrentAnalysis = (analysis: AnalysisResult | null) => {
     setCurrentAnalysisState(analysis);
     
@@ -113,7 +113,15 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
       const storageKey = getStorageKey(userId);
       
       if (analysis) {
-        localStorage.setItem(storageKey, JSON.stringify(analysis));
+        // Create a copy without the large base64 screenshot data
+        const lightAnalysis = {
+          ...analysis,
+          profile: {
+            ...analysis.profile,
+            profileImageBase64: undefined // Exclude large screenshot data
+          }
+        };
+        localStorage.setItem(storageKey, JSON.stringify(lightAnalysis));
       } else {
         localStorage.removeItem(storageKey);
       }
@@ -122,7 +130,7 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Add analysis to history and save to localStorage
+  // Add analysis to history and save to localStorage (excluding large data)
   const addToHistory = (analysis: AnalysisResult) => {
     setAnalysisHistory(prev => {
       // Remove any existing analysis for the same user/platform
@@ -137,7 +145,17 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
       try {
         const userId = isAuthenticated && user ? user.id : null;
         const historyKey = getHistoryKey(userId);
-        localStorage.setItem(historyKey, JSON.stringify(newHistory));
+        
+        // Create light history without large base64 data
+        const lightHistory = newHistory.map(item => ({
+          ...item,
+          profile: {
+            ...item.profile,
+            profileImageBase64: undefined // Exclude large screenshot data
+          }
+        }));
+        
+        localStorage.setItem(historyKey, JSON.stringify(lightHistory));
       } catch (error) {
         console.error('Error saving analysis history to localStorage:', error);
       }

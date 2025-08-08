@@ -286,14 +286,22 @@ export class UserBookmarksService {
         search => !(search.username === username && search.platform === platform)
       );
 
-      // Add new search at the beginning
+      // Add new search at the beginning (exclude large screenshot data)
+      const lightAnalysisData = analysisData ? {
+        ...analysisData,
+        profile: {
+          ...analysisData.profile,
+          profileImageBase64: undefined // Exclude large screenshot data
+        }
+      } : undefined;
+
       const newSearch: RecentSearch = {
         id: Date.now().toString(),
         userId,
         username,
         platform,
         searchedAt: new Date().toISOString(),
-        analysisData
+        analysisData: lightAnalysisData
       };
 
       filteredSearches.unshift(newSearch);
