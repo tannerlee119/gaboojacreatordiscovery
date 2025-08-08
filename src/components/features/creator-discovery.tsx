@@ -233,17 +233,38 @@ export function CreatorDiscovery() {
       // Force re-render to update bookmark state in UI
       setBookmarkUpdate(prev => prev + 1);
     } else {
-      // Add bookmark
+      // Add bookmark with complete AI analysis data
       const bookmarkData = {
         id: Date.now().toString(),
         username: creator.username,
         platform: creator.platform,
         displayName: creator.displayName,
         bio: creator.overallAssessment || creator.displayName,
+        profileImageUrl: creator.profileImageUrl,
         isVerified: creator.isVerified,
         followerCount: creator.followerCount,
         followingCount: creator.followingCount,
+        location: creator.location,
+        website: creator.website,
         bookmarkedAt: new Date().toISOString(),
+        // Include full AI analysis data from discovery
+        aiAnalysis: {
+          creator_score: creator.aiScore || '0',
+          category: creator.category || 'other',
+          brand_potential: creator.brandPotential || '',
+          key_strengths: creator.keyStrengths || '',
+          engagement_quality: creator.engagementQuality || '',
+          content_style: creator.contentStyle || '',
+          audience_demographics: creator.audienceDemographics || '',
+          collaboration_potential: creator.collaborationPotential || '',
+          overall_assessment: creator.overallAssessment || '',
+        },
+        // Include metrics data
+        metrics: {
+          followerCount: creator.followerCount,
+          followingCount: creator.followingCount,
+          engagementRate: creator.engagementRate,
+        }
       };
       
       if (isAuthenticated) {
@@ -288,6 +309,47 @@ export function CreatorDiscovery() {
 
   const handleViewAnalysis = (analysis: AnalysisData) => {
     setSelectedAnalysis(analysis);
+    setIsModalOpen(true);
+  };
+
+  const handleViewCreatorAnalysis = (creator: DiscoveryCreator) => {
+    // Convert DiscoveryCreator to AnalysisData format
+    const analysisData: AnalysisData = {
+      profile: {
+        username: creator.username,
+        platform: creator.platform as 'instagram' | 'tiktok' | 'youtube',
+        displayName: creator.displayName,
+        bio: creator.bio || creator.overallAssessment,
+        profileImageUrl: creator.profileImageUrl || '',
+        isVerified: creator.isVerified,
+        followerCount: creator.followerCount,
+        followingCount: creator.followingCount,
+        location: creator.location,
+        website: creator.website,
+        metrics: {
+          followerCount: creator.followerCount,
+          followingCount: creator.followingCount,
+          engagementRate: creator.engagementRate,
+        },
+        aiAnalysis: {
+          creator_score: creator.aiScore || '0',
+          category: creator.category || 'other',
+          brand_potential: creator.brandPotential || '',
+          key_strengths: creator.keyStrengths || '',
+          engagement_quality: creator.engagementQuality || '',
+          content_style: creator.contentStyle || '',
+          audience_demographics: creator.audienceDemographics || '',
+          collaboration_potential: creator.collaborationPotential || '',
+          overall_assessment: creator.overallAssessment || '',
+        },
+      },
+      scrapingDetails: {
+        method: 'From Discovery',
+        timestamp: creator.lastAnalysisDate || new Date().toISOString(),
+      },
+    };
+    
+    setSelectedAnalysis(analysisData);
     setIsModalOpen(true);
   };
 
@@ -413,6 +475,7 @@ export function CreatorDiscovery() {
                         isBookmarked={isCreatorBookmarked(creator)}
                         onBookmark={handleBookmarkCreator}
                         onAnalyze={handleAnalyzeCreator}
+                        onViewAnalysis={handleViewCreatorAnalysis}
                       />
                     ))}
                   </div>

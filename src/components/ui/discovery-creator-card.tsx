@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
-import { Bookmark, BookmarkCheck, BarChart3, ExternalLink } from 'lucide-react';
+import { Bookmark, BookmarkCheck, BarChart3, ExternalLink, Eye } from 'lucide-react';
 
 export interface DiscoveryCreator {
   id: string;
@@ -18,6 +18,18 @@ export interface DiscoveryCreator {
   category: string;
   aiScore?: string; // Replace engagementRate with AI score
   location?: string;
+  website?: string;
+  bio?: string;
+  profileImageUrl?: string;
+  engagementRate?: number;
+  // AI analysis fields
+  brandPotential?: string;
+  keyStrengths?: string;
+  engagementQuality?: string;
+  contentStyle?: string;
+  audienceDemographics?: string;
+  collaborationPotential?: string;
+  lastAnalysisDate?: string;
 }
 
 interface DiscoveryCreatorCardProps {
@@ -25,13 +37,15 @@ interface DiscoveryCreatorCardProps {
   isBookmarked: boolean;
   onBookmark: (creator: DiscoveryCreator) => void;
   onAnalyze: (creator: DiscoveryCreator) => void;
+  onViewAnalysis?: (creator: DiscoveryCreator) => void;
 }
 
 export function DiscoveryCreatorCard({ 
   creator, 
   isBookmarked, 
   onBookmark, 
-  onAnalyze
+  onAnalyze,
+  onViewAnalysis
 }: DiscoveryCreatorCardProps) {
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
@@ -61,6 +75,15 @@ export function DiscoveryCreatorCard({
     
     window.open(profileUrl, '_blank', 'noopener,noreferrer');
   };
+
+  const handleViewAnalysis = () => {
+    if (onViewAnalysis) {
+      onViewAnalysis(creator);
+    }
+  };
+
+  // Check if creator has analysis data (any of the key AI fields)
+  const hasAnalysisData = creator.brandPotential || creator.keyStrengths || creator.engagementQuality || creator.overallAssessment;
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -159,7 +182,18 @@ export function DiscoveryCreatorCard({
 
 
           {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-2">
+          <div className={`grid gap-2 pt-2 ${hasAnalysisData ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {hasAnalysisData && onViewAnalysis && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewAnalysis}
+                className="text-xs cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                View Analysis
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
