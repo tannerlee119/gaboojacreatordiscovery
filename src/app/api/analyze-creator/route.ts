@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeInstagramProfile } from '@/lib/scraping/instagram-scraper';
 import { analyzeTikTokProfile } from '@/lib/scraping/tiktok-scraper';
 import { analyzeWithOpenAI } from '@/lib/ai-analysis/openai-analyzer';
-import { saveCreatorAnalysis } from '@/lib/database/supabase-service';
+import { saveCreatorAnalysis, getLatestCreatorAnalysis } from '@/lib/database/supabase-service';
 import { logUserSearch } from '@/lib/database/supabase-service';
 import { createServerClient } from '@/lib/supabase';
 import { analyzeCreatorRequestSchema, InputSanitizer } from '@/lib/validation/schemas';
@@ -128,9 +128,71 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(response);
     }
 
-    const { username, platform } = validatedData;
+    const { username, platform, forceRefresh } = validatedData;
 
-    console.log(`Starting analysis for ${platform} user: ${username}`);
+    console.log(`Starting analysis for ${platform} user: ${username}${forceRefresh ? ' (forced refresh)' : ''}`);
+
+    // Check for existing analysis first (unless forced refresh)
+    if (!forceRefresh) {
+      console.log('🔍 Checking database for existing analysis...');
+      const existingAnalysis = await getLatestCreatorAnalysis(username, platform as 'instagram' | 'tiktok');
+      
+      if (existingAnalysis.success && existingAnalysis.data) {
+        const analysisAge = Date.now() - new Date(existingAnalysis.data.scrapingDetails.timestamp).getTime();
+        const ageInDays = Math.floor(analysisAge / (1000 * 60 * 60 * 24));
+        const ageInHours = Math.floor(analysisAge / (1000 * 60 * 60));
+        const ageInMinutes = Math.floor(analysisAge / (1000 * 60));
+        
+        let ageDisplay = '';
+        if (ageInDays > 0) {
+          ageDisplay = `${ageInDays} day${ageInDays > 1 ? 's' : ''} ago`;
+        } else if (ageInHours > 0) {
+          ageDisplay = `${ageInHours} hour${ageInHours > 1 ? 's' : ''} ago`;
+        } else if (ageInMinutes > 0) {
+          ageDisplay = `${ageInMinutes} minute${ageInMinutes > 1 ? 's' : ''} ago`;
+        } else {
+          ageDisplay = 'just now';
+        }
+        
+        console.log(`✅ Using existing analysis from database (analyzed ${ageDisplay})`);
+        
+        // Get user ID for logging
+        let userId: string | undefined;
+        try {
+          const supabase = createServerClient();
+          const { data: { session } } = await supabase.auth.getSession();
+          userId = session?.user?.id;
+        } catch {
+          // Continue without user ID for anonymous analysis
+        }
+
+        // Log user search even for cached results
+        if (userId) {
+          try {
+            await logUserSearch(userId, username, platform as 'instagram' | 'tiktok', undefined, undefined);
+          } catch (searchLogError) {
+            console.error('Failed to log user search:', searchLogError);
+          }
+        }
+
+        // Return cached data with additional metadata
+        const response = NextResponse.json({
+          success: true,
+          data: existingAnalysis.data,
+          cached: true,
+          lastAnalyzedDisplay: ageDisplay
+        });
+
+        // Add cache headers
+        response.headers.set('X-Cache-Status', 'HIT');
+        response.headers.set('X-Cache-Age', analysisAge.toString());
+        response.headers.set('X-Processing-Time', '0ms');
+
+        return setCorsHeaders(response);
+      }
+    }
+
+    console.log(forceRefresh ? '🔄 Performing forced refresh analysis...' : '🚀 No cached analysis found, performing fresh analysis...');
 
     let scrapingResult;
     let screenshotBuffer: Buffer | null = null;

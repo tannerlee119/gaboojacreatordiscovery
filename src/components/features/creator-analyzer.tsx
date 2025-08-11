@@ -15,7 +15,7 @@ import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
 import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCcw } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -83,6 +83,9 @@ interface AnalysisResult {
     transformations: number;
     recommendations: string[];
   };
+  // Cache-related fields
+  cached?: boolean;
+  lastAnalyzedDisplay?: string;
 }
 
 // Type guard functions
@@ -115,7 +118,7 @@ export function CreatorAnalyzer() {
   // Use current analysis from context
   const result = currentAnalysis;
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (forceRefresh: boolean = false) => {
     if (!username.trim()) return;
     
     setIsLoading(true);
@@ -123,14 +126,14 @@ export function CreatorAnalyzer() {
     setCurrentAnalysis(null);
     
     try {
-      console.log('Starting analysis for:', { username, platform });
+      console.log(`Starting analysis for:`, { username, platform, forceRefresh });
       
       const response = await fetch('/api/analyze-creator', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: username.trim(), platform }),
+        body: JSON.stringify({ username: username.trim(), platform, forceRefresh }),
       });
 
       const data = await response.json();
@@ -139,7 +142,11 @@ export function CreatorAnalyzer() {
         throw new Error(data.error || 'Analysis failed');
       }
 
+      // Handle both fresh and cached analysis results
       const newResult = data.data;
+      newResult.cached = data.cached || false;
+      newResult.lastAnalyzedDisplay = data.lastAnalyzedDisplay;
+      
       setCurrentAnalysis(newResult);
       addToHistory(newResult);
       
@@ -167,6 +174,11 @@ export function CreatorAnalyzer() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle refresh - force new analysis
+  const handleRefresh = async () => {
+    await handleAnalyze(true);
   };
 
   // Check bookmark status when result changes
@@ -376,29 +388,50 @@ export function CreatorAnalyzer() {
                       }`}>
                         {result.profile.platform}
                       </span>
+                      {result.cached && result.lastAnalyzedDisplay && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          📊 Analyzed {result.lastAnalyzedDisplay}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
                 
-                {/* Bookmark Button */}
-                <Button
-                  variant={bookmarkedStatus ? "default" : "outline"}
-                  size="sm"
-                  onClick={handleBookmarkToggle}
-                  className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
-                >
-                  {bookmarkedStatus ? (
-                    <>
-                      <BookmarkCheck className="h-4 w-4" />
-                      Bookmarked
-                    </>
-                  ) : (
-                    <>
-                      <Bookmark className="h-4 w-4" />
-                      Bookmark
-                    </>
-                  )}
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  {/* Refresh Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                    title="Refresh analysis with latest data"
+                  >
+                    <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  
+                  {/* Bookmark Button */}
+                  <Button
+                    variant={bookmarkedStatus ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleBookmarkToggle}
+                    className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                  >
+                    {bookmarkedStatus ? (
+                      <>
+                        <BookmarkCheck className="h-4 w-4" />
+                        Bookmarked
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4" />
+                        Bookmark
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

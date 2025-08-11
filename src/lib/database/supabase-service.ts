@@ -377,3 +377,120 @@ export async function getTrendingCreators(
     };
   }
 }
+
+/**
+ * Get latest creator analysis from database for caching
+ */
+export async function getLatestCreatorAnalysis(
+  username: string,
+  platform: 'instagram' | 'tiktok'
+): Promise<{ success: boolean; data?: CreatorAnalysisData | null; error?: string }> {
+  try {
+    const supabase = createServerClient();
+    
+    console.log(`🔍 Looking up existing analysis for ${platform}/@${username}`);
+    
+    // Get the most recent analysis for this creator
+    const { data, error } = await supabase
+      .from('creator_analyses')
+      .select(`
+        *,
+        creators!inner(
+          username,
+          platform,
+          display_name,
+          bio,
+          updated_at
+        )
+      `)
+      .eq('creators.username', username)
+      .eq('creators.platform', platform)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`📭 No existing analysis found for ${platform}/@${username}`);
+        return { success: true, data: null };
+      }
+      console.error('Error fetching latest analysis:', error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data) {
+      console.log(`📭 No analysis data found for ${platform}/@${username}`);
+      return { success: true, data: null };
+    }
+
+    // Transform database record back to our API format
+    const analysisData: CreatorAnalysisData = {
+      profile: {
+        username: data.creators.username,
+        platform: data.creators.platform,
+        displayName: data.display_name || data.creators.display_name,
+        bio: data.bio || data.creators.bio,
+        profileImageUrl: data.profile_image_url,
+        profileImageBase64: data.profile_image_base64,
+        isVerified: data.is_verified || false,
+        followerCount: data.follower_count || 0,
+        followingCount: data.following_count || 0,
+        location: data.location,
+        website: data.website,
+        metrics: {
+          followerCount: data.follower_count,
+          followingCount: data.following_count,
+          postCount: data.post_count,
+          likeCount: data.like_count,
+          videoCount: data.video_count,
+          engagementRate: data.engagement_rate,
+          averageLikes: data.average_likes,
+          averageComments: data.average_comments,
+          averageViews: data.average_views,
+        },
+        aiAnalysis: data.ai_analysis_raw || {
+          creator_score: data.ai_creator_score,
+          category: data.ai_category,
+          brand_potential: data.ai_brand_potential,
+          key_strengths: data.ai_key_strengths,
+          engagement_quality: data.ai_engagement_quality,
+          content_style: data.ai_content_style,
+          audience_demographics: data.ai_audience_demographics,
+          collaboration_potential: data.ai_collaboration_potential,
+          overall_assessment: data.ai_overall_assessment,
+        }
+      },
+      scrapingDetails: {
+        method: data.scraping_method || 'unknown',
+        timestamp: data.created_at
+      },
+      aiMetrics: {
+        model: data.ai_model || 'unknown',
+        cost: (data.ai_cost_cents || 0) / 100,
+        cached: data.ai_cached || false
+      },
+      dataQuality: {
+        score: data.data_quality_score || 0,
+        isValid: data.data_quality_valid || true,
+        breakdown: {
+          completeness: data.data_completeness || 0,
+          consistency: data.data_consistency || 0,
+          reliability: data.data_reliability || 0,
+        },
+        issues: [],
+        transformations: data.data_transformations || 0
+      },
+      processingTime: data.processing_time_ms || 0
+    };
+
+    console.log(`✅ Found existing analysis from ${data.created_at} for ${platform}/@${username}`);
+    return { success: true, data: analysisData };
+
+  } catch (error) {
+    console.error('Error getting latest creator analysis:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
