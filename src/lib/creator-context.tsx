@@ -44,6 +44,33 @@ interface AnalysisResult {
     method: string;
     timestamp: string;
   };
+  aiMetrics?: {
+    model: string;
+    cost: number;
+    cached: boolean;
+  };
+  dataQuality?: {
+    score: number;
+    isValid: boolean;
+    breakdown: {
+      completeness: number;
+      consistency: number;
+      reliability: number;
+    };
+    issues: Array<{
+      field: string;
+      message: string;
+      severity: 'critical' | 'warning' | 'info';
+    }>;
+    transformations: number;
+    recommendations: string[];
+  };
+  growthData?: {
+    previousFollowerCount: number;
+    growthPercentage: number;
+  };
+  lastAnalyzed?: string;
+  cached?: boolean;
 }
 
 interface CreatorContextType {
