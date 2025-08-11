@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
-import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3, RefreshCw } from 'lucide-react';
+import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
@@ -69,7 +69,6 @@ export default function BookmarksPage() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedBookmark, setSelectedBookmark] = useState<UserBookmark | null>(null);
-  const [refreshingBookmarks, setRefreshingBookmarks] = useState<Set<string>>(new Set());
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -182,78 +181,6 @@ export default function BookmarksPage() {
     }
   };
 
-  const handleRefreshBookmark = async (bookmark: UserBookmark) => {
-    const bookmarkKey = `${bookmark.username}_${bookmark.platform}`;
-    setRefreshingBookmarks(prev => new Set([...prev, bookmarkKey]));
-
-    try {
-      // Fetch latest data from discovery API
-      const response = await fetch(`/api/discover-creators?platform=${bookmark.platform}&search=${bookmark.username}&limit=1`);
-      const data = await response.json();
-      
-      if (data.creators && data.creators.length > 0) {
-        const updatedCreator = data.creators[0];
-        
-        // Update the bookmark with latest data
-        const updatedBookmark: UserBookmark = {
-          ...bookmark,
-          displayName: updatedCreator.displayName || bookmark.displayName,
-          followerCount: updatedCreator.followerCount || bookmark.followerCount,
-          followingCount: updatedCreator.followingCount || bookmark.followingCount,
-          bio: updatedCreator.bio || bookmark.bio,
-          website: updatedCreator.website || bookmark.website,
-          metrics: updatedCreator.engagementRate ? {
-            ...bookmark.metrics,
-            engagementRate: updatedCreator.engagementRate
-          } : bookmark.metrics,
-          aiAnalysis: {
-            creator_score: updatedCreator.aiScore || bookmark.aiAnalysis?.creator_score || '0',
-            category: updatedCreator.category || bookmark.aiAnalysis?.category || 'other',
-            brand_potential: updatedCreator.brandPotential || bookmark.aiAnalysis?.brand_potential || '',
-            key_strengths: updatedCreator.keyStrengths || bookmark.aiAnalysis?.key_strengths || '',
-            engagement_quality: updatedCreator.engagementQuality || bookmark.aiAnalysis?.engagement_quality || '',
-            content_style: updatedCreator.contentStyle || bookmark.aiAnalysis?.content_style || '',
-            audience_demographics: updatedCreator.audienceDemographics || bookmark.aiAnalysis?.audience_demographics || '',
-            collaboration_potential: updatedCreator.collaborationPotential || bookmark.aiAnalysis?.collaboration_potential || '',
-            overall_assessment: updatedCreator.overallAssessment || bookmark.aiAnalysis?.overall_assessment || '',
-          }
-        };
-
-        // Update local state
-        setBookmarks(prev => prev.map(b => 
-          b.username === bookmark.username && b.platform === bookmark.platform 
-            ? updatedBookmark 
-            : b
-        ));
-
-        // Update storage
-        if (isAuthenticated && user) {
-          await UserBookmarksService.updateUserBookmark(user.id, updatedBookmark);
-        } else {
-          // Update localStorage for non-authenticated users
-          const storedBookmarks = getBookmarkedCreators();
-          const updatedStoredBookmarks = storedBookmarks.map(b =>
-            b.username === bookmark.username && b.platform === bookmark.platform
-              ? updatedBookmark
-              : b
-          );
-          localStorage.setItem('gabooja_bookmarked_creators', JSON.stringify(updatedStoredBookmarks));
-        }
-        
-        console.log('✅ Bookmark data refreshed successfully');
-      } else {
-        console.warn('⚠️ No updated data found for this creator');
-      }
-    } catch (error) {
-      console.error('❌ Error refreshing bookmark data:', error);
-    } finally {
-      setRefreshingBookmarks(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(bookmarkKey);
-        return newSet;
-      });
-    }
-  };
 
   const handleViewAnalysis = async (bookmark: UserBookmark) => {
     // Convert bookmark data to complete analysis format - ensure ALL fields are populated
