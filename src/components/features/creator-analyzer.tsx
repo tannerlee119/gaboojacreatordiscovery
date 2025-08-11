@@ -337,7 +337,7 @@ export function CreatorAnalyzer() {
           </div>
           
           <Button 
-            onClick={handleAnalyze}
+            onClick={() => handleAnalyze()}
             disabled={!username.trim() || isLoading}
             size="lg"
             className="w-full cursor-pointer hover:bg-primary/90 transition-colors duration-200 disabled:cursor-not-allowed"
