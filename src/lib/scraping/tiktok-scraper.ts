@@ -197,37 +197,43 @@ class TikTokScraper extends PlaywrightBaseScraper {
   private checkForTikTokErrors(pageText: string, currentUrl: string, username: string): TikTokScrapingResult {
     console.log('🔍 Checking for TikTok error conditions...');
     
+    // Check URL patterns for clear errors (be more specific)
+    if (currentUrl.includes('/404') || currentUrl.endsWith('/404')) {
+      console.log('❌ URL indicates 404 page');
+      return {
+        success: false,
+        error: `TikTok account @${username} does not exist`,
+        method: 'scraping'
+      };
+    }
+    
+    // Make content checks much more specific to avoid false positives
+    const lowerContent = pageText.toLowerCase();
+    
+    // If we can see profile data in the content, don't flag as error even if there are error messages
+    const hasProfileData = lowerContent.includes(`${username.toLowerCase()}`) && 
+                          (lowerContent.includes('followers') || lowerContent.includes('following'));
+    
+    if (hasProfileData) {
+      console.log('✅ Profile data detected in page content, ignoring error messages');
+      return { success: true, method: 'scraping' };
+    }
+    
+    // Only check for very specific error patterns to avoid false positives
     const notFoundIndicators = [
-      'Couldn\'t find this account',
-      'This user doesn\'t exist',
-      'User not found',
-      'Page Not Found',
-      '404',
-      'Something went wrong',
-      'Account not found',
-      'This account cannot be found',
-      'No such user exists'
+      `couldn't find this account`, // More specific TikTok error message
+      `this user doesn't exist`,
+      `@${username.toLowerCase()} not found` // Username-specific
     ];
     
     const privateAccountIndicators = [
-      'This account is private',
-      'Account is private',
-      'Private account',
-      'This user\'s account is private'
+      'this account is private',
+      'account is private'
     ];
     
-    const restrictedAccessIndicators = [
-      'Log in to TikTok',
-      'Sign up for TikTok', 
-      'You must be 18 or older',
-      'This content is age-restricted',
-      'Age verification required',
-      'Create an account or log in'
-    ];
-    
-    // Check URL patterns for errors
-    if (currentUrl.includes('404') || currentUrl.includes('error') || currentUrl.includes('not-found')) {
-      console.log('❌ URL indicates error page');
+    // Only check for very specific error messages that are unlikely to appear in normal content
+    if (notFoundIndicators.some(indicator => lowerContent.includes(indicator))) {
+      console.log('❌ Specific account not found message detected');
       return {
         success: false,
         error: `TikTok account @${username} does not exist`,
@@ -235,22 +241,10 @@ class TikTokScraper extends PlaywrightBaseScraper {
       };
     }
     
-    // Check page content for error messages
-    const lowerContent = pageText.toLowerCase();
-    
-    // Check for account doesn't exist
-    if (notFoundIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
-      console.log('❌ Account does not exist');
-      return {
-        success: false,
-        error: `TikTok account @${username} does not exist`,
-        method: 'scraping'
-      };
-    }
-    
-    // Check for private account
-    if (privateAccountIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
-      console.log('🔒 Account is private');
+    // Only check for private account if we have a clear indication AND no profile data
+    if (privateAccountIndicators.some(indicator => lowerContent.includes(indicator)) && 
+        !lowerContent.includes('followers') && !lowerContent.includes('following')) {
+      console.log('🔒 Account appears to be private with no accessible data');
       return {
         success: false,
         error: `TikTok account @${username} is private. Only approved followers can see their content.`,
@@ -258,17 +252,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       };
     }
     
-    // Check for restricted access (requires login/age verification)
-    if (restrictedAccessIndicators.some(indicator => lowerContent.includes(indicator.toLowerCase()))) {
-      console.log('🚫 Content is restricted or requires login');
-      return {
-        success: false,
-        error: `TikTok account @${username} requires login or age verification to view`,
-        method: 'scraping'
-      };
-    }
-    
-    console.log('✅ No error conditions detected');
+    console.log('✅ No clear error conditions detected, proceeding with analysis');
     return { success: true, method: 'scraping' };
   }
 
