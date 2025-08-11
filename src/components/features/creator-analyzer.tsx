@@ -393,9 +393,24 @@ export function CreatorAnalyzer() {
                       }`}>
                         {result.profile.platform}
                       </span>
-                      {result.cached && result.lastAnalyzedDisplay && (
+                      {result.lastAnalyzed && (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                          📊 Analyzed {result.lastAnalyzedDisplay}
+                          📊 Analyzed {(() => {
+                            const analysisAge = Date.now() - new Date(result.lastAnalyzed).getTime();
+                            const ageInDays = Math.floor(analysisAge / (1000 * 60 * 60 * 24));
+                            const ageInHours = Math.floor(analysisAge / (1000 * 60 * 60));
+                            const ageInMinutes = Math.floor(analysisAge / (1000 * 60));
+                            
+                            if (ageInDays > 0) {
+                              return `${ageInDays} day${ageInDays > 1 ? 's' : ''} ago`;
+                            } else if (ageInHours > 0) {
+                              return `${ageInHours} hour${ageInHours > 1 ? 's' : ''} ago`;
+                            } else if (ageInMinutes > 0) {
+                              return `${ageInMinutes} minute${ageInMinutes > 1 ? 's' : ''} ago`;
+                            } else {
+                              return 'just now';
+                            }
+                          })()}
                         </span>
                       )}
                     </div>

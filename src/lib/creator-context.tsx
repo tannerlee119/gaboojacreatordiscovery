@@ -101,23 +101,17 @@ export function CreatorProvider({ children }: { children: ReactNode }) {
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load data from localStorage when user changes
+  // Load data from localStorage when user changes (but clear analysis on login for clean interface)
   useEffect(() => {
     try {
       const userId = isAuthenticated && user ? user.id : null;
-      const storageKey = getStorageKey(userId);
       const historyKey = getHistoryKey(userId);
       
-      const storedAnalysis = localStorage.getItem(storageKey);
+      // Always clear current analysis when user changes to show clean search interface
+      setCurrentAnalysisState(null);
+      
+      // Always load history (but not current analysis on login)
       const storedHistory = localStorage.getItem(historyKey);
-      
-      if (storedAnalysis) {
-        const analysis = JSON.parse(storedAnalysis);
-        setCurrentAnalysisState(analysis);
-      } else {
-        setCurrentAnalysisState(null);
-      }
-      
       if (storedHistory) {
         const history = JSON.parse(storedHistory);
         setAnalysisHistory(history);

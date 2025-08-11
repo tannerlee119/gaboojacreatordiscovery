@@ -186,6 +186,17 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('🔄 Force refresh requested, performing fresh analysis...');
     }
+    
+    // For refresh operations, get the original analysis date to preserve it
+    let originalAnalysisDate: string | undefined;
+    if (forceRefresh) {
+      console.log('🔍 Getting original analysis date for refresh...');
+      const originalAnalysis = await getLatestCreatorAnalysis(username, platform as 'instagram' | 'tiktok');
+      if (originalAnalysis.success && originalAnalysis.data) {
+        originalAnalysisDate = originalAnalysis.data.lastAnalyzed;
+        console.log(`📅 Original analysis date found: ${originalAnalysisDate}`);
+      }
+    }
 
     let scrapingResult;
     let screenshotBuffer: Buffer | null = null;
@@ -451,7 +462,8 @@ export async function POST(request: NextRequest) {
         processingTime,
         // Include growth data if calculated
         growthData: growthData,
-        lastAnalyzed: new Date().toISOString()
+        // Use original analysis date for refreshes, current date for new analyses
+        lastAnalyzed: originalAnalysisDate || new Date().toISOString()
       }
     });
 

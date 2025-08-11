@@ -183,6 +183,34 @@ export default function BookmarksPage() {
 
 
   const handleViewAnalysis = async (bookmark: UserBookmark) => {
+    // First, try to get the latest analysis data with proper analysis date
+    let actualAnalysisDate = bookmark.bookmarkedAt; // fallback to bookmark date
+    
+    try {
+      // Check if we have analysis data in database with proper analysis date
+      const response = await fetch('/api/analyze-creator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: bookmark.username,
+          platform: bookmark.platform,
+          forceRefresh: false // Use cached data
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.lastAnalyzed) {
+          actualAnalysisDate = data.data.lastAnalyzed;
+          console.log(`Found actual analysis date for ${bookmark.username}: ${actualAnalysisDate}`);
+        }
+      }
+    } catch (error) {
+      console.log('Could not fetch analysis date, using bookmark date as fallback:', error);
+    }
+    
     // Convert bookmark data to complete analysis format - ensure ALL fields are populated
     let analysisData: AnalysisData = {
       profile: {
@@ -235,7 +263,7 @@ export default function BookmarksPage() {
       },
       // Add missing fields that Analysis Modal expects
       growthData: undefined, // TODO: Could add growth data for bookmarks in the future
-      lastAnalyzed: bookmark.bookmarkedAt,
+      lastAnalyzed: actualAnalysisDate, // Use actual analysis date or fallback to bookmark date
       cached: true, // Bookmark data is considered cached
     };
 

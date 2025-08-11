@@ -208,7 +208,7 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
                   <span className="text-primary">✓</span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   analysisData.profile.platform === 'instagram' 
                     ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
@@ -218,6 +218,26 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
                 }`}>
                   {analysisData.profile.platform}
                 </span>
+                {analysisData.lastAnalyzed && (
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    📊 Analyzed {(() => {
+                      const analysisAge = Date.now() - new Date(analysisData.lastAnalyzed).getTime();
+                      const ageInDays = Math.floor(analysisAge / (1000 * 60 * 60 * 24));
+                      const ageInHours = Math.floor(analysisAge / (1000 * 60 * 60));
+                      const ageInMinutes = Math.floor(analysisAge / (1000 * 60));
+                      
+                      if (ageInDays > 0) {
+                        return `${ageInDays} day${ageInDays > 1 ? 's' : ''} ago`;
+                      } else if (ageInHours > 0) {
+                        return `${ageInHours} hour${ageInHours > 1 ? 's' : ''} ago`;
+                      } else if (ageInMinutes > 0) {
+                        return `${ageInMinutes} minute${ageInMinutes > 1 ? 's' : ''} ago`;
+                      } else {
+                        return 'just now';
+                      }
+                    })()}
+                  </span>
+                )}
               </div>
             </div>
           </DialogTitle>
