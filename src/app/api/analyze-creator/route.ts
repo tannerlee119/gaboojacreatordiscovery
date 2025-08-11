@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     // Check for existing analysis first (unless forced refresh)
     if (!forceRefresh) {
       console.log('🔍 Checking for existing analysis...');
-      const existingAnalysis = await getLatestCreatorAnalysis(username, platform);
+      const existingAnalysis = await getLatestCreatorAnalysis(username, platform as 'instagram' | 'tiktok');
       
       if (existingAnalysis.success && existingAnalysis.data) {
         const analysisAge = Date.now() - new Date(existingAnalysis.data.lastAnalyzed).getTime();
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
           
           // Log the search for analytics
           if (userId) {
-            await logUserSearch(username, platform, userId, true);
+            await logUserSearch(userId, username, platform as 'instagram' | 'tiktok');
           }
           
           const response = NextResponse.json({
@@ -377,7 +377,7 @@ export async function POST(request: NextRequest) {
     // Log user search if authenticated
     if (userId) {
       try {
-        await logUserSearch(userId, username, platform, undefined, analysisId);
+        await logUserSearch(userId, username, platform as 'instagram' | 'tiktok', undefined, analysisId);
       } catch (searchLogError) {
         console.error('Failed to log user search:', searchLogError);
         // Continue even if search logging fails
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
     let growthData;
     if (analysisId) {
       console.log('🔍 Calculating growth data after fresh analysis...');
-      const latestWithGrowth = await getLatestCreatorAnalysis(username, platform);
+      const latestWithGrowth = await getLatestCreatorAnalysis(username, platform as 'instagram' | 'tiktok');
       if (latestWithGrowth.success && latestWithGrowth.data?.growthData) {
         growthData = latestWithGrowth.data.growthData;
         console.log('✅ Growth data calculated:', growthData);

@@ -9,7 +9,7 @@ export const usernameSchema = z
   .transform((val) => val.toLowerCase().trim());
 
 // Platform validation schema
-export const platformSchema = z.enum(['instagram', 'tiktok', 'youtube'] as const);
+export const platformSchema = z.enum(['instagram', 'tiktok'] as const);
 
 // Creator analysis request schema
 export const analyzeCreatorRequestSchema = z.object({
