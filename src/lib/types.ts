@@ -1,5 +1,5 @@
 // Core platform types
-export type Platform = 'instagram' | 'tiktok' | 'youtube';
+export type Platform = 'instagram' | 'tiktok';
 
 export type CreatorCategory = 
   | 'lifestyle'
@@ -42,16 +42,6 @@ export interface TikTokMetrics {
   recentVideos: TikTokVideo[];
 }
 
-export interface YouTubeMetrics {
-  subscriberCount: number;
-  videoCount: number;
-  viewCount: number;
-  averageViews: number;
-  averageLikes: number;
-  averageComments: number;
-  engagementRate: number;
-  recentVideos: YouTubeVideo[];
-}
 
 // Post/Video types
 export interface InstagramPost {
@@ -76,17 +66,6 @@ export interface TikTokVideo {
   duration: number;
 }
 
-export interface YouTubeVideo {
-  id: string;
-  title: string;
-  thumbnailUrl: string;
-  description: string;
-  views: number;
-  likes: number;
-  comments: number;
-  timestamp: Date;
-  duration: number | null; // in seconds
-}
 
 // Main creator profile interface
 export interface CreatorProfile {
@@ -108,7 +87,6 @@ export interface CreatorProfile {
   // Platform-specific metrics
   instagramMetrics?: InstagramMetrics;
   tiktokMetrics?: TikTokMetrics;
-  youtubeMetrics?: YouTubeMetrics;
   
   // AI Analysis fields
   aiAnalysis?: Record<string, unknown>; // Will contain the full AI analysis data

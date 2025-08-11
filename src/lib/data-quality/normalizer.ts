@@ -251,15 +251,6 @@ export class DataNormalizer {
         normalized.engagementRate = this.normalizePercentage(metrics.engagementRate || metrics.engagement_rate);
         break;
         
-      case 'youtube':
-        normalized.subscriberCount = this.normalizeCount(metrics.subscriberCount || metrics.subscribers);
-        normalized.videoCount = this.normalizeCount(metrics.videoCount || metrics.videos);
-        normalized.viewCount = this.normalizeCount(metrics.viewCount || metrics.views);
-        normalized.averageViews = this.normalizeCount(metrics.averageViews || metrics.avg_views);
-        normalized.averageLikes = this.normalizeCount(metrics.averageLikes || metrics.avg_likes);
-        normalized.averageComments = this.normalizeCount(metrics.averageComments || metrics.avg_comments);
-        normalized.engagementRate = this.normalizePercentage(metrics.engagementRate || metrics.engagement_rate);
-        break;
     }
     
     return normalized;

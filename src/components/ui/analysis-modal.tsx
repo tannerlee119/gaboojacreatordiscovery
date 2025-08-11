@@ -19,7 +19,7 @@ import Image from 'next/image';
 interface AnalysisData {
   profile: {
     username: string;
-    platform: 'instagram' | 'tiktok' | 'youtube';
+    platform: 'instagram' | 'tiktok';
     displayName: string;
     bio?: string;
     profileImageUrl: string;

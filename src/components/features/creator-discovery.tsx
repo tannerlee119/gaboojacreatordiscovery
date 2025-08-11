@@ -29,7 +29,7 @@ interface DiscoveryState {
 interface AnalysisData {
   profile: {
     username: string;
-    platform: 'instagram' | 'tiktok' | 'youtube';
+    platform: 'instagram' | 'tiktok';
     displayName: string;
     bio?: string;
     profileImageUrl: string;
@@ -359,7 +359,7 @@ export function CreatorDiscovery() {
     const analysisData: AnalysisData = {
       profile: {
         username: creator.username,
-        platform: creator.platform as 'instagram' | 'tiktok' | 'youtube',
+        platform: creator.platform as 'instagram' | 'tiktok',
         displayName: creator.displayName,
         bio: creator.bio || creator.overallAssessment,
         profileImageUrl: creator.profileImageUrl || '',

@@ -255,9 +255,6 @@ export class DataQualityScorer {
       case 'tiktok':
         score -= this.validateTikTokMetrics(metrics, followers, issues);
         break;
-      case 'youtube':
-        score -= this.validateYouTubeMetrics(metrics, followers, issues);
-        break;
     }
 
     return Math.max(0, score);
@@ -306,17 +303,6 @@ export class DataQualityScorer {
         }
         break;
         
-      case 'youtube':
-        if (!data.metrics || !(data.metrics as Record<string, unknown>).subscriberCount) {
-          issues.push({
-            field: 'metrics.subscriberCount',
-            severity: 'warning',
-            message: 'YouTube profiles should include subscriber count',
-            impact: 10
-          });
-          score -= 10;
-        }
-        break;
     }
 
     return Math.max(0, score);

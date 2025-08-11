@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(response);
     }
 
-    if (!['instagram', 'tiktok', 'youtube'].includes(body.platform)) {
+    if (!['instagram', 'tiktok'].includes(body.platform)) {
       const response = NextResponse.json({
         success: false,
-        error: 'Invalid platform. Must be instagram, tiktok, or youtube'
+        error: 'Invalid platform. Must be instagram or tiktok'
       }, { status: 400 });
       return setCorsHeaders(response);
     }
@@ -151,7 +151,7 @@ export async function GET() {
           'Merge recommendations'
         ]
       },
-      supportedPlatforms: ['instagram', 'tiktok', 'youtube'],
+      supportedPlatforms: ['instagram', 'tiktok'],
       qualityThresholds: {
         excellent: 90,
         good: 70,

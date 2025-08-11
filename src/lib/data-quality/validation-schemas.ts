@@ -8,7 +8,7 @@ const optionalUrl = z.string().url().optional().or(z.literal(''));
 const optionalString = z.string().optional();
 
 // Platform enum
-export const platformSchema = z.enum(['instagram', 'tiktok', 'youtube']);
+export const platformSchema = z.enum(['instagram', 'tiktok']);
 
 // Creator category enum
 export const creatorCategorySchema = z.enum([
@@ -80,29 +80,6 @@ export const tiktokMetricsSchema = z.object({
   recentVideos: z.array(tiktokVideoSchema).optional()
 });
 
-// YouTube-specific schemas
-export const youtubeVideoSchema = z.object({
-  id: nonEmptyString,
-  title: nonEmptyString,
-  thumbnailUrl: optionalUrl,
-  description: optionalString,
-  views: nonNegativeNumber,
-  likes: nonNegativeNumber,
-  comments: nonNegativeNumber,
-  timestamp: z.date(),
-  duration: z.number().nullable()
-});
-
-export const youtubeMetricsSchema = z.object({
-  subscriberCount: followerCountSchema,
-  videoCount: nonNegativeNumber,
-  viewCount: nonNegativeNumber,
-  averageViews: nonNegativeNumber,
-  averageLikes: nonNegativeNumber,
-  averageComments: nonNegativeNumber,
-  engagementRate: engagementRateSchema,
-  recentVideos: z.array(youtubeVideoSchema).optional()
-});
 
 // Main creator profile schema
 export const creatorProfileSchema = z.object({
@@ -119,7 +96,6 @@ export const creatorProfileSchema = z.object({
   // Platform-specific metrics (only one should be present)
   instagramMetrics: instagramMetricsSchema.optional(),
   tiktokMetrics: tiktokMetricsSchema.optional(),
-  youtubeMetrics: youtubeMetricsSchema.optional(),
   
   // AI analysis data
   aiAnalysis: z.record(z.string(), z.unknown()).optional(),
@@ -167,4 +143,4 @@ export type ValidationResult = z.infer<typeof validationResultSchema>;
 export type CreatorProfileValidated = z.infer<typeof creatorProfileSchema>;
 export type InstagramMetrics = z.infer<typeof instagramMetricsSchema>;
 export type TikTokMetrics = z.infer<typeof tiktokMetricsSchema>;
-export type YouTubeMetrics = z.infer<typeof youtubeMetricsSchema>; 
+ 

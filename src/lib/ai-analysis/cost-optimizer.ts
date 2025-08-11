@@ -195,7 +195,6 @@ export class AICostOptimizer {
     switch (platform) {
       case 'instagram': return 2; // High business value
       case 'tiktok': return 2; // High growth potential
-      case 'youtube': return 3; // Highest monetization potential
       default: return 1;
     }
   }

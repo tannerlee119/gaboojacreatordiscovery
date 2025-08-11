@@ -15,7 +15,7 @@ import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
 interface AnalysisData {
   profile: {
     username: string;
-    platform: 'instagram' | 'tiktok' | 'youtube';
+    platform: 'instagram' | 'tiktok';
     displayName: string;
     bio?: string;
     profileImageUrl: string;
