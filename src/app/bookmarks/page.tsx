@@ -9,8 +9,10 @@ import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-re
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
+import { GrowthChart } from '@/components/ui/growth-chart';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
+import { supabase } from '@/lib/supabase';
 
 interface AnalysisData {
   profile: {
@@ -69,6 +71,9 @@ export default function BookmarksPage() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedBookmark, setSelectedBookmark] = useState<UserBookmark | null>(null);
+  const [showGrowthChart, setShowGrowthChart] = useState(false);
+  const [selectedBookmarkForGrowth, setSelectedBookmarkForGrowth] = useState<UserBookmark | null>(null);
+  const [bookmarkGrowthData, setBookmarkGrowthData] = useState<Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }>>({});
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -120,6 +125,73 @@ export default function BookmarksPage() {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isAuthenticated, user]);
+
+  // Load growth data for bookmarks with caching and throttling
+  useEffect(() => {
+    const loadGrowthData = async () => {
+      if (bookmarks.length === 0) return;
+      
+      // Check localStorage cache first
+      const CACHE_KEY = 'gabooja_bookmark_growth_cache';
+      const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
+      
+      try {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            // Use cached data if it's less than 10 minutes old
+            setBookmarkGrowthData(data);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Error loading cached growth data:', error);
+      }
+      
+      const growthDataMap: Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }> = {};
+      
+      // Fetch growth data for all bookmarks from database (no rate limiting needed)
+      for (const bookmark of bookmarks) {
+        try {
+          // Fetch growth data directly from database using client
+          const { data, error } = await supabase
+            .from('creator_discovery_enriched')
+            .select('growth_percentage, previous_follower_count, last_analysis_date')
+            .eq('username', bookmark.username)
+            .eq('platform', bookmark.platform)
+            .order('last_analysis_date', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (!error && data && data.growth_percentage !== null) {
+            const key = `${bookmark.username}_${bookmark.platform}`;
+            growthDataMap[key] = {
+              previousFollowerCount: data.previous_follower_count || 0,
+              growthPercentage: data.growth_percentage || 0,
+              lastAnalyzed: data.last_analysis_date || bookmark.bookmarkedAt
+            };
+          }
+        } catch (error) {
+          console.log(`Could not fetch growth data for ${bookmark.username}:`, error);
+        }
+      }
+      
+      // Cache the results
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: growthDataMap,
+          timestamp: Date.now()
+        }));
+      } catch (error) {
+        console.log('Error caching growth data:', error);
+      }
+      
+      setBookmarkGrowthData(growthDataMap);
+    };
+    
+    loadGrowthData();
+  }, [bookmarks]);
 
   const handleDeleteClick = (bookmark: UserBookmark) => {
     // Check if user has disabled confirmation modal
@@ -188,24 +260,18 @@ export default function BookmarksPage() {
     
     try {
       // Check if we have analysis data in database with proper analysis date
-      const response = await fetch('/api/analyze-creator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: bookmark.username,
-          platform: bookmark.platform,
-          forceRefresh: false // Use cached data
-        })
-      });
+      const { data, error } = await supabase
+        .from('creator_discovery_enriched')
+        .select('last_analysis_date')
+        .eq('username', bookmark.username)
+        .eq('platform', bookmark.platform)
+        .order('last_analysis_date', { ascending: false })
+        .limit(1)
+        .single();
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.lastAnalyzed) {
-          actualAnalysisDate = data.data.lastAnalyzed;
-          console.log(`Found actual analysis date for ${bookmark.username}: ${actualAnalysisDate}`);
-        }
+      if (!error && data && data.last_analysis_date) {
+        actualAnalysisDate = data.last_analysis_date;
+        console.log(`Found actual analysis date for ${bookmark.username}: ${actualAnalysisDate}`);
       }
     } catch (error) {
       console.log('Could not fetch analysis date, using bookmark date as fallback:', error);
@@ -280,24 +346,65 @@ export default function BookmarksPage() {
 
     if (needsEnrichment) {
       try {
-        const response = await fetch('/api/analyze-creator', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: bookmark.username,
-            platform: bookmark.platform,
-            forceRefresh: false
-          })
-        });
-        const data = await response.json();
-        if (data?.success && data.data) {
+        // Fetch complete analysis data from database using client
+        const { data, error } = await supabase
+          .from('creator_discovery_enriched')
+          .select('*')
+          .eq('username', bookmark.username)
+          .eq('platform', bookmark.platform)
+          .order('last_analysis_date', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!error && data) {
           analysisData = {
-            ...data.data,
+            profile: {
+              username: data.username || bookmark.username,
+              platform: data.platform as 'instagram' | 'tiktok',
+              displayName: data.display_name || bookmark.displayName,
+              bio: data.bio || bookmark.bio,
+              profileImageUrl: data.profile_image_url || bookmark.profileImageUrl || '',
+              isVerified: data.is_verified || bookmark.isVerified,
+              followerCount: data.follower_count || bookmark.followerCount,
+              followingCount: data.following_count || bookmark.followingCount,
+              location: data.location || bookmark.location,
+              website: data.website || bookmark.website,
+              metrics: {
+                followerCount: data.follower_count,
+                followingCount: data.following_count,
+                postCount: data.post_count,
+                engagementRate: data.engagement_rate,
+                likeCount: data.like_count,
+                videoCount: data.video_count,
+                averageViews: data.average_views,
+                averageLikes: data.average_likes,
+              },
+              aiAnalysis: {
+                creator_score: data.creator_score || '0',
+                category: data.category || 'other',
+                brand_potential: data.brand_potential || 'Not analyzed',
+                key_strengths: data.key_strengths || 'Not analyzed',
+                engagement_quality: data.engagement_quality || 'Not analyzed',
+                content_style: data.content_style || 'Not analyzed',
+                audience_demographics: data.audience_demographics || 'Not analyzed',
+                collaboration_potential: data.collaboration_potential || 'Not analyzed',
+                overall_assessment: data.overall_assessment || 'Creator profile analysis'
+              }
+            },
+            scrapingDetails: {
+              method: 'From Database',
+              timestamp: data.last_analysis_date || actualAnalysisDate,
+            },
+            growthData: data.growth_percentage !== null ? {
+              previousFollowerCount: data.previous_follower_count || 0,
+              growthPercentage: data.growth_percentage || 0,
+            } : undefined,
+            lastAnalyzed: data.last_analysis_date || actualAnalysisDate,
             cached: true
-          } as AnalysisData;
+          };
         }
       } catch (error) {
-        console.error('Error enriching analysis from API:', error);
+        console.error('Error enriching analysis from database:', error);
       }
     }
 
@@ -325,6 +432,11 @@ export default function BookmarksPage() {
     } else {
       throw new Error(data.error || 'Failed to refresh analysis');
     }
+  };
+
+  const handleGrowthChart = (bookmark: UserBookmark) => {
+    setSelectedBookmarkForGrowth(bookmark);
+    setShowGrowthChart(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -440,6 +552,26 @@ export default function BookmarksPage() {
                       {formatNumber(bookmark.followerCount)}
                     </div>
                     <div className="text-xs text-muted-foreground">Followers</div>
+                    {(() => {
+                      const key = `${bookmark.username}_${bookmark.platform}`;
+                      const growthData = bookmarkGrowthData[key];
+                      return growthData && (
+                        <button
+                          onClick={() => handleGrowthChart(bookmark)}
+                          className={`text-xs px-1.5 py-0.5 rounded-full mt-1 inline-block cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all duration-200 ${
+                            growthData.growthPercentage > 0
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
+                              : growthData.growthPercentage < 0
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
+                              : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
+                          }`}
+                          title="Click to view growth chart"
+                        >
+                          {growthData.growthPercentage > 0 ? '+' : ''}
+                          {growthData.growthPercentage.toFixed(1)}%
+                        </button>
+                      );
+                    })()}
                   </div>
                   <div className="text-center">
                     <div className="text-lg font-bold">
@@ -566,6 +698,30 @@ export default function BookmarksPage() {
           platform={selectedBookmark.platform}
         />
       )}
+
+      {/* Growth Chart Modal */}
+      {selectedBookmarkForGrowth && (() => {
+        const key = `${selectedBookmarkForGrowth.username}_${selectedBookmarkForGrowth.platform}`;
+        const growthData = bookmarkGrowthData[key];
+        return growthData && (
+          <GrowthChart
+            isOpen={showGrowthChart}
+            onClose={() => {
+              setShowGrowthChart(false);
+              setSelectedBookmarkForGrowth(null);
+            }}
+            growthData={{
+              previousFollowerCount: growthData.previousFollowerCount,
+              growthPercentage: growthData.growthPercentage,
+              currentFollowerCount: selectedBookmarkForGrowth.followerCount,
+              lastAnalyzed: growthData.lastAnalyzed,
+              previousAnalyzed: undefined
+            }}
+            username={selectedBookmarkForGrowth.username}
+            platform={selectedBookmarkForGrowth.platform}
+          />
+        );
+      })()}
     </div>
   );
 } 

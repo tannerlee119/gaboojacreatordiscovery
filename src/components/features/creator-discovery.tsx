@@ -11,6 +11,7 @@ import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
 import { PaginationComponent } from '@/components/ui/pagination-component';
+import { GrowthChart } from '@/components/ui/growth-chart';
 import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
@@ -90,6 +91,8 @@ export function CreatorDiscovery() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [selectedCreatorForComment, setSelectedCreatorForComment] = useState<DiscoveryCreator | null>(null);
+  const [showGrowthChart, setShowGrowthChart] = useState(false);
+  const [selectedCreatorForGrowth, setSelectedCreatorForGrowth] = useState<DiscoveryCreator | null>(null);
   
   // Recent analyses collapsed state
   const [isRecentAnalysesCollapsed, setIsRecentAnalysesCollapsed] = useState(true);
@@ -354,6 +357,11 @@ export function CreatorDiscovery() {
     setIsModalOpen(true);
   };
 
+  const handleGrowthChart = (creator: DiscoveryCreator) => {
+    setSelectedCreatorForGrowth(creator);
+    setShowGrowthChart(true);
+  };
+
   const handleViewCreatorAnalysis = (creator: DiscoveryCreator) => {
     // Convert DiscoveryCreator to AnalysisData format
     const analysisData: AnalysisData = {
@@ -530,6 +538,7 @@ export function CreatorDiscovery() {
                         isBookmarked={isCreatorBookmarked(creator)}
                         onBookmark={handleBookmarkCreator}
                         onViewAnalysis={handleViewCreatorAnalysis}
+                        onGrowthChart={handleGrowthChart}
                       />
                     ))}
                   </div>
@@ -650,6 +659,26 @@ export function CreatorDiscovery() {
           platform={selectedCreatorForComment.platform}
           initialComments=""
           isEditing={false}
+        />
+      )}
+
+      {/* Growth Chart Modal */}
+      {selectedCreatorForGrowth?.growthData && (
+        <GrowthChart
+          isOpen={showGrowthChart}
+          onClose={() => {
+            setShowGrowthChart(false);
+            setSelectedCreatorForGrowth(null);
+          }}
+          growthData={{
+            previousFollowerCount: selectedCreatorForGrowth.growthData.previousFollowerCount,
+            growthPercentage: selectedCreatorForGrowth.growthData.growthPercentage,
+            currentFollowerCount: selectedCreatorForGrowth.followerCount,
+            lastAnalyzed: selectedCreatorForGrowth.lastAnalysisDate || new Date().toISOString(),
+            previousAnalyzed: undefined
+          }}
+          username={selectedCreatorForGrowth.username}
+          platform={selectedCreatorForGrowth.platform}
         />
       )}
     </div>

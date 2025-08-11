@@ -42,13 +42,15 @@ interface DiscoveryCreatorCardProps {
   isBookmarked: boolean;
   onBookmark: (creator: DiscoveryCreator) => void;
   onViewAnalysis?: (creator: DiscoveryCreator) => void;
+  onGrowthChart?: (creator: DiscoveryCreator) => void;
 }
 
 export function DiscoveryCreatorCard({ 
   creator, 
   isBookmarked, 
   onBookmark, 
-  onViewAnalysis
+  onViewAnalysis,
+  onGrowthChart
 }: DiscoveryCreatorCardProps) {
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
 
@@ -73,6 +75,12 @@ export function DiscoveryCreatorCard({
   const handleViewAnalysis = () => {
     if (onViewAnalysis) {
       onViewAnalysis(creator);
+    }
+  };
+
+  const handleGrowthChart = () => {
+    if (onGrowthChart) {
+      onGrowthChart(creator);
     }
   };
 
@@ -166,16 +174,20 @@ export function DiscoveryCreatorCard({
               <p className="text-muted-foreground">Followers</p>
               <p className="font-medium">{formatNumber(creator.followerCount)}</p>
               {creator.growthData && (
-                <div className={`text-xs px-1.5 py-0.5 rounded-full mt-1 inline-block ${
-                  creator.growthData.growthPercentage > 0
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                    : creator.growthData.growthPercentage < 0
-                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
-                }`}>
+                <button
+                  onClick={handleGrowthChart}
+                  className={`text-xs px-1.5 py-0.5 rounded-full mt-1 inline-block cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all duration-200 ${
+                    creator.growthData.growthPercentage > 0
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
+                      : creator.growthData.growthPercentage < 0
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
+                  }`}
+                  title="Click to view growth chart"
+                >
                   {creator.growthData.growthPercentage > 0 ? '+' : ''}
                   {creator.growthData.growthPercentage.toFixed(1)}%
-                </div>
+                </button>
               )}
             </div>
             <div>

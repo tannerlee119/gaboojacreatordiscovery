@@ -114,6 +114,7 @@ export function CreatorAnalyzer() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showGrowthChart, setShowGrowthChart] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string>('other');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Cache for storing last results per platform
   const [resultCache, setResultCache] = useState<{
@@ -127,13 +128,15 @@ export function CreatorAnalyzer() {
     if (!username.trim()) return;
     
     setIsLoading(true);
+    if (forceRefresh) {
+      setIsRefreshing(true);
+    }
     setError(null);
     if (!forceRefresh) {
       setCurrentAnalysis(null);
     }
     
     try {
-      console.log('Starting analysis for:', username, platform, forceRefresh ? '(forced refresh)' : '');
       
       const requestBody = { 
         username: username.trim(), 
@@ -175,13 +178,24 @@ export function CreatorAnalyzer() {
         [platform]: newResult
       }));
       
-      console.log('Analysis completed:', newResult);
       
     } catch (error) {
       console.error('Analysis failed:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Provide more helpful error messages for common issues
+      if (errorMessage.includes('Rate limit exceeded')) {
+        setError('⏰ You\'ve made too many requests recently. Please wait a few minutes before trying again.');
+      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+        setError('🌐 Network error. Please check your connection and try again.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
+      if (forceRefresh) {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -423,11 +437,11 @@ export function CreatorAnalyzer() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleAnalyze(true)}
-                    disabled={isLoading}
+                    disabled={isRefreshing}
                     className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
                   >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    {isLoading ? 'Refreshing...' : 'Refresh'}
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
                   </Button>
                   <Button
                     variant={bookmarkedStatus ? "default" : "outline"}

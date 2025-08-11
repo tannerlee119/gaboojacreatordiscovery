@@ -166,6 +166,7 @@ export async function GET(request: NextRequest) {
     query = query.range(startIndex, startIndex + filters.limit - 1);
 
     // Execute query
+    console.log('🔍 Discovery API: Fetching creators from database...');
     const { data: creators, error } = await query;
 
     if (error) {
@@ -177,8 +178,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate growth data for each creator
+    console.log(`📊 Discovery API: Processing ${(creators || []).length} creators for growth data...`);
     const creatorsWithGrowth = await Promise.all((creators || []).map(async (creator) => {
-      // Get previous analysis for this creator to calculate growth
+      console.log(`👤 Processing creator: ${creator.username} - Current follower count: ${creator.follower_count}`);
+      
+      // Check if there's newer data in creator_analyses table that hasn't been reflected in the view yet
+      const { data: latestAnalysis } = await supabase
+        .from('creator_analyses')
+        .select('follower_count, created_at')
+        .eq('creator_id', creator.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      // Use the latest analysis data if it's newer than what's in the view
+      let currentFollowerCount = creator.follower_count;
+      if (latestAnalysis && latestAnalysis.created_at > (creator.last_analysis_date || '')) {
+        console.log(`🔄 Found newer data in creator_analyses for ${creator.username}: ${latestAnalysis.follower_count} vs ${creator.follower_count}`);
+        currentFollowerCount = latestAnalysis.follower_count;
+      }
+      
+      // Get previous analysis for growth calculation (excluding the latest one)
       const { data: previousAnalysis } = await supabase
         .from('creator_analyses')
         .select('follower_count, created_at')
@@ -190,7 +210,7 @@ export async function GET(request: NextRequest) {
 
       let growthData = null;
       if (previousAnalysis && previousAnalysis.follower_count) {
-        const currentCount = creator.follower_count || 0;
+        const currentCount = currentFollowerCount || 0; // Use the updated current count
         const previousCount = previousAnalysis.follower_count || 0;
         const growthPercentage = previousCount > 0 
           ? ((currentCount - previousCount) / previousCount) * 100 
@@ -200,10 +220,15 @@ export async function GET(request: NextRequest) {
           previous_follower_count: previousCount,
           growth_percentage: Math.round(growthPercentage * 100) / 100 // Round to 2 decimal places
         };
+        
+        console.log(`📈 Growth calculated for ${creator.username}: ${currentCount} (updated) vs ${previousCount} (previous) = ${growthData.growth_percentage}%`);
+      } else {
+        console.log(`📊 No previous analysis found for ${creator.username} - no growth data`);
       }
 
       return {
         ...creator,
+        follower_count: currentFollowerCount, // Use the updated follower count
         previous_follower_count: growthData?.previous_follower_count,
         growth_percentage: growthData?.growth_percentage
       };
