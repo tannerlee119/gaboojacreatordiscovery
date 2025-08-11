@@ -124,6 +124,14 @@ export function CreatorAnalyzer() {
   // Use current analysis from context
   const result = currentAnalysis;
 
+  // Restore username and platform from current analysis when component mounts or analysis changes
+  useEffect(() => {
+    if (result && !username.trim()) {
+      setUsername(result.profile.username);
+      setPlatform(result.profile.platform);
+    }
+  }, [result, username]);
+
   const handleAnalyze = async (forceRefresh = false) => {
     if (!username.trim()) return;
     

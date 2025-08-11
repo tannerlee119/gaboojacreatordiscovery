@@ -378,7 +378,6 @@ export async function POST(request: NextRequest) {
         processingTime: analysisData.processingTime
       }, null, 2));
       
-      console.log(`💾 Saving analysis for ${analysisData.profile.username} with follower count: ${analysisData.profile.followerCount}`);
       const saveResult = await saveCreatorAnalysis(analysisData, userId);
       if (saveResult.success) {
         analysisId = saveResult.analysisId;
