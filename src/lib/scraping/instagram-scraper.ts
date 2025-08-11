@@ -111,7 +111,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
         console.log(`📄 Page content length: ${pageContent.length} characters`);
         
         // Check for specific error conditions first
-        const errorChecks = this.checkForErrors(pageContent, currentUrl, username);
+        const errorChecks = this.checkForInstagramErrors(pageContent, currentUrl, username);
         if (!errorChecks.success) {
           return errorChecks;
         }
@@ -148,7 +148,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
             // Check for errors after login
             const postLoginContent = await this.page.textContent('body') || '';
             const postLoginUrl = this.page.url();
-            const postLoginErrorCheck = this.checkForErrors(postLoginContent, postLoginUrl, username);
+            const postLoginErrorCheck = this.checkForInstagramErrors(postLoginContent, postLoginUrl, username);
             
             if (!postLoginErrorCheck.success) {
               console.log('❌ Error detected after login');
@@ -269,7 +269,7 @@ class InstagramScraper extends PlaywrightBaseScraper {
     };
   }
 
-  private checkForErrors(pageContent: string, currentUrl: string, username: string): InstagramScrapingResult {
+  private checkForInstagramErrors(pageContent: string, currentUrl: string, username: string): InstagramScrapingResult {
     console.log('🔍 Checking for error conditions...');
     
     // Check for "Page Not Found" or similar (be more specific to avoid false positives)

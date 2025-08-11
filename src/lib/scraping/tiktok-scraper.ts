@@ -3,6 +3,7 @@ import { TikTokMetrics } from '@/lib/types';
 
 interface TikTokScrapingResult extends ScrapingResult {
   data?: {
+    username: string;
     displayName: string;
     bio?: string;
     profileImageUrl: string;
@@ -97,7 +98,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       console.log(`📄 Page text sample: ${pageText.substring(0, 300)}...`);
 
       // Check for specific error conditions first
-      const errorCheck = this.checkForErrors(pageText, currentUrl, username);
+      const errorCheck = this.checkForTikTokErrors(pageText, currentUrl, username);
       if (!errorCheck.success) {
         return errorCheck;
       }
@@ -193,7 +194,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
     }
   }
 
-  private checkForErrors(pageText: string, currentUrl: string, username: string): TikTokScrapingResult {
+  private checkForTikTokErrors(pageText: string, currentUrl: string, username: string): TikTokScrapingResult {
     console.log('🔍 Checking for TikTok error conditions...');
     
     const notFoundIndicators = [

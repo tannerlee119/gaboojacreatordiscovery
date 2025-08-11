@@ -410,9 +410,7 @@ export function CreatorDiscovery() {
   }, [discoveryData?.creators, searchTerm]);
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
-    // Use bookmarkUpdate to ensure component re-renders when bookmarks change
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _forceRerender = bookmarkUpdate; // Intentionally unused to trigger re-renders
+    // bookmarkUpdate is used in dependency arrays to trigger re-renders
     const key = `${creator.username}_${creator.platform}`;
     return bookmarkStatuses[key] || false;
   };
