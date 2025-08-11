@@ -34,6 +34,8 @@ Ensure these environment variables are configured in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Database connection
 - `SUPABASE_SERVICE_ROLE_KEY` - For server-side database operations
 - `INSTAGRAM_SESSION_ID` - Instagram scraping (optional)
+- `INSTAGRAM_COOKIES_JSON` - Instagram session cookies as JSON array (optional)
+- `TIKTOK_COOKIES_JSON` - TikTok session cookies as JSON array (optional)
 - `NODE_ENV` - Set to 'development' for local development
 
 ## Core Architecture

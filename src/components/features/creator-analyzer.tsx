@@ -383,7 +383,7 @@ export function CreatorAnalyzer() {
                         <span className="text-primary">✓</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         result.profile.platform === 'instagram' 
                           ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
@@ -393,6 +393,11 @@ export function CreatorAnalyzer() {
                       }`}>
                         {result.profile.platform}
                       </span>
+                      {result.cached && result.lastAnalyzedDisplay && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          📊 Analyzed {result.lastAnalyzedDisplay}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

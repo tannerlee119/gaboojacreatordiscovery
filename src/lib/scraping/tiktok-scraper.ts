@@ -32,12 +32,54 @@ class TikTokScraper extends PlaywrightBaseScraper {
       // Initialize browser with Sparticuz chromium if available
       await this.initBrowser();
 
-    const profileUrl = `https://www.tiktok.com/@${username}`;
-      console.log(`📱 Navigating to: ${profileUrl}`);
-      
       if (!this.page) {
         throw new Error('Page not initialized');
       }
+
+      // Inject TikTok cookies if available (similar to Instagram approach)
+      const cookiesEnv = process.env.TIKTOK_COOKIES_JSON;
+      let cookiesInjected = false;
+      if (cookiesEnv) {
+        try {
+          const cookies = JSON.parse(cookiesEnv);
+          if (Array.isArray(cookies) && cookies.length > 0) {
+            await this.page.context().addCookies(cookies);
+            cookiesInjected = true;
+            console.log(`🍪 Injected ${cookies.length} TikTok session cookies`);
+            
+            // Log key cookies for debugging (without exposing sensitive values)
+            const sessionCookies = cookies.filter(c => c.name.includes('session') || c.name.includes('sid') || c.name.includes('tiktok'));
+            console.log(`   📝 Session cookies found: ${sessionCookies.map(c => c.name).join(', ')}`);
+          } else {
+            console.log('⚠️ TIKTOK_COOKIES_JSON is empty or invalid format');
+          }
+        } catch (cookieErr) {
+          console.log('⚠️ Failed to parse TIKTOK_COOKIES_JSON:', cookieErr);
+          console.log('   💡 Make sure it\'s valid JSON array format');
+        }
+      } else {
+        console.log('⚠️ No TIKTOK_COOKIES_JSON found - using anonymous access');
+        console.log('   💡 Add TikTok cookies to .env.local for better access to posts and content');
+      }
+
+      // Set optimal viewport for TikTok (mobile-first design)
+      await this.page.setViewportSize({ width: 1920, height: 1080 });
+
+      // Add TikTok-specific stealth headers
+      await this.page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br', 
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      });
+
+      const profileUrl = `https://www.tiktok.com/@${username}`;
+      console.log(`📱 Navigating to: ${profileUrl}${cookiesInjected ? ' (with session cookies)' : ' (anonymous)'}`);
 
       // Navigate to profile with retry logic
       let retries = 3;
@@ -110,12 +152,11 @@ class TikTokScraper extends PlaywrightBaseScraper {
         console.log('✅ Successfully parsed profile data from page text');
        
         // Take screenshot for AI analysis
-        console.log('📸 Taking screenshot for AI analysis...');
+        console.log('📸 Taking full page screenshot for AI analysis...');
         const screenshot = await this.page.screenshot({ 
-          fullPage: false,
-          type: 'jpeg',
-          quality: 80,
-          clip: { x: 0, y: 0, width: 1280, height: 1024 }
+          fullPage: true,
+          type: 'png',
+          timeout: 30000 // Extended timeout for screenshot like Instagram
         });
         
         return {

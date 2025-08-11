@@ -144,33 +144,47 @@ export async function POST(request: NextRequest) {
 
     // Check for existing analysis first (unless forced refresh)
     if (!forceRefresh) {
-      console.log('🔍 Checking for existing analysis...');
+      console.log('🔍 Checking database for existing analysis...');
       const existingAnalysis = await getLatestCreatorAnalysis(username, platform as 'instagram' | 'tiktok');
       
       if (existingAnalysis.success && existingAnalysis.data) {
         const analysisAge = Date.now() - new Date(existingAnalysis.data.lastAnalyzed).getTime();
-        const maxAgeHours = 24; // Consider analysis fresh for 24 hours
-        const isAnalysisFresh = analysisAge < (maxAgeHours * 60 * 60 * 1000);
+        const ageInHours = Math.round(analysisAge / (1000 * 60 * 60));
+        const ageInDays = Math.round(analysisAge / (1000 * 60 * 60 * 24));
         
-        if (isAnalysisFresh) {
-          console.log(`✅ Using cached analysis from ${existingAnalysis.data.lastAnalyzed}`);
-          
-          // Log the search for analytics
-          if (userId) {
-            await logUserSearch(userId, username, platform as 'instagram' | 'tiktok');
-          }
-          
-          const response = NextResponse.json({
-            success: true,
-            data: existingAnalysis.data,
-            cached: true,
-            processingTime: Date.now() - startTime
-          });
-          return setCorsHeaders(response);
+        let ageDisplay = '';
+        if (ageInDays > 0) {
+          ageDisplay = `${ageInDays} day${ageInDays > 1 ? 's' : ''} ago`;
+        } else if (ageInHours > 0) {
+          ageDisplay = `${ageInHours} hour${ageInHours > 1 ? 's' : ''} ago`;
         } else {
-          console.log(`⏰ Existing analysis is ${Math.round(analysisAge / (1000 * 60 * 60))} hours old, performing fresh analysis...`);
+          const ageInMinutes = Math.round(analysisAge / (1000 * 60));
+          ageDisplay = `${ageInMinutes} minute${ageInMinutes > 1 ? 's' : ''} ago`;
         }
+        
+        console.log(`✅ Using existing analysis from database (analyzed ${ageDisplay})`);
+        
+        // Log the search for analytics
+        if (userId) {
+          await logUserSearch(userId, username, platform as 'instagram' | 'tiktok');
+        }
+        
+        const response = NextResponse.json({
+          success: true,
+          data: {
+            ...existingAnalysis.data,
+            cached: true,
+            lastAnalyzedDisplay: ageDisplay
+          },
+          cached: true,
+          processingTime: Date.now() - startTime
+        });
+        return setCorsHeaders(response);
+      } else {
+        console.log('📝 No existing analysis found in database, performing fresh analysis...');
       }
+    } else {
+      console.log('🔄 Force refresh requested, performing fresh analysis...');
     }
 
     let scrapingResult;
