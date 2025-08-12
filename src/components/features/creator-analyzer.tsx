@@ -13,10 +13,10 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { useCreator } from '@/lib/creator-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
-import { GrowthChart } from '@/components/ui/growth-chart';
+import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw, TrendingUp } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -469,6 +469,15 @@ export function CreatorAnalyzer() {
                       </>
                     )}
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowGrowthChart(true)}
+                    className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Growth Chart
+                  </Button>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -915,19 +924,15 @@ export function CreatorAnalyzer() {
       )}
 
       {/* Growth Chart Modal */}
-      {result && result.growthData && (
-        <GrowthChart
+      {result && (
+        <GrowthChartModal
+          creator={{
+            username: result.profile.username,
+            platform: result.profile.platform,
+            displayName: result.profile.displayName
+          }}
           isOpen={showGrowthChart}
           onClose={() => setShowGrowthChart(false)}
-          growthData={{
-            previousFollowerCount: result.growthData.previousFollowerCount,
-            growthPercentage: result.growthData.growthPercentage,
-            currentFollowerCount: result.profile.followerCount,
-            lastAnalyzed: result.lastAnalyzed || result.scrapingDetails.timestamp,
-            previousAnalyzed: undefined // We could add this if we store more historical data
-          }}
-          username={result.profile.username}
-          platform={result.profile.platform}
         />
       )}
     </div>

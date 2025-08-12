@@ -9,7 +9,7 @@ import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-re
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
-import { GrowthChart } from '@/components/ui/growth-chart';
+import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { UserBookmarksService, UserBookmark } from '@/lib/user-bookmarks';
 import { supabase } from '@/lib/supabase';
@@ -700,28 +700,20 @@ export default function BookmarksPage() {
       )}
 
       {/* Growth Chart Modal */}
-      {selectedBookmarkForGrowth && (() => {
-        const key = `${selectedBookmarkForGrowth.username}_${selectedBookmarkForGrowth.platform}`;
-        const growthData = bookmarkGrowthData[key];
-        return growthData && (
-          <GrowthChart
-            isOpen={showGrowthChart}
-            onClose={() => {
-              setShowGrowthChart(false);
-              setSelectedBookmarkForGrowth(null);
-            }}
-            growthData={{
-              previousFollowerCount: growthData.previousFollowerCount,
-              growthPercentage: growthData.growthPercentage,
-              currentFollowerCount: selectedBookmarkForGrowth.followerCount,
-              lastAnalyzed: growthData.lastAnalyzed,
-              previousAnalyzed: undefined
-            }}
-            username={selectedBookmarkForGrowth.username}
-            platform={selectedBookmarkForGrowth.platform}
-          />
-        );
-      })()}
+      {selectedBookmarkForGrowth && (
+        <GrowthChartModal
+          creator={{
+            username: selectedBookmarkForGrowth.username,
+            platform: selectedBookmarkForGrowth.platform,
+            displayName: selectedBookmarkForGrowth.displayName
+          }}
+          isOpen={showGrowthChart}
+          onClose={() => {
+            setShowGrowthChart(false);
+            setSelectedBookmarkForGrowth(null);
+          }}
+        />
+      )}
     </div>
   );
 } 

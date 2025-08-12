@@ -785,18 +785,42 @@ class InstagramScraper extends PlaywrightBaseScraper {
     let followingCount = 0;
     
     try {
+      // Debug: Log a sample of the page content to see what we're working with
+      const contentSample = profileData.rawContent.substring(0, 500);
+      console.log('📄 Page content sample:', contentSample);
+      
       // Look for follower patterns in the content
       const followerMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*followers?/i);
+      console.log('👥 Follower matches found:', followerMatches);
       if (followerMatches) {
         followerCount = this.parseCount(followerMatches[1]);
       }
 
       const followingMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*following/i);
+      console.log('👥 Following matches found:', followingMatches);
       if (followingMatches) {
         followingCount = this.parseCount(followingMatches[1]);
       }
-    } catch {
-      console.log('⚠️ Could not parse follower counts from content');
+      
+      // Check if we're being blocked or if cookies expired
+      const isBlocked = profileData.rawContent.toLowerCase().includes('challenge') || 
+                       profileData.rawContent.toLowerCase().includes('login') ||
+                       profileData.rawContent.toLowerCase().includes('sign in') ||
+                       profileData.rawContent.toLowerCase().includes('verify');
+      
+      if (isBlocked) {
+        console.log('🚨 Page appears to be blocked or requiring authentication');
+        console.log('💡 This suggests cookies may have expired or IP is flagged');
+      }
+      
+      // Look for specific text that indicates we need fresh login
+      if (profileData.rawContent.includes('This content isn\'t available right now') || 
+          profileData.rawContent.includes('Something went wrong')) {
+        console.log('🔒 Instagram is blocking access - fresh cookies needed');
+      }
+      
+    } catch (error) {
+      console.log('⚠️ Could not parse follower counts from content:', error);
     }
 
     // Extract posts count

@@ -11,7 +11,7 @@ import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DiscoveryFilters, DiscoveryFilters as DiscoveryFiltersComponent } from '@/components/ui/discovery-filters';
 import { DiscoveryCreatorCard, DiscoveryCreator } from '@/components/ui/discovery-creator-card';
 import { PaginationComponent } from '@/components/ui/pagination-component';
-import { GrowthChart } from '@/components/ui/growth-chart';
+import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
@@ -663,22 +663,18 @@ export function CreatorDiscovery() {
       )}
 
       {/* Growth Chart Modal */}
-      {selectedCreatorForGrowth?.growthData && (
-        <GrowthChart
+      {selectedCreatorForGrowth && (
+        <GrowthChartModal
+          creator={{
+            username: selectedCreatorForGrowth.username,
+            platform: selectedCreatorForGrowth.platform,
+            displayName: selectedCreatorForGrowth.displayName
+          }}
           isOpen={showGrowthChart}
           onClose={() => {
             setShowGrowthChart(false);
             setSelectedCreatorForGrowth(null);
           }}
-          growthData={{
-            previousFollowerCount: selectedCreatorForGrowth.growthData.previousFollowerCount,
-            growthPercentage: selectedCreatorForGrowth.growthData.growthPercentage,
-            currentFollowerCount: selectedCreatorForGrowth.followerCount,
-            lastAnalyzed: selectedCreatorForGrowth.lastAnalysisDate || new Date().toISOString(),
-            previousAnalyzed: undefined
-          }}
-          username={selectedCreatorForGrowth.username}
-          platform={selectedCreatorForGrowth.platform}
         />
       )}
     </div>
