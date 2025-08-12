@@ -14,9 +14,10 @@ import { useCreator } from '@/lib/creator-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
 import { GrowthChartModal } from '@/components/features/growth-chart-modal';
+import { CreatorMatchingModal } from '@/components/features/creator-matching-modal';
 import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw, TrendingUp } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw, TrendingUp, Users } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -113,6 +114,7 @@ export function CreatorAnalyzer() {
   const [bookmarkedStatus, setBookmarkedStatus] = useState<boolean>(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showGrowthChart, setShowGrowthChart] = useState(false);
+  const [showCreatorMatching, setShowCreatorMatching] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string>('other');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -477,6 +479,15 @@ export function CreatorAnalyzer() {
                   >
                     <TrendingUp className="h-4 w-4" />
                     Growth Chart
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCreatorMatching(true)}
+                    className="flex items-center gap-2 text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
+                  >
+                    <Users className="h-4 w-4" />
+                    Find Match
                   </Button>
                 </div>
               </CardTitle>
@@ -933,6 +944,19 @@ export function CreatorAnalyzer() {
           }}
           isOpen={showGrowthChart}
           onClose={() => setShowGrowthChart(false)}
+        />
+      )}
+
+      {/* Creator Matching Modal */}
+      {result && (
+        <CreatorMatchingModal
+          creator={{
+            username: result.profile.username,
+            platform: result.profile.platform,
+            displayName: result.profile.displayName
+          }}
+          isOpen={showCreatorMatching}
+          onClose={() => setShowCreatorMatching(false)}
         />
       )}
     </div>
