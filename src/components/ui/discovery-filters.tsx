@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface DiscoveryFilters {
   platform: 'all' | 'instagram' | 'tiktok';
@@ -17,7 +19,8 @@ export interface DiscoveryFilters {
 interface DiscoveryFiltersProps {
   filters: DiscoveryFilters;
   onFiltersChange: (filters: DiscoveryFilters) => void;
-  onApplyFilters: () => void;
+  onApplyFilters: (filters?: DiscoveryFilters) => void;
+  isLoading?: boolean;
 }
 
 const categories = [
@@ -48,14 +51,28 @@ const followerRanges = [
   { label: 'Macro (1M+)', min: 1000000, max: 10000000 }
 ];
 
-export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: DiscoveryFiltersProps) {
+export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters, isLoading = false }: DiscoveryFiltersProps) {
   // Use temporary state to stage changes before applying
   const [tempFilters, setTempFilters] = useState<DiscoveryFilters>(filters);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Update tempFilters when filters prop changes (for reset functionality)
   useEffect(() => {
     setTempFilters(filters);
   }, [filters]);
+
+  // Count active filters
+  const getActiveFilterCount = (filterSet: DiscoveryFilters) => {
+    let count = 0;
+    if (filterSet.platform !== 'all') count++;
+    if (filterSet.category.length > 0) count++;
+    if (filterSet.minFollowers > 0 || filterSet.maxFollowers < 10000000) count++;
+    if (filterSet.verified !== undefined) count++;
+    if (filterSet.sortBy !== 'followers-desc') count++;
+    return count;
+  };
+
+  const activeFilterCount = getActiveFilterCount(tempFilters);
 
   const handlePlatformChange = (platform: 'all' | 'instagram' | 'tiktok') => {
     setTempFilters(prev => ({ ...prev, platform }));
@@ -88,7 +105,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
 
   const handleApply = () => {
     onFiltersChange(tempFilters);
-    onApplyFilters();
+    onApplyFilters(tempFilters); // Pass the filters directly to ensure immediate application
   };
 
   const handleReset = () => {
@@ -102,15 +119,34 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
     };
     setTempFilters(resetFilters);
     onFiltersChange(resetFilters);
-    onApplyFilters();
+    onApplyFilters(resetFilters); // Pass the reset filters directly
   };
 
   return (
     <Card className="gabooja-card">
-      <CardHeader>
-        <CardTitle className="text-lg">Filters</CardTitle>
+      <CardHeader 
+        className="cursor-pointer lg:cursor-default"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {activeFilterCount} active
+              </Badge>
+            )}
+          </div>
+          <div className="lg:hidden">
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </div>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className={`space-y-6 lg:block ${isExpanded ? 'block' : 'hidden'}`}>
         {/* Platform Filter */}
         <div>
           <h3 className="text-sm font-medium mb-3">Platform</h3>
@@ -241,10 +277,28 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters }: D
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-4 border-t">
-          <Button onClick={handleApply} className="w-full text-xs" size="sm">
-            Apply
+          <Button 
+            onClick={handleApply} 
+            className="w-full text-xs" 
+            size="sm"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                Applying...
+              </>
+            ) : (
+              'Apply Filters'
+            )}
           </Button>
-          <Button onClick={handleReset} variant="outline" className="w-full text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200" size="sm">
+          <Button 
+            onClick={handleReset} 
+            variant="outline" 
+            className="w-full text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200" 
+            size="sm"
+            disabled={isLoading}
+          >
             Reset All
           </Button>
         </div>

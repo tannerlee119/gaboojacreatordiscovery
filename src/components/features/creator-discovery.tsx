@@ -113,27 +113,27 @@ export function CreatorDiscovery() {
   const [currentPage, setCurrentPage] = useState(1);
   const [bookmarkUpdate, setBookmarkUpdate] = useState(0); // Force re-renders when bookmarks change
 
-  // Fetch discovery data
-  const fetchDiscoveryData = useCallback(async (page = 1) => {
+  // Fetch discovery data with specific filters
+  const fetchDiscoveryDataWithFilters = useCallback(async (filtersToUse: DiscoveryFilters, page = 1) => {
     setIsLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams({
-        platform: filters.platform,
+        platform: filtersToUse.platform,
         page: page.toString(),
         limit: '12',
-        sortBy: filters.sortBy,
-        minFollowers: filters.minFollowers.toString(),
-        maxFollowers: filters.maxFollowers.toString()
+        sortBy: filtersToUse.sortBy,
+        minFollowers: filtersToUse.minFollowers.toString(),
+        maxFollowers: filtersToUse.maxFollowers.toString()
       });
 
-      if (filters.category.length > 0) {
-        params.append('category', filters.category.join(','));
+      if (filtersToUse.category.length > 0) {
+        params.append('category', filtersToUse.category.join(','));
       }
 
-      if (filters.verified !== undefined) {
-        params.append('verified', filters.verified.toString());
+      if (filtersToUse.verified !== undefined) {
+        params.append('verified', filtersToUse.verified.toString());
       }
 
       const response = await fetch(`/api/discover-creators?${params}`);
@@ -149,7 +149,12 @@ export function CreatorDiscovery() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, []);
+
+  // Fetch discovery data using current filters (for backwards compatibility)
+  const fetchDiscoveryData = useCallback(async (page = 1) => {
+    await fetchDiscoveryDataWithFilters(filters, page);
+  }, [filters, fetchDiscoveryDataWithFilters]);
 
   // Load persisted state on mount
   const [isStateLoaded, setIsStateLoaded] = useState(false);
@@ -221,8 +226,10 @@ export function CreatorDiscovery() {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
-  const handleApplyFilters = () => {
-    fetchDiscoveryData(1);
+  const handleApplyFilters = (filtersToApply?: DiscoveryFilters) => {
+    // If specific filters are provided, use those; otherwise use current filters
+    const activeFilters = filtersToApply || filters;
+    fetchDiscoveryDataWithFilters(activeFilters, 1);
   };
 
   const handleBookmarkCreator = async (creator: DiscoveryCreator) => {
@@ -469,18 +476,19 @@ export function CreatorDiscovery() {
       </Card>
 
       {/* Main Content */}
-      <div className="grid lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Filters Sidebar - Full width on mobile, sidebar on desktop */}
+        <div className="lg:col-span-1 order-first">
           <DiscoveryFiltersComponent
             filters={filters}
             onFiltersChange={handleFiltersChange}
             onApplyFilters={handleApplyFilters}
+            isLoading={isLoading}
           />
         </div>
 
         {/* Discovery Results */}
-        <div className="lg:col-span-3" data-results-section>
+        <div className="lg:col-span-3 order-last" data-results-section>
           <Card className="gabooja-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
