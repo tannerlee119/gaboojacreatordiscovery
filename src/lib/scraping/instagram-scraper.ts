@@ -789,11 +789,29 @@ class InstagramScraper extends PlaywrightBaseScraper {
       const contentSample = profileData.rawContent.substring(0, 500);
       console.log('📄 Page content sample:', contentSample);
       
+      // Check if we're seeing signs of being blocked or redirected
+      const isBlocked = profileData.rawContent.includes('Please wait a few minutes before you try again') ||
+                       profileData.rawContent.includes('Try Again Later') ||
+                       profileData.rawContent.includes('We restrict certain activity') ||
+                       profileData.rawContent.includes('unusual activity') ||
+                       profileData.rawContent.includes('Sorry, this page') ||
+                       contentSample.length < 100;
+      
+      if (isBlocked) {
+        console.log('🚫 Instagram appears to be blocking or limiting access');
+        console.log('💡 This usually means cookies are expired or IP is rate limited');
+        throw new Error('Instagram access blocked - likely due to expired cookies or rate limiting');
+      }
+      
       // Look for follower patterns in the content
       const followerMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*followers?/i);
       console.log('👥 Follower matches found:', followerMatches);
       if (followerMatches) {
         followerCount = this.parseCount(followerMatches[1]);
+        console.log(`✅ Parsed follower count: ${followerCount}`);
+      } else {
+        console.log('⚠️ No follower count found in page content');
+        console.log('📝 Full content preview (first 1000 chars):', profileData.rawContent.substring(0, 1000));
       }
 
       const followingMatches = profileData.rawContent.match(/(\d[\d.,]*\s*(?:[KMB])?)\s*following/i);

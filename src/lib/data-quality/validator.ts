@@ -58,7 +58,10 @@ export class DataQualityValidator {
     // Check follower count validity
     const followerCount = Number(data.followerCount);
     if (!followerCount || followerCount <= 0 || followerCount > 1000000000) {
-      return { acceptable: false, reason: `Invalid follower count: ${followerCount}` };
+      return { 
+        acceptable: false, 
+        reason: `Invalid follower count: ${followerCount}. This usually indicates Instagram access is blocked due to expired cookies or rate limiting. Please update INSTAGRAM_COOKIES_JSON in environment variables.` 
+      };
     }
     
     // Reject test/invalid usernames
