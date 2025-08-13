@@ -314,8 +314,8 @@ export class CreatorMatchingService {
    * Get existing matches from database (for caching results)
    */
   static async getExistingMatches(
-    username: string, 
-    platform: 'instagram' | 'tiktok'
+    _username: string, 
+    _platform: 'instagram' | 'tiktok'
   ): Promise<CreatorMatch[]> {
     // This would query a creator_matches table if we implement caching
     // For now, return empty array

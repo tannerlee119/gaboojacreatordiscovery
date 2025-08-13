@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Users, ExternalLink, CheckCircle, AlertCircle, Search } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
 
 interface CreatorMatch {
   username: string;
@@ -48,13 +47,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && creator.username && creator.platform) {
-      fetchMatchingData();
-    }
-  }, [isOpen, creator.username, creator.platform]);
-
-  const fetchMatchingData = async () => {
+  const fetchMatchingData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -76,7 +69,13 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
     } finally {
       setLoading(false);
     }
-  };
+  }, [creator.username, creator.platform]);
+
+  useEffect(() => {
+    if (isOpen && creator.username && creator.platform) {
+      fetchMatchingData();
+    }
+  }, [isOpen, creator.username, creator.platform, fetchMatchingData]);
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 75) return 'bg-green-100 text-green-800 border-green-200';
@@ -255,7 +254,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-200">
-                    {matchingData.potentialMatches.map((match, index) => (
+                    {matchingData.potentialMatches.map((match, _index) => (
                       <div key={`${match.platform}-${match.username}`} className="p-4 hover:bg-gray-50">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">

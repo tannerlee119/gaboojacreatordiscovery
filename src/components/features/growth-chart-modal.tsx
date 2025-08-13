@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, TrendingUp, TrendingDown, Calendar, Users, AlertCircle } from 'lucide-react';
@@ -64,13 +64,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && creator.username && creator.platform) {
-      fetchGrowthData();
-    }
-  }, [isOpen, creator.username, creator.platform]);
-
-  const fetchGrowthData = async () => {
+  const fetchGrowthData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -92,7 +86,13 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
     } finally {
       setLoading(false);
     }
-  };
+  }, [creator.username, creator.platform]);
+
+  useEffect(() => {
+    if (isOpen && creator.username && creator.platform) {
+      fetchGrowthData();
+    }
+  }, [isOpen, creator.username, creator.platform, fetchGrowthData]);
 
   // Helper function to format large numbers
   const formatNumber = (num: number): string => {
@@ -184,7 +184,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
           text: 'Analysis Date',
           font: {
             size: 12,
-            weight: 'bold',
+            weight: 'bold' as const,
           },
         },
         ticks: {
@@ -201,11 +201,11 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
           text: 'Followers',
           font: {
             size: 12,
-            weight: 'bold',
+            weight: 'bold' as const,
           },
         },
         ticks: {
-          callback: (value: any) => formatNumber(Number(value)),
+          callback: (value: string | number) => formatNumber(Number(value)),
           font: {
             size: 11,
           },
