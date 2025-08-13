@@ -795,6 +795,12 @@ class InstagramScraper extends PlaywrightBaseScraper {
                        profileData.rawContent.includes('We restrict certain activity') ||
                        profileData.rawContent.includes('unusual activity') ||
                        profileData.rawContent.includes('Sorry, this page') ||
+                       profileData.rawContent.toLowerCase().includes('challenge') || 
+                       profileData.rawContent.toLowerCase().includes('login') ||
+                       profileData.rawContent.toLowerCase().includes('sign in') ||
+                       profileData.rawContent.toLowerCase().includes('verify') ||
+                       profileData.rawContent.includes('This content isn\'t available right now') || 
+                       profileData.rawContent.includes('Something went wrong') ||
                        contentSample.length < 100;
       
       if (isBlocked) {
@@ -818,23 +824,6 @@ class InstagramScraper extends PlaywrightBaseScraper {
       console.log('👥 Following matches found:', followingMatches);
       if (followingMatches) {
         followingCount = this.parseCount(followingMatches[1]);
-      }
-      
-      // Check if we're being blocked or if cookies expired
-      const isBlocked = profileData.rawContent.toLowerCase().includes('challenge') || 
-                       profileData.rawContent.toLowerCase().includes('login') ||
-                       profileData.rawContent.toLowerCase().includes('sign in') ||
-                       profileData.rawContent.toLowerCase().includes('verify');
-      
-      if (isBlocked) {
-        console.log('🚨 Page appears to be blocked or requiring authentication');
-        console.log('💡 This suggests cookies may have expired or IP is flagged');
-      }
-      
-      // Look for specific text that indicates we need fresh login
-      if (profileData.rawContent.includes('This content isn\'t available right now') || 
-          profileData.rawContent.includes('Something went wrong')) {
-        console.log('🔒 Instagram is blocking access - fresh cookies needed');
       }
       
     } catch (error) {
