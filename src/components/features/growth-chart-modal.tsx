@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { X, TrendingUp, TrendingDown, Calendar, Users, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, Users, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
   Chart as ChartJS,
@@ -226,19 +225,9 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-3">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">
-              Growth Analysis
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-bold">
+            Growth Analysis
+          </DialogTitle>
           
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <span className="font-medium">
