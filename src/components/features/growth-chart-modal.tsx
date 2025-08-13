@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, TrendingUp, TrendingDown, Calendar, Users } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Calendar, Users, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
   Chart as ChartJS,
@@ -263,7 +263,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <X className="h-5 w-5 text-red-400" />
+                  <AlertCircle className="h-5 w-5 text-red-400" />
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
