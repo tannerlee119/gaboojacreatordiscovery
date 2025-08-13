@@ -104,7 +104,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:bg-transparent [&>button]:data-[state=open]:bg-transparent">
         <DialogHeader className="space-y-3">
           <DialogTitle className="text-xl font-bold">
             Cross-Platform Creator Matching
