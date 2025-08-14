@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Gabooja Creator Discovery Platform - A Next.js application for discovering and analyzing social media creators across Instagram, TikTok, and YouTube. The platform provides AI-powered analysis, real-time engagement metrics, and creator discovery tools for marketing professionals.
+Gabooja Creator Discovery Platform - A comprehensive Next.js application for discovering and analyzing social media creators across Instagram and TikTok. The platform provides AI-powered analysis, real-time engagement metrics, creator discovery tools, growth trend analysis, cross-platform creator matching, and advanced filtering capabilities for marketing professionals.
 
 ## Development Commands
 ```bash
@@ -33,8 +33,8 @@ Ensure these environment variables are configured in `.env.local`:
 - `OPENAI_API_KEY` - OpenAI API access for creator analysis
 - `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Database connection
 - `SUPABASE_SERVICE_ROLE_KEY` - For server-side database operations
-- `INSTAGRAM_SESSION_ID` - Instagram scraping (optional)
-- `INSTAGRAM_COOKIES_JSON` - Instagram session cookies as JSON array (optional)
+- `INSTAGRAM_SESSION_ID` - Instagram scraping (deprecated, use cookies instead)
+- `INSTAGRAM_COOKIES_JSON` - **CRITICAL**: Fresh Instagram cookies in JSON array format for authentication
 - `TIKTOK_COOKIES_JSON` - TikTok session cookies as JSON array (optional)
 - `NODE_ENV` - Set to 'development' for local development
 
@@ -46,8 +46,9 @@ Ensure these environment variables are configured in `.env.local`:
 - **Database**: Supabase (PostgreSQL)
 - **Styling**: Tailwind CSS 4.0
 - **UI Components**: Radix UI via Shadcn/ui
-- **Web Scraping**: Playwright (Chromium)
-- **AI Analysis**: OpenAI GPT models
+- **Web Scraping**: Playwright (Chromium) with enhanced error detection
+- **AI Analysis**: OpenAI GPT models with cost optimization
+- **Data Visualization**: Chart.js for growth trend analysis
 - **Icons**: Lucide React
 
 ### Key Architectural Components
@@ -70,26 +71,55 @@ Ensure these environment variables are configured in `.env.local`:
    - `quality-scorer.ts` - Data quality scoring system
 
 4. **Database Layer** (`src/lib/database/`)
-   - `supabase-service.ts` - Main database operations
+   - `supabase-service.ts` - Main database operations with real-time data access
    - `creator-service.ts` - Creator-specific database functions
    - `bookmark-service.ts` - Bookmark persistence for authenticated users
+   - `growth-data-service.ts` - Historical growth data processing and analysis
    - Supports both RPC functions and direct table operations
+   - Hybrid approach for live data vs cached views
+
+5. **Creator Matching System** (`src/lib/creator-matching/`)
+   - `matching-service.ts` - Multi-signal cross-platform creator identification
+   - Weighted confidence scoring with display name, bio, website, and username analysis
+   - Future-ready caching architecture for match results
+
+6. **User Management** (`src/lib/`)
+   - `user-bookmarks.ts` - User-specific bookmark management with database integration
+   - `bookmarks.ts` - Local storage fallback for non-authenticated users
+   - Seamless transition between authenticated and guest experiences
 
 ### Core Features
 
 #### Creator Analysis Workflow
 1. User inputs creator username and platform
-2. Playwright scraper extracts profile data and screenshots
-3. Data quality validation and normalization
-4. AI analysis via OpenAI with cost optimization
-5. Results stored in Supabase with full metadata
-6. Analysis displayed in responsive UI
+2. Playwright scraper extracts profile data and screenshots with enhanced error detection
+3. Data quality validation and normalization with detailed feedback
+4. AI analysis via OpenAI with intelligent cost optimization
+5. Results stored in Supabase with full metadata and analysis history
+6. Analysis displayed in responsive UI with refresh capabilities
+7. Growth trend analysis with historical data tracking
 
 #### Discovery System
-- Creator database with filtering by platform, category, followers
-- Bookmark system with user-specific storage
-- Trending creators based on growth metrics
-- Pagination and search functionality
+- Creator database with advanced filtering by platform, category, followers, verification status
+- Real-time filter application with loading states and active filter badges
+- Bookmark system with user-specific storage and commenting capabilities
+- Trending creators based on growth metrics with clickable growth trend indicators
+- Pagination and search functionality with state persistence
+- Mobile-responsive collapsible filters
+
+#### Growth Analysis System
+- Historical follower count tracking across multiple analyses
+- Interactive Chart.js visualizations with data points and growth percentages
+- Growth trend modals accessible from discovery, bookmarks, and analysis pages
+- Comprehensive growth metrics including absolute and percentage changes
+- Timeline analysis with days between data points
+
+#### Cross-Platform Creator Matching
+- Multi-signal algorithm for identifying creators across Instagram and TikTok
+- Weighted confidence scoring based on display name, bio, website, and username similarity
+- High-confidence match suggestions with detailed reasoning
+- Manual verification workflow with direct profile links
+- Comprehensive matching factors analysis
 
 ### Authentication & Context
 - **Custom Authentication**: `CustomAuthService` in `src/lib/custom-auth.ts` - Username/password auth with bcrypt hashing
@@ -101,18 +131,24 @@ Ensure these environment variables are configured in `.env.local`:
 ### API Routes Structure
 ```
 /api/
-├── analyze-creator/ - Main creator analysis endpoint (POST)
-├── discover-creators/ - Creator discovery with filtering (GET)
+├── analyze-creator/ - Main creator analysis endpoint with refresh capabilities (POST)
+├── discover-creators/ - Creator discovery with advanced filtering and real-time data (GET)
+├── growth-data/ - Historical growth analysis endpoint (GET)
+├── creator-matches/ - Cross-platform creator matching endpoint (GET)
 ├── ai-metrics/ - AI usage tracking (GET)
-└── data-quality/ - Data validation endpoints (GET)
+├── data-quality/ - Data validation endpoints (GET)
+└── debug-env/ - Environment debugging for development (GET)
 ```
 
 **Key API Features:**
 - Rate limiting (10 requests per window) via `rate-limiter.ts`
 - CORS configuration in `cors.ts`
-- Input validation with Zod schemas
-- Data quality scoring and normalization
-- Comprehensive error handling with user-friendly messages
+- Input validation with Zod schemas and comprehensive error messages
+- Data quality scoring and normalization with Instagram-specific feedback
+- Enhanced error handling with detailed debugging information
+- Real-time data validation and cache invalidation
+- Growth data processing with percentage calculations and timeline analysis
+- Multi-signal creator matching with confidence scoring
 
 ### Security & Rate Limiting
 - CORS configuration in `src/lib/security/cors.ts`
@@ -120,9 +156,17 @@ Ensure these environment variables are configured in `.env.local`:
 - Environment variable validation for API keys
 
 ### Component Architecture
-- **Features**: High-level feature components (`creator-analyzer.tsx`, `creator-discovery.tsx`)
-- **UI**: Reusable Shadcn/ui components with consistent styling
-- **Layout**: Conditional navigation and responsive layouts
+- **Features**: High-level feature components with advanced functionality:
+  - `creator-analyzer.tsx` - Analysis with refresh and state restoration
+  - `creator-discovery.tsx` - Discovery with real-time filtering and pagination
+  - `growth-chart-modal.tsx` - Interactive Chart.js growth visualization
+  - `creator-matching-modal.tsx` - Cross-platform creator identification UI
+- **UI**: Reusable Shadcn/ui components with consistent styling:
+  - `discovery-filters.tsx` - Advanced filtering with mobile responsiveness
+  - `discovery-creator-card.tsx` - Creator cards with growth trend indicators
+  - `analysis-modal.tsx` - Comprehensive analysis display with refresh capabilities
+  - `bookmark-comment-modal.tsx` - User annotation system
+- **Layout**: Conditional navigation and responsive layouts with state persistence
 
 ## Development Guidelines
 
@@ -238,8 +282,9 @@ Set these in your Vercel project settings:
 - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
-- `INSTAGRAM_SESSION_ID` - Instagram session (optional)
-- `INSTAGRAM_COOKIES_JSON` - Instagram cookies (optional)
+- `INSTAGRAM_SESSION_ID` - Instagram session (deprecated, use cookies instead)
+- `INSTAGRAM_COOKIES_JSON` - **CRITICAL**: Fresh Instagram cookies in JSON array format for authentication
+- `TIKTOK_COOKIES_JSON` - TikTok session cookies as JSON array (optional)
 - `NODE_ENV` - Set to `production`
 
 ### Configuration Details
@@ -305,3 +350,97 @@ The system uses multiple tables for creator data:
 - `user_bookmarks` - User bookmark relationships
 
 When adding new platforms or modifying data structures, ensure all layers (scraping → analysis → storage → discovery → bookmarks) are updated consistently.
+
+## Critical Production Issues & Solutions
+
+### Instagram Scraping Authentication (ONGOING MAINTENANCE)
+
+**Issue**: Instagram requires valid session cookies for profile access. Without fresh cookies, all Instagram analyses fail with "Invalid follower count: 0" errors.
+
+**Symptoms**:
+- Instagram creators return follower count 0
+- Error message: "Invalid follower count: 0. This usually indicates Instagram access is blocked due to expired cookies"
+- TikTok creators work fine, only Instagram affected
+
+**Solution Process**:
+1. **Get Fresh Cookies**: Log into Instagram in browser, extract cookies using developer tools
+2. **Format Cookies**: Convert to JSON array format with proper domain/path/security settings
+3. **Update Environment**: Set `INSTAGRAM_COOKIES_JSON` in Vercel dashboard
+4. **Redeploy**: Trigger new deployment or wait for automatic deployment
+
+**Cookie Format Example**:
+```json
+[
+  {
+    "name": "sessionid",
+    "value": "75565908758%3AHz2awM0WNj0XC3%3A5%3AAYecAdAwhHV...",
+    "domain": ".instagram.com",
+    "path": "/",
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "csrftoken", 
+    "value": "9tg3kmionV7apNe2RA3wRmuqMlrgxiYj",
+    "domain": ".instagram.com",
+    "path": "/",
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  }
+]
+```
+
+**Browser Console Script** (run on instagram.com while logged in):
+```javascript
+copy(JSON.stringify(document.cookie.split(';').map(c => {
+  const [name, value] = c.trim().split('=');
+  return {
+    name: name,
+    value: value,
+    domain: '.instagram.com',
+    path: '/',
+    httpOnly: false,
+    secure: true,
+    sameSite: 'None'
+  };
+})))
+```
+
+**Maintenance Schedule**: Update Instagram cookies every 1-2 weeks or when scraping failures occur.
+
+**Monitoring**: Enhanced error messages in scraper provide clear guidance when cookies need refreshing:
+- "Instagram access blocked - likely due to expired cookies or rate limiting"
+- Detailed page content logging to diagnose blocking patterns
+- Cookie injection status logging for debugging
+
+### Recent Architectural Improvements
+
+#### Growth Trend Analysis System (Added 2024)
+- **Files Added**: 
+  - `src/lib/database/growth-data-service.ts` - Historical data processing
+  - `src/app/api/growth-data/route.ts` - Growth data API endpoint
+  - `src/components/features/growth-chart-modal.tsx` - Chart.js visualization
+- **Features**: Interactive follower growth charts with percentage calculations and timeline analysis
+- **Integration**: Accessible from discovery cards, bookmarks, and analysis modals
+
+#### Cross-Platform Creator Matching (Added 2024)  
+- **Files Added**:
+  - `src/lib/creator-matching/matching-service.ts` - Multi-signal matching algorithm
+  - `src/app/api/creator-matches/route.ts` - Matching API endpoint
+  - `src/components/features/creator-matching-modal.tsx` - Matching results UI
+- **Features**: Identifies same creators across Instagram and TikTok with confidence scoring
+- **Algorithm**: Weighted analysis of display name, bio, website, and username similarity
+
+#### Advanced Discovery Filters (Enhanced 2024)
+- **Files Modified**: `src/components/ui/discovery-filters.tsx`, `src/components/features/creator-discovery.tsx`
+- **Improvements**: Real-time filter application, mobile responsiveness, active filter badges
+- **Bug Fix**: Fixed critical issue where "Apply" button required navigation to take effect
+- **UX**: Collapsible mobile interface with loading states and visual feedback
+
+#### Enhanced Modal System (Refined 2024)
+- **Issue Fixed**: Duplicate close buttons in modals causing UI confusion
+- **Solution**: Custom Tailwind classes to override Shadcn Dialog focus styles
+- **Implementation**: `[&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:bg-transparent`
+- **Result**: Clean, single close button without auto-highlighting when modals open
