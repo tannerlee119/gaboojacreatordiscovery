@@ -203,7 +203,7 @@ export async function analyzeWithOpenAI(
  * Generate tailored prompt based on complexity level
  */
 function generatePrompt(level: AnalysisComplexity['level'], platform: Platform, username: string): string {
-  const basePrompt = `You are a social media marketing analyst. Analyze this ${platform} profile page layout for business and marketing insights. Focus on the publicly visible profile information including follower metrics, verification status, bio content, and overall brand presentation for user @${username}.
+  const basePrompt = `You are a social media marketing analyst. Analyze this ${platform} profile page layout for business and marketing insights. Focus primarily on the publicly visible profile information including follower metrics, bio content, and overall brand presentation for user @${username}. Note: verification status is only a minor factor - prioritize content quality and engagement over verification badges.
 
 IMPORTANT: You must respond ONLY in valid JSON format. Do not include any explanatory text outside the JSON structure.
 
@@ -239,7 +239,7 @@ Provide a basic creator analysis based on the visual information available:
 4. Key Strengths: Observable strengths from the profile
 5. Overall Assessment: Brief summary
 
-Focus only on what's clearly visible in the screenshot. Make confident assessments based on profile aesthetics, follower counts, verification status, bio content, and overall presentation quality.
+Focus only on what's clearly visible in the screenshot. Make confident assessments based on profile aesthetics, follower counts, bio content, and overall presentation quality. Verification is a minor factor.
 
 Respond in JSON format with these exact keys:
 {"creator_score": "X/10 - reason", "category": "[choose from predefined list]", "brand_potential": "assessment", "key_strengths": "strengths", "engagement_quality": "based on profile quality", "content_style": "visual style assessment", "audience_demographics": "inferred from profile", "collaboration_potential": "potential assessment", "overall_assessment": "summary"}`
@@ -250,15 +250,15 @@ Respond in JSON format with these exact keys:
 Provide a comprehensive creator analysis based on the visible profile information:
 1. Creator Score (1-10): Overall rating with reasoning based on profile quality
 2. Category: Choose the single best matching category from the predefined list
-3. Brand Potential: Partnership suitability based on follower count, verification, presentation
+3. Brand Potential: Partnership suitability based on follower count, content quality, and presentation
 4. Key Strengths: What makes them stand out from the profile
-5. Engagement Quality: Assessment based on follower count, verification, and profile professionalism
+5. Engagement Quality: Assessment based on follower count, content quality, and profile professionalism
 6. Content Style: Visual/aesthetic approach observed in the profile
 7. Audience Demographics: Likely audience characteristics inferred from profile elements
 8. Collaboration Potential: Assessment based on profile professionalism and metrics
 9. Overall Assessment: Summary and recommendations
 
-Analyze the profile presentation, follower counts, verification status, bio quality, profile aesthetics, and overall brand consistency. Provide confident insights based on these observable elements.
+Analyze the profile presentation, follower counts, bio quality, profile aesthetics, and overall brand consistency. Provide confident insights based on these observable elements. Consider verification status as only a minor factor.
 
 Respond in JSON format with exact keys:
 {"creator_score": "X/10 - reason", "category": "[single category from list]", "brand_potential": "assessment", "key_strengths": "specific strengths", "engagement_quality": "quality assessment", "content_style": "style description", "audience_demographics": "demographic insights", "collaboration_potential": "collaboration assessment", "overall_assessment": "summary and recommendations"}`
@@ -271,13 +271,13 @@ Provide an in-depth, premium creator analysis based on comprehensive observation
 2. Category: Select the most accurate single category from the predefined list
 3. Brand Potential: Detailed partnership suitability with specific recommendations
 4. Key Strengths: Comprehensive analysis of unique value propositions
-5. Engagement Quality: Deep assessment based on follower metrics, verification, and profile quality
+5. Engagement Quality: Deep assessment based on follower metrics, content quality, and profile professionalism
 6. Content Style: Detailed visual/aesthetic approach analysis
 7. Audience Demographics: Comprehensive audience profiling based on profile elements
 8. Collaboration Potential: Detailed collaboration assessment with specific opportunities
 9. Overall Assessment: In-depth summary with actionable recommendations
 
-Conduct a thorough analysis of all visible elements: follower counts, verification badges, bio content, profile aesthetics, username professionalism, link presence, and overall brand presentation. Provide strategic insights and actionable recommendations for brand partnerships based on these observable factors.
+Conduct a thorough analysis of all visible elements: follower counts, bio content, profile aesthetics, username professionalism, link presence, and overall brand presentation. Verification badges are only a minor consideration. Provide strategic insights and actionable recommendations for brand partnerships based on these observable factors.
 
 Respond in JSON format with these exact keys:
 {"creator_score": "X/10 - detailed reason", "category": "[exact category from predefined list]", "brand_potential": "comprehensive assessment", "key_strengths": "detailed strengths analysis", "engagement_quality": "detailed quality assessment", "content_style": "comprehensive style analysis", "audience_demographics": "detailed demographic insights", "collaboration_potential": "detailed collaboration assessment", "overall_assessment": "comprehensive summary and strategic recommendations"}`

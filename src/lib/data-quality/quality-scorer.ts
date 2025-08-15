@@ -292,15 +292,8 @@ export class DataQualityScorer {
         break;
         
       case 'tiktok':
-        if (!data.metrics || !(data.metrics as Record<string, unknown>).videoCount) {
-          issues.push({
-            field: 'metrics.videoCount',
-            severity: 'warning',
-            message: 'TikTok profiles should include video count',
-            impact: 10
-          });
-          score -= 10;
-        }
+        // Video count is not always available from TikTok screenshots, so we don't penalize for missing it
+        // We focus on like count and other available metrics instead
         break;
         
     }

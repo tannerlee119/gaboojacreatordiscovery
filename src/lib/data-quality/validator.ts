@@ -84,10 +84,10 @@ export class DataQualityValidator {
     }
     
     if (platform === 'tiktok') {
-      // TikTok profiles should have video count or like count
+      // TikTok profiles should have like count (video count may not be available from screenshots)
       const metrics = data.metrics as Record<string, unknown>;
-      if (!metrics || (!Number(metrics.videoCount) && !Number(metrics.likeCount))) {
-        return { acceptable: false, reason: 'TikTok profile missing video or like count' };
+      if (!metrics || !Number(metrics.likeCount)) {
+        return { acceptable: false, reason: 'TikTok profile missing like count' };
       }
     }
     

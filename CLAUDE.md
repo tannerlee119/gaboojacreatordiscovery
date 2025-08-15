@@ -444,3 +444,9 @@ copy(JSON.stringify(document.cookie.split(';').map(c => {
 - **Solution**: Custom Tailwind classes to override Shadcn Dialog focus styles
 - **Implementation**: `[&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:bg-transparent`
 - **Result**: Clean, single close button without auto-highlighting when modals open
+
+#### TikTok Analysis Improvements (2024)
+- **Verification Weight Reduction**: Updated AI analysis prompts to treat verification as minor factor, prioritizing content quality and engagement over verification badges
+- **Video Count Error Fix**: Removed video count requirements from TikTok validation since video counts aren't available from profile screenshots
+- **Enhanced Posts Loading**: Improved TikTok scraper with multiple strategies for loading videos, better error handling for "Something went wrong" scenarios
+- **Authentication Guidance**: Enhanced logging to explain when TikTok cookies are needed for full video access

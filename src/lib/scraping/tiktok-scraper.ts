@@ -1,5 +1,5 @@
 import { PlaywrightBaseScraper, ScrapingResult } from './playwright-base-scraper';
-import { TikTokMetrics } from '@/lib/types';
+import { TikTokMetrics, TikTokVideo } from '@/lib/types';
 
 interface TikTokScrapingResult extends ScrapingResult {
   data?: {
@@ -60,6 +60,7 @@ class TikTokScraper extends PlaywrightBaseScraper {
       } else {
         console.log('⚠️ No TIKTOK_COOKIES_JSON found - using anonymous access');
         console.log('   💡 Add TikTok cookies to .env.local for better access to posts and content');
+        console.log('   ⚠️ Without authentication, videos may show "Something went wrong" but profile data will still be available');
       }
 
       // Set optimal viewport for TikTok (mobile-first design)
@@ -207,8 +208,33 @@ class TikTokScraper extends PlaywrightBaseScraper {
         };
       }
 
-      // Extract profile data
+      // Extract profile data and videos
+      console.log('📊 Extracting profile data and videos...');
       const profileData = await this.extractProfileData(username);
+      
+      // Try to load and extract recent videos
+      console.log('🎬 Attempting to extract recent videos...');
+      const recentVideos = await this.extractRecentVideos(username);
+      
+      // Update metrics with video data
+      if (profileData && recentVideos.length > 0) {
+        const totalViews = recentVideos.reduce((sum, video) => sum + video.views, 0);
+        const totalLikes = recentVideos.reduce((sum, video) => sum + video.likes, 0);
+        
+        profileData.metrics.averageViews = Math.round(totalViews / recentVideos.length);
+        profileData.metrics.averageLikes = Math.round(totalLikes / recentVideos.length);
+        profileData.metrics.recentVideos = recentVideos;
+        // Note: Don't set videoCount since we only extract a limited number of videos from the visible page
+        
+        // Calculate engagement rate if we have follower count
+        if (profileData.followerCount > 0) {
+          profileData.metrics.engagementRate = Number((profileData.metrics.averageLikes / profileData.followerCount * 100).toFixed(2));
+        }
+        
+        console.log(`✅ Extracted ${recentVideos.length} recent videos with metrics`);
+      } else {
+        console.log('⚠️ No videos extracted or profile data missing');
+      }
       
       // Take screenshot
       const screenshot = await this.page.screenshot({ 
@@ -295,6 +321,198 @@ class TikTokScraper extends PlaywrightBaseScraper {
     
     console.log('✅ No clear error conditions detected, proceeding with analysis');
     return { success: true, method: 'scraping' };
+  }
+
+  private async extractRecentVideos(_username: string): Promise<TikTokVideo[]> {
+    if (!this.page) {
+      console.log('❌ Page not available for video extraction');
+      return [];
+    }
+
+    try {
+      console.log('🎬 Looking for video elements...');
+      
+      // Try multiple strategies to load videos
+      console.log('📜 Attempting to load videos with multiple strategies...');
+      
+      // Strategy 1: Wait for videos tab to be clickable and click it
+      try {
+        console.log('🎯 Strategy 1: Looking for Videos tab...');
+        const videosTab = await this.page.locator('text=Videos').first();
+        if (await videosTab.isVisible({ timeout: 5000 })) {
+          await videosTab.click();
+          console.log('✅ Clicked Videos tab');
+          await this.page.waitForTimeout(3000);
+        }
+      } catch {
+        console.log('⚠️ Videos tab not found or not clickable');
+      }
+      
+      // Strategy 2: Scroll down to trigger video loading
+      try {
+        console.log('📜 Strategy 2: Scrolling to trigger loading...');
+        for (let i = 0; i < 3; i++) {
+          await this.page.evaluate(() => {
+            window.scrollTo(0, window.innerHeight + (window.innerHeight * 0.5));
+          });
+          await this.page.waitForTimeout(2000);
+          
+          // Check if videos loaded
+          const hasVideos = await this.page.locator('a[href*="/video/"]').count() > 0;
+          if (hasVideos) {
+            console.log('✅ Videos detected after scrolling');
+            break;
+          }
+        }
+        
+        // Scroll back up to see profile info
+        await this.page.evaluate(() => {
+          window.scrollTo(0, 0);
+        });
+        await this.page.waitForTimeout(1500);
+      } catch {
+        console.log('⚠️ Scrolling strategy failed, continuing...');
+      }
+      
+      // Strategy 3: Wait for any dynamic content to load
+      try {
+        console.log('⏳ Strategy 3: Waiting for dynamic content...');
+        await this.page.waitForLoadState('networkidle', { timeout: 10000 });
+      } catch {
+        console.log('⚠️ Network idle timeout, continuing...');
+      }
+      
+      // Wait for video grid to load - try multiple selectors
+      const videoSelectors = [
+        '[data-e2e="user-post-item"]',
+        '[data-e2e="user-post-item-list"] > div',
+        'div[data-e2e*="video"]',
+        'a[href*="/video/"]',
+        'div[style*="video"]',
+        'div[class*="video"]',
+        'div[class*="DivItemContainer"]',
+        'div[class*="tiktok-"]',
+        '[role="button"] img', // Video thumbnails
+        'div > div > img[src*="tiktok"]' // Generic TikTok image containers
+      ];
+      
+      let videoElements = null;
+      
+      for (const selector of videoSelectors) {
+        try {
+          await this.page.waitForSelector(selector, { timeout: 10000 });
+          videoElements = await this.page.locator(selector).all();
+          if (videoElements.length > 0) {
+            console.log(`✅ Found ${videoElements.length} video elements with selector: ${selector}`);
+            break;
+          }
+        } catch {
+          console.log(`⚠️ Selector ${selector} not found`);
+        }
+      }
+
+      if (!videoElements || videoElements.length === 0) {
+        console.log('❌ No video elements found on profile');
+        
+        // Check if there's a "Something went wrong" or "No videos" message
+        const pageText = await this.page.textContent('body') || '';
+        if (pageText.includes('Something went wrong')) {
+          console.log('⚠️ TikTok shows "Something went wrong" - videos section failed to load');
+          console.log('💡 This often happens due to authentication requirements or rate limiting');
+          console.log('✅ Profile data (followers, likes, bio) is still available for analysis');
+        } else if (pageText.includes('No videos yet') || pageText.includes('This user hasn\'t posted')) {
+          console.log('📭 User has no videos posted');
+        } else {
+          console.log('🔍 Videos may be loading asynchronously or require different selectors');
+        }
+        
+        return [];
+      }
+
+      console.log(`🔍 Extracting data from ${videoElements.length} videos...`);
+      const videos: TikTokVideo[] = [];
+      
+      // Limit to first 6 videos to avoid long processing times
+      const videosToProcess = Math.min(videoElements.length, 6);
+      
+      for (let i = 0; i < videosToProcess; i++) {
+        try {
+          const videoElement = videoElements[i];
+          
+          // Extract video data using page.evaluate with the element
+          const videoData = await videoElement.evaluate((element) => {
+            // Find thumbnail image
+            const img = element.querySelector('img');
+            const thumbnailUrl = img?.src || '';
+            
+            // Try to find video link to extract ID
+            const link = element.querySelector('a[href*="/video/"]') || element.closest('a[href*="/video/"]');
+            const href = link?.getAttribute('href') || '';
+            const videoIdMatch = href.match(/\/video\/(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : `video_${Date.now()}_${Math.random()}`;
+            
+            // Try to extract description from alt text or nearby text
+            const description = img?.getAttribute('alt') || 
+                              element.textContent?.trim().substring(0, 100) || 
+                              '';
+            
+            return {
+              id: videoId,
+              thumbnailUrl,
+              description,
+              href
+            };
+          });
+          
+          // Try to extract metrics if available in the element
+          const metricsData = await videoElement.evaluate((element) => {
+            const text = element.textContent || '';
+            
+            // Look for view counts (may not be visible on profile grid)
+            const viewMatch = text.match(/([\d.]+[KMB]?)\s*views?/i);
+            const views = viewMatch ? parseFloat(viewMatch[1].replace(/[KMB]/g, '')) * 
+                         (viewMatch[1].includes('K') ? 1000 : 
+                          viewMatch[1].includes('M') ? 1000000 : 
+                          viewMatch[1].includes('B') ? 1000000000 : 1) : 0;
+            
+            // Look for like counts
+            const likeMatch = text.match(/([\d.]+[KMB]?)\s*likes?/i);
+            const likes = likeMatch ? parseFloat(likeMatch[1].replace(/[KMB]/g, '')) * 
+                         (likeMatch[1].includes('K') ? 1000 : 
+                          likeMatch[1].includes('M') ? 1000000 : 
+                          likeMatch[1].includes('B') ? 1000000000 : 1) : 0;
+            
+            return { views: Math.floor(views), likes: Math.floor(likes) };
+          });
+          
+          if (videoData.thumbnailUrl) {
+            videos.push({
+              id: videoData.id,
+              thumbnailUrl: videoData.thumbnailUrl,
+              description: videoData.description,
+              views: metricsData.views,
+              likes: metricsData.likes,
+              comments: 0, // Not available in grid view
+              shares: 0, // Not available in grid view
+              timestamp: new Date(), // Approximate - would need individual video pages for exact timestamp
+              duration: 0 // Not available in grid view
+            });
+            
+            console.log(`📹 Video ${i + 1}: ${videoData.description.substring(0, 50)}... (${metricsData.views} views, ${metricsData.likes} likes)`);
+          }
+          
+        } catch (error) {
+          console.log(`⚠️ Error extracting video ${i + 1}:`, error);
+        }
+      }
+      
+      console.log(`✅ Successfully extracted ${videos.length} videos`);
+      return videos;
+      
+    } catch (error) {
+      console.log('❌ Error during video extraction:', error);
+      return [];
+    }
   }
 
   private async extractProfileData(username: string) {
@@ -546,8 +764,14 @@ class TikTokScraper extends PlaywrightBaseScraper {
       const followerCount = this.parseNumber(followersRaw);
       const likeCount = this.parseNumber(likesRaw);
       
-      // Clean up bio text
-      const bio = bioRaw.replace(/Something went wrong.*$/i, '').trim();
+      // Clean up bio text - remove error messages and extra content
+      const bio = bioRaw
+        .replace(/Something went wrong.*$/i, '')
+        .replace(/Try again.*$/i, '')
+        .replace(/Videos.*$/i, '')
+        .replace(/Liked.*$/i, '')
+        .replace(/\{.*$/g, '') // Remove any JSON-like content
+        .trim();
       
       // Check for verification indicators in the page text
       const isVerified = pageText.includes('verified') || 
