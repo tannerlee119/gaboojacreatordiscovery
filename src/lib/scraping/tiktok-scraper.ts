@@ -286,11 +286,32 @@ class TikTokScraper extends PlaywrightBaseScraper {
         console.log('⚠️ No videos extracted or profile data missing');
       }
       
+      // Wait a bit more for any final loading, then take screenshot
+      console.log('📸 Preparing to take screenshot...');
+      await this.page.waitForTimeout(3000);
+      
+      // Check if posts/videos are actually visible before screenshot
+      const postsVisible = await this.page.evaluate(() => {
+        const videoLinks = document.querySelectorAll('a[href*="/video/"]');
+        const videoThumbnails = document.querySelectorAll('img[src*="tiktok"]');
+        return {
+          videoLinks: videoLinks.length,
+          thumbnails: videoThumbnails.length,
+          hasVideosSection: document.querySelector('[data-e2e="user-post-item"]') !== null,
+          hasSomethingWrong: document.body.textContent?.includes('Something went wrong') || false
+        };
+      });
+      
+      console.log(`📊 Posts visibility check: ${JSON.stringify(postsVisible)}`);
+      
       // Take screenshot
       const screenshot = await this.page.screenshot({ 
         fullPage: true,
-        type: 'png'
+        type: 'png',
+        timeout: 30000 // Add timeout to avoid hanging
       });
+      
+      console.log('📸 Screenshot captured successfully');
     
     return {
       success: true,
@@ -502,17 +523,38 @@ class TikTokScraper extends PlaywrightBaseScraper {
       // Try multiple strategies to load videos
       console.log('📜 Attempting to load videos with multiple strategies...');
       
-      // Strategy 1: Wait for videos tab to be clickable and click it
+      // Strategy 1: Wait for and click Videos tab (critical for posts to appear)
       try {
         console.log('🎯 Strategy 1: Looking for Videos tab...');
-        const videosTab = await this.page.locator('text=Videos').first();
-        if (await videosTab.isVisible({ timeout: 5000 })) {
-          await videosTab.click();
-          console.log('✅ Clicked Videos tab');
-          await this.page.waitForTimeout(3000);
+        const videosTabSelectors = [
+          'text=Videos',
+          '[data-e2e="videos-tab"]',
+          'div[role="tablist"] div:has-text("Videos")',
+          'a[href*="tab=videos"]',
+          'div:has-text("Videos"):not(:has-text("No videos"))'
+        ];
+        
+        let videosTab = null;
+        for (const selector of videosTabSelectors) {
+          try {
+            videosTab = await this.page.locator(selector).first();
+            if (await videosTab.isVisible({ timeout: 3000 })) {
+              console.log(`✅ Found Videos tab with selector: ${selector}`);
+              await videosTab.click();
+              console.log('🎬 Clicked Videos tab to load posts');
+              await this.page.waitForTimeout(5000); // Wait longer for posts to load
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+        
+        if (!videosTab) {
+          console.log('⚠️ Videos tab not found with any selector');
         }
       } catch {
-        console.log('⚠️ Videos tab not found or not clickable');
+        console.log('⚠️ Videos tab interaction failed');
       }
       
       // Strategy 2: Scroll down to trigger video loading
