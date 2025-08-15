@@ -122,10 +122,10 @@ Ensure these environment variables are configured in `.env.local`:
 - Comprehensive matching factors analysis
 
 ### Authentication & Context
-- **Custom Authentication**: `CustomAuthService` in `src/lib/custom-auth.ts` - Username/password auth with bcrypt hashing
-- **Supabase Authentication**: Alternative auth provider with conditional features  
-- `SupabaseAuthProvider` - Global auth state management
-- `CreatorProvider` - Analysis history and state management
+- **Custom Authentication**: Simple username/password system in `src/lib/simple-auth.ts` with bcrypt hashing
+- **Supabase Authentication**: Alternative auth provider with conditional features via `src/lib/supabase-auth-context.tsx`
+- **Auth Context**: `src/lib/auth-context.tsx` - Global auth state management
+- **Creator Context**: `src/lib/creator-context.tsx` - Analysis history and state management
 - Supports both authenticated and guest users with graceful fallbacks
 
 ### API Routes Structure
@@ -217,7 +217,7 @@ Ensure these environment variables are configured in `.env.local`:
   - `scraping/` - Platform-specific scrapers with base class
   - `security/` - Rate limiting and CORS configuration
   - `validation/` - Input validation schemas
-  - `custom-auth.ts` - Custom username/password authentication system
+  - `simple-auth.ts` - Simple username/password authentication system
   - `user-bookmarks.ts` - Bookmark management with database/localStorage hybrid
 - Type definitions centralized in `/src/lib/types.ts` with platform-specific interfaces
 
