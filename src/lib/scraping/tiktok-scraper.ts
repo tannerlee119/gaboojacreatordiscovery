@@ -27,10 +27,13 @@ class TikTokScraper extends PlaywrightBaseScraper {
     }
 
     try {
-      console.log(`🔍 Starting TikTok analysis for: ${username}`);
+      const totalStartTime = Date.now();
+      console.log(`🔍 Starting TikTok analysis for: ${username} at ${new Date().toISOString()}`);
       
       // Initialize browser with Sparticuz chromium if available
+      const browserStartTime = Date.now();
       await this.initBrowser();
+      console.log(`🚀 Browser initialization took: ${Date.now() - browserStartTime}ms`);
 
       if (!this.page) {
         throw new Error('Page not initialized');
@@ -90,10 +93,15 @@ class TikTokScraper extends PlaywrightBaseScraper {
       let retries = 3;
       while (retries > 0) {
         try {
+          console.log(`⏱️ Navigation attempt ${4 - retries} - start time: ${Date.now()}`);
+          const navStart = Date.now();
+          
           await this.page.goto(profileUrl, { 
-      waitUntil: 'networkidle',
-            timeout: 30000 
+            waitUntil: 'domcontentloaded', // Faster than networkidle for SPAs
+            timeout: 90000 // Increased for TikTok's heavy SPA loading
           });
+          
+          console.log(`✅ Navigation completed in ${Date.now() - navStart}ms`);
           break;
         } catch (error) {
           retries--;

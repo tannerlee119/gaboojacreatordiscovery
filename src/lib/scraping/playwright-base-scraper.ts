@@ -48,7 +48,17 @@ export abstract class PlaywrightBaseScraper {
           '--disable-features=VizDisplayCompositor',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
+          '--disable-renderer-backgrounding',
+          // Additional performance optimizations for TikTok
+          '--disable-extensions',
+          '--disable-plugins',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-background-networking',
+          '--no-default-browser-check',
+          '--memory-pressure-off',
+          '--single-process',
+          '--disable-features=TranslateUI'
         ]
       };
 
