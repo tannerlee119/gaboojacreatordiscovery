@@ -1,10 +1,10 @@
 # Gabooja Creator Discovery Platform
 
-A Next.js application for discovering and analyzing social media creators across Instagram, TikTok, and YouTube. The platform provides AI-powered analysis, real-time engagement metrics, and creator discovery tools for marketing professionals.
+A Next.js application for discovering and analyzing social media creators across Instagram and TikTok. The platform provides AI-powered analysis, real-time engagement metrics, and creator discovery tools for marketing professionals.
 
 ## 🚀 Features
 
-- **Multi-Platform Support**: Instagram, TikTok, and YouTube creator analysis
+- **Multi-Platform Support**: Instagram and TikTok creator analysis
 - **AI-Powered Analysis**: OpenAI GPT integration for comprehensive creator insights
 - **Web Scraping**: Playwright-based scraping with anti-detection measures
 - **Data Quality Validation**: Comprehensive data validation and normalization
