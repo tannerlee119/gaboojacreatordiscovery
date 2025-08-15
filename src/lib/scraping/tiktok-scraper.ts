@@ -36,20 +36,40 @@ class TikTokScraper extends PlaywrightBaseScraper {
         throw new Error('Page not initialized');
       }
 
-      // Inject TikTok cookies if available (similar to Instagram approach)
+      // Enhanced stealth setup for TikTok
+      await this.setupTikTokStealth();
+
+      // Inject TikTok cookies BEFORE navigation (critical for authentication)
       const cookiesEnv = process.env.TIKTOK_COOKIES_JSON;
       let cookiesInjected = false;
       if (cookiesEnv) {
         try {
           const cookies = JSON.parse(cookiesEnv);
           if (Array.isArray(cookies) && cookies.length > 0) {
-            await this.page.context().addCookies(cookies);
+            // Ensure cookies have proper TikTok domain/path settings
+            const validatedCookies = cookies.map(cookie => ({
+              ...cookie,
+              domain: cookie.domain || '.tiktok.com',
+              path: cookie.path || '/',
+              secure: true,
+              httpOnly: cookie.httpOnly !== undefined ? cookie.httpOnly : false,
+              sameSite: cookie.sameSite || 'None'
+            }));
+
+            await this.page.context().addCookies(validatedCookies);
             cookiesInjected = true;
-            console.log(`🍪 Injected ${cookies.length} TikTok session cookies`);
+            console.log(`🍪 Injected ${validatedCookies.length} TikTok session cookies with proper domain settings`);
             
-            // Log key cookies for debugging (without exposing sensitive values)
-            const sessionCookies = cookies.filter(c => c.name.includes('session') || c.name.includes('sid') || c.name.includes('tiktok'));
-            console.log(`   📝 Session cookies found: ${sessionCookies.map(c => c.name).join(', ')}`);
+            // Log important TikTok cookies for debugging
+            const importantCookies = validatedCookies.filter(c => 
+              c.name.includes('sessionid') || 
+              c.name.includes('sessionid_ss') ||
+              c.name.includes('sid_tt') ||
+              c.name.includes('sid_guard') ||
+              c.name.includes('tt_csrf_token') ||
+              c.name.includes('passport_csrf_token')
+            );
+            console.log(`   📝 Key TikTok cookies found: ${importantCookies.map(c => c.name).join(', ')}`);
           } else {
             console.log('⚠️ TIKTOK_COOKIES_JSON is empty or invalid format');
           }
@@ -62,22 +82,6 @@ class TikTokScraper extends PlaywrightBaseScraper {
         console.log('   💡 Add TikTok cookies to .env.local for better access to posts and content');
         console.log('   ⚠️ Without authentication, videos may show "Something went wrong" but profile data will still be available');
       }
-
-      // Set optimal viewport for TikTok (mobile-first design)
-      await this.page.setViewportSize({ width: 1920, height: 1080 });
-
-      // Add TikTok-specific stealth headers
-      await this.page.setExtraHTTPHeaders({
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br', 
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      });
 
       const profileUrl = `https://www.tiktok.com/@${username}`;
       console.log(`📱 Navigating to: ${profileUrl}${cookiesInjected ? ' (with session cookies)' : ' (anonymous)'}`);
@@ -102,12 +106,23 @@ class TikTokScraper extends PlaywrightBaseScraper {
       // Wait for DOM and attempt to dismiss cookie / login overlays
       await this.page.waitForLoadState('domcontentloaded');
 
+      // Check if authentication worked by looking for login indicators
+      const pageContent = await this.page.textContent('body') || '';
+      if (cookiesInjected) {
+        if (pageContent.includes('Log in') && !pageContent.includes('Log out')) {
+          console.log('⚠️ Authentication may have failed - still seeing login prompts');
+        } else {
+          console.log('✅ Authentication appears successful - no login prompts detected');
+        }
+      }
+
       // Dismiss cookie consent if present
       try {
         const acceptBtn = await this.page.$('button:has-text("Accept all")');
         if (acceptBtn) {
           await acceptBtn.click();
           console.log('🍪 Dismissed cookie banner');
+          await this.page.waitForTimeout(1000);
         }
       } catch {
         // ignore
@@ -119,6 +134,28 @@ class TikTokScraper extends PlaywrightBaseScraper {
         if (closeLogin) {
           await closeLogin.click();
           console.log('🔒 Closed login modal');
+          await this.page.waitForTimeout(1000);
+        }
+      } catch {
+        // ignore
+      }
+
+      // Try to dismiss any other overlays
+      try {
+        const overlaySelectors = [
+          'button[data-e2e="close-button"]',
+          'button[aria-label="Close"]',
+          'div[role="dialog"] button'
+        ];
+        
+        for (const selector of overlaySelectors) {
+          const overlay = await this.page.$(selector);
+          if (overlay) {
+            await overlay.click();
+            console.log(`🗂️ Dismissed overlay: ${selector}`);
+            await this.page.waitForTimeout(500);
+            break;
+          }
         }
       } catch {
         // ignore
@@ -129,6 +166,11 @@ class TikTokScraper extends PlaywrightBaseScraper {
         await this.page.waitForSelector('[data-e2e="user-subtitle"], h2:has-text("@")', { timeout: 15000 });
       } catch {
         console.log('⚠️ Profile subtitle not found – may be blocked or non-existent');
+      }
+
+      // Verify authentication if cookies were injected
+      if (cookiesInjected) {
+        await this.verifyAuthentication();
       }
 
       const pageText = (await this.page.textContent('body')) || '';
@@ -258,6 +300,123 @@ class TikTokScraper extends PlaywrightBaseScraper {
     };
     } finally {
       await this.cleanup();
+    }
+  }
+
+  private async setupTikTokStealth() {
+    if (!this.page) return;
+
+    console.log('🥷 Setting up TikTok stealth techniques...');
+
+    // Set realistic viewport with variation (TikTok is mobile-first)
+    const viewportOptions = [
+      { width: 1920, height: 1080 },
+      { width: 1366, height: 768 },
+      { width: 1440, height: 900 },
+      { width: 1536, height: 864 }
+    ];
+    
+    const randomViewport = viewportOptions[Math.floor(Math.random() * viewportOptions.length)];
+    await this.page.setViewportSize(randomViewport);
+
+    // Set TikTok-specific headers to appear legitimate
+    await this.page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'Referer': 'https://www.tiktok.com/',
+      // Use a recent Chrome user agent that TikTok expects
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    });
+
+    // Override navigator properties to avoid bot detection
+    await this.page.addInitScript(() => {
+      // Override webdriver property
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      // Override plugins to look more realistic
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // Override languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+
+      // Override platform  
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'MacIntel',
+      });
+
+      // Add realistic screen properties
+      Object.defineProperty(screen, 'availHeight', {
+        get: () => 1055,
+      });
+
+      Object.defineProperty(screen, 'availWidth', {
+        get: () => 1920,
+      });
+
+      // Override permissions API to avoid detection
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      );
+
+      // Remove playwright-specific properties
+      delete window.__playwright;
+      delete window.__pw_manual;
+      delete window.__PW_inspect;
+    });
+
+    console.log('✅ TikTok stealth setup completed');
+  }
+
+  private async verifyAuthentication(): Promise<boolean> {
+    if (!this.page) return false;
+
+    try {
+      // Check for authenticated user indicators
+      const indicators = await this.page.evaluate(() => {
+        const body = document.body.textContent || '';
+        return {
+          hasFollowButton: !!document.querySelector('[data-e2e="follow-button"]'),
+          hasLogoutOption: body.includes('Log out') || body.includes('Sign out'),
+          hasUploadButton: !!document.querySelector('[data-e2e="upload-icon"]'),
+          hasProfileMenu: !!document.querySelector('[data-e2e="nav-profile"]'),
+          noLoginPrompt: !body.includes('Log in to follow creators')
+        };
+      });
+
+      const isAuthenticated = indicators.hasFollowButton || 
+                              indicators.hasLogoutOption || 
+                              indicators.hasUploadButton || 
+                              indicators.hasProfileMenu || 
+                              indicators.noLoginPrompt;
+
+      if (isAuthenticated) {
+        console.log('✅ Authentication verified - user appears to be logged in');
+        console.log(`   📊 Indicators: Follow=${indicators.hasFollowButton}, Upload=${indicators.hasUploadButton}, Menu=${indicators.hasProfileMenu}`);
+      } else {
+        console.log('❌ Authentication failed - user appears to be anonymous');
+      }
+
+      return isAuthenticated;
+    } catch {
+      console.log('⚠️ Could not verify authentication status');
+      return false;
     }
   }
 
