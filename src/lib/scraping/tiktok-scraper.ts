@@ -290,19 +290,83 @@ class TikTokScraper extends PlaywrightBaseScraper {
       console.log('📸 Preparing to take screenshot...');
       await this.page.waitForTimeout(3000);
       
-      // Check if posts/videos are actually visible before screenshot
-      const postsVisible = await this.page.evaluate(() => {
+      // Comprehensive DOM inspection to understand TikTok structure
+      const domInspection = await this.page.evaluate(() => {
         const videoLinks = document.querySelectorAll('a[href*="/video/"]');
         const videoThumbnails = document.querySelectorAll('img[src*="tiktok"]');
+        const allImages = document.querySelectorAll('img');
+        const allLinks = document.querySelectorAll('a');
+        const dataElements = document.querySelectorAll('[data-e2e]');
+        const canvasElements = document.querySelectorAll('canvas');
+        const videoElements = document.querySelectorAll('video');
+        
+        // Get all data-e2e attributes to understand TikTok's structure
+        const dataE2eValues = Array.from(dataElements).map(el => el.getAttribute('data-e2e')).filter(Boolean);
+        
+        // Look for text content that might indicate posts area
+        const bodyText = document.body.textContent || '';
+        const hasVideosText = bodyText.includes('Videos');
+        const hasPostsText = bodyText.includes('posts') || bodyText.includes('Posts');
+        
+        // Check for specific TikTok post-related classes
+        const postRelatedSelectors = [
+          '.DivItemContainer', // Common TikTok video container class
+          '[class*="video"]',
+          '[class*="post"]',
+          '[class*="item"]',
+          '[class*="grid"]',
+          '[class*="content"]'
+        ];
+        
+        const postRelatedElements = postRelatedSelectors.map(selector => {
+          const elements = document.querySelectorAll(selector);
+          return {
+            selector,
+            count: elements.length,
+            hasContent: elements.length > 0
+          };
+        }).filter(item => item.count > 0);
+        
         return {
+          // Basic counts
           videoLinks: videoLinks.length,
           thumbnails: videoThumbnails.length,
-          hasVideosSection: document.querySelector('[data-e2e="user-post-item"]') !== null,
-          hasSomethingWrong: document.body.textContent?.includes('Something went wrong') || false
+          allImages: allImages.length,
+          allLinks: allLinks.length,
+          canvasElements: canvasElements.length,
+          videoElements: videoElements.length,
+          
+          // TikTok-specific elements
+          dataE2eElements: dataElements.length,
+          dataE2eValues: dataE2eValues.slice(0, 20), // First 20 for debugging
+          
+          // Content analysis
+          hasVideosText,
+          hasPostsText,
+          hasSomethingWrong: bodyText.includes('Something went wrong'),
+          hasNoVideosYet: bodyText.includes('No videos yet'),
+          
+          // Post-related elements
+          postRelatedElements,
+          
+          // Page state
+          currentUrl: window.location.href,
+          pageTitle: document.title,
+          
+          // Sample of actual content structure
+          mainContentHTML: document.querySelector('main')?.innerHTML?.substring(0, 500) || 'No main element found'
         };
       });
       
-      console.log(`📊 Posts visibility check: ${JSON.stringify(postsVisible)}`);
+      console.log('🔍 Comprehensive DOM inspection:');
+      console.log(`   📊 Video links: ${domInspection.videoLinks}, Images: ${domInspection.allImages}, Canvas: ${domInspection.canvasElements}`);
+      console.log(`   🎯 Data-e2e elements: ${domInspection.dataE2eElements}, Values: ${domInspection.dataE2eValues.join(', ')}`);
+      console.log(`   📝 Has Videos text: ${domInspection.hasVideosText}, Posts text: ${domInspection.hasPostsText}`);
+      console.log(`   ⚠️ Something wrong: ${domInspection.hasSomethingWrong}, No videos: ${domInspection.hasNoVideosYet}`);
+      console.log(`   🏗️ Post-related elements found: ${JSON.stringify(domInspection.postRelatedElements)}`);
+      console.log(`   📄 Current URL: ${domInspection.currentUrl}`);
+      console.log(`   🏷️ Page title: ${domInspection.pageTitle}`);
+      console.log(`   📋 Main content sample: ${domInspection.mainContentHTML.substring(0, 200)}...`);
       
       // Take screenshot
       const screenshot = await this.page.screenshot({ 
@@ -557,36 +621,104 @@ class TikTokScraper extends PlaywrightBaseScraper {
         console.log('⚠️ Videos tab interaction failed');
       }
       
-      // Strategy 2: Scroll down to trigger video loading
+      // Strategy 2: Aggressive scrolling and interaction to trigger lazy loading
       try {
-        console.log('📜 Strategy 2: Scrolling to trigger loading...');
-        for (let i = 0; i < 3; i++) {
-          await this.page.evaluate(() => {
-            window.scrollTo(0, window.innerHeight + (window.innerHeight * 0.5));
-          });
+        console.log('📜 Strategy 2: Aggressive scrolling and interaction...');
+        
+        // First, try hovering over the profile area to trigger JS
+        await this.page.hover('main, [data-e2e="user-detail"], div[data-e2e*="profile"]').catch(() => {});
+        await this.page.waitForTimeout(1000);
+        
+        // Scroll down in multiple stages with pauses
+        for (let i = 0; i < 5; i++) {
+          const scrollAmount = (i + 1) * 300; // Gradually increase scroll
+          await this.page.evaluate((scroll) => {
+            window.scrollTo(0, scroll);
+          }, scrollAmount);
+          
           await this.page.waitForTimeout(2000);
           
-          // Check if videos loaded
+          // Try to click on any video thumbnails to trigger loading
+          try {
+            const thumbnail = await this.page.$('img[src*="tiktok"], canvas, video');
+            if (thumbnail) {
+              await thumbnail.hover();
+              console.log(`🖱️ Hovered over media element at scroll ${scrollAmount}px`);
+            }
+          } catch {}
+          
+          // Check if videos appeared
           const hasVideos = await this.page.locator('a[href*="/video/"]').count() > 0;
           if (hasVideos) {
-            console.log('✅ Videos detected after scrolling');
+            console.log(`✅ Videos detected after scrolling to ${scrollAmount}px`);
             break;
           }
         }
         
-        // Scroll back up to see profile info
+        // Scroll back to top smoothly
         await this.page.evaluate(() => {
-          window.scrollTo(0, 0);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
-        await this.page.waitForTimeout(1500);
+        await this.page.waitForTimeout(2000);
       } catch {
         console.log('⚠️ Scrolling strategy failed, continuing...');
       }
       
-      // Strategy 3: Wait for any dynamic content to load
+      // Strategy 3: Force trigger video loading with simulated interaction
       try {
-        console.log('⏳ Strategy 3: Waiting for dynamic content...');
-        await this.page.waitForLoadState('networkidle', { timeout: 10000 });
+        console.log('🎮 Strategy 3: Simulating user interaction to trigger posts...');
+        
+        // Try different approaches to trigger posts loading
+        await this.page.evaluate(() => {
+          // Trigger intersection observer events
+          const observer = new IntersectionObserver(() => {});
+          const elements = document.querySelectorAll('div, main, section');
+          elements.forEach(el => observer.observe(el));
+          
+          // Simulate user activity
+          window.dispatchEvent(new Event('scroll'));
+          window.dispatchEvent(new Event('resize'));
+          window.dispatchEvent(new Event('focus'));
+          
+          // Try to trigger any lazy loading
+          const images = document.querySelectorAll('img[data-src], img[loading="lazy"]');
+          images.forEach(img => {
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+            }
+          });
+        });
+        
+        await this.page.waitForTimeout(3000);
+        
+        // Try clicking on profile tabs or sections that might load posts
+        const interactionSelectors = [
+          '[data-e2e="profile-icon"]',
+          '[role="tab"]',
+          'div[role="tabpanel"]',
+          'main section',
+          'div[data-e2e*="user"]'
+        ];
+        
+        for (const selector of interactionSelectors) {
+          try {
+            const element = await this.page.$(selector);
+            if (element) {
+              await element.hover();
+              await this.page.waitForTimeout(500);
+              console.log(`🔄 Interacted with ${selector}`);
+            }
+          } catch {}
+        }
+        
+      } catch {
+        console.log('⚠️ Interaction simulation failed, continuing...');
+      }
+      
+      // Strategy 4: Wait for network activity to settle
+      try {
+        console.log('⏳ Strategy 4: Waiting for network activity...');
+        await this.page.waitForLoadState('networkidle', { timeout: 8000 });
       } catch {
         console.log('⚠️ Network idle timeout, continuing...');
       }
