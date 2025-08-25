@@ -13,7 +13,7 @@ import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { CategoryEditor } from '@/components/ui/category-editor';
 import { CreatorCategory } from '@/lib/types';
-import { GrowthChart } from '@/components/ui/growth-chart';
+import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import Image from 'next/image';
 
 interface AnalysisData {
@@ -626,21 +626,15 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
       />
 
       {/* Growth Chart Modal */}
-      {analysisData.growthData && (
-        <GrowthChart
-          isOpen={showGrowthChart}
-          onClose={() => setShowGrowthChart(false)}
-          growthData={{
-            previousFollowerCount: analysisData.growthData.previousFollowerCount,
-            growthPercentage: analysisData.growthData.growthPercentage,
-            currentFollowerCount: analysisData.profile.followerCount,
-            lastAnalyzed: analysisData.lastAnalyzed || analysisData.scrapingDetails.timestamp,
-            previousAnalyzed: undefined // We could add this if we store more historical data
-          }}
-          username={analysisData.profile.username}
-          platform={analysisData.profile.platform}
-        />
-      )}
+      <GrowthChartModal
+        creator={{
+          username: analysisData.profile.username,
+          platform: analysisData.profile.platform,
+          displayName: analysisData.profile.displayName
+        }}
+        isOpen={showGrowthChart}
+        onClose={() => setShowGrowthChart(false)}
+      />
     </Dialog>
   );
 } 
