@@ -196,7 +196,7 @@ export function CreatorDiscovery() {
       setHasInitialLoad(true);
       fetchDiscoveryData(currentPage);
     }
-  }, [isStateLoaded, hasInitialLoad, fetchDiscoveryData, currentPage]);
+  }, [isStateLoaded, hasInitialLoad, fetchDiscoveryData]);
 
   // Save state whenever it changes (only after state is loaded to avoid overwriting)
   useEffect(() => {
@@ -515,14 +515,23 @@ export function CreatorDiscovery() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Initializing...</span>
                 </div>
-              ) : filteredCreators.length === 0 ? (
+              ) : discoveryData && filteredCreators.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <p>No creators found matching your criteria.</p>
-                  <p className="text-sm mt-2">Try adjusting your filters or search term.</p>
+                  {searchTerm ? (
+                    <>
+                      <p>No creators found matching "{searchTerm}" on this page.</p>
+                      <p className="text-sm mt-2">Try searching on other pages or adjusting your search term.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>No creators found matching your criteria.</p>
+                      <p className="text-sm mt-2">Try adjusting your filters.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <>
-                  {/* Top Pagination */}
+                  {/* Top Pagination - Always show when there are multiple pages */}
                   {discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mb-6">
                       <PaginationComponent 
@@ -533,21 +542,38 @@ export function CreatorDiscovery() {
                       />
                     </div>
                   )}
-                  {/* Creator Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-                    {filteredCreators.map((creator) => (
-                      <DiscoveryCreatorCard
-                        key={creator.id}
-                        creator={creator}
-                        isBookmarked={isCreatorBookmarked(creator)}
-                        onBookmark={handleBookmarkCreator}
-                        onViewAnalysis={handleViewCreatorAnalysis}
-                        onGrowthChart={handleGrowthChart}
-                      />
-                    ))}
-                  </div>
+                  
+                  {/* Creator Grid or Empty State */}
+                  {filteredCreators.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      {searchTerm ? (
+                        <>
+                          <p>No creators found matching "{searchTerm}" on this page.</p>
+                          <p className="text-sm mt-2">Try searching on other pages or adjusting your search term.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>No creators found on this page.</p>
+                          <p className="text-sm mt-2">Try navigating to other pages or adjusting your filters.</p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+                      {filteredCreators.map((creator) => (
+                        <DiscoveryCreatorCard
+                          key={creator.id}
+                          creator={creator}
+                          isBookmarked={isCreatorBookmarked(creator)}
+                          onBookmark={handleBookmarkCreator}
+                          onViewAnalysis={handleViewCreatorAnalysis}
+                          onGrowthChart={handleGrowthChart}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Bottom Pagination */}
+                  {/* Bottom Pagination - Always show when there are multiple pages */}
                   {discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mt-6">
                       <PaginationComponent 
