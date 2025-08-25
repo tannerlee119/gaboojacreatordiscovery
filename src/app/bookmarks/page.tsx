@@ -126,7 +126,7 @@ export default function BookmarksPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isAuthenticated, user]);
 
-  // Load growth data for bookmarks with caching and throttling
+  // Load growth data for bookmarks with caching and batch queries
   useEffect(() => {
     const loadGrowthData = async () => {
       if (bookmarks.length === 0) return;
@@ -151,30 +151,38 @@ export default function BookmarksPage() {
       
       const growthDataMap: Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }> = {};
       
-      // Fetch growth data for all bookmarks from database (no rate limiting needed)
-      for (const bookmark of bookmarks) {
-        try {
-          // Fetch growth data directly from database using client
+      try {
+        // OPTIMIZATION: Batch query all bookmarks at once instead of individual queries
+        const bookmarkIdentifiers = bookmarks.map(b => `(username='${b.username.replace("'", "''")}' AND platform='${b.platform}')`).join(' OR ');
+        
+        if (bookmarkIdentifiers) {
           const { data, error } = await supabase
             .from('creator_discovery_enriched')
-            .select('growth_percentage, previous_follower_count, last_analysis_date')
-            .eq('username', bookmark.username)
-            .eq('platform', bookmark.platform)
-            .order('last_analysis_date', { ascending: false })
-            .limit(1)
-            .single();
+            .select('username, platform, growth_percentage, previous_follower_count, last_analysis_date')
+            .or(bookmarkIdentifiers)
+            .order('last_analysis_date', { ascending: false });
           
-          if (!error && data && data.growth_percentage !== null) {
-            const key = `${bookmark.username}_${bookmark.platform}`;
-            growthDataMap[key] = {
-              previousFollowerCount: data.previous_follower_count || 0,
-              growthPercentage: data.growth_percentage || 0,
-              lastAnalyzed: data.last_analysis_date || bookmark.bookmarkedAt
-            };
+          if (!error && data) {
+            // Group by username/platform and take the most recent analysis
+            const seenCreators = new Set<string>();
+            
+            data.forEach(item => {
+              const key = `${item.username}_${item.platform}`;
+              if (!seenCreators.has(key) && item.growth_percentage !== null) {
+                seenCreators.add(key);
+                growthDataMap[key] = {
+                  previousFollowerCount: item.previous_follower_count || 0,
+                  growthPercentage: item.growth_percentage || 0,
+                  lastAnalyzed: item.last_analysis_date || bookmarks.find(b => b.username === item.username && b.platform === item.platform)?.bookmarkedAt || new Date().toISOString()
+                };
+              }
+            });
+          } else {
+            console.log('Error fetching batch growth data:', error);
           }
-        } catch (error) {
-          console.log(`Could not fetch growth data for ${bookmark.username}:`, error);
         }
+      } catch (error) {
+        console.log('Error in batch growth data fetch:', error);
       }
       
       // Cache the results
@@ -255,27 +263,9 @@ export default function BookmarksPage() {
 
 
   const handleViewAnalysis = async (bookmark: UserBookmark) => {
-    // First, try to get the latest analysis data with proper analysis date
-    let actualAnalysisDate = bookmark.bookmarkedAt; // fallback to bookmark date
-    
-    try {
-      // Check if we have analysis data in database with proper analysis date
-      const { data, error } = await supabase
-        .from('creator_discovery_enriched')
-        .select('last_analysis_date')
-        .eq('username', bookmark.username)
-        .eq('platform', bookmark.platform)
-        .order('last_analysis_date', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (!error && data && data.last_analysis_date) {
-        actualAnalysisDate = data.last_analysis_date;
-        console.log(`Found actual analysis date for ${bookmark.username}: ${actualAnalysisDate}`);
-      }
-    } catch (error) {
-      console.log('Could not fetch analysis date, using bookmark date as fallback:', error);
-    }
+    // OPTIMIZATION: Use cached analysis date if available from growth data load
+    const key = `${bookmark.username}_${bookmark.platform}`;
+    let actualAnalysisDate = bookmarkGrowthData[key]?.lastAnalyzed || bookmark.bookmarkedAt;
     
     // Convert bookmark data to complete analysis format - ensure ALL fields are populated
     let analysisData: AnalysisData = {
@@ -333,7 +323,7 @@ export default function BookmarksPage() {
       cached: true, // Bookmark data is considered cached
     };
 
-    // If AI fields are incomplete, enrich with cached full analysis from API (no forced refresh)
+    // OPTIMIZATION: Only enrich if absolutely necessary and use lazy loading
     const needsEnrichment = !bookmark.aiAnalysis || (
       !bookmark.aiAnalysis.brand_potential ||
       !bookmark.aiAnalysis.key_strengths ||
@@ -344,9 +334,22 @@ export default function BookmarksPage() {
       !bookmark.aiAnalysis.overall_assessment
     );
 
+    // Add growth data from our batch-loaded cache if available
+    const growthKey = `${bookmark.username}_${bookmark.platform}`;
+    if (bookmarkGrowthData[growthKey]) {
+      analysisData.growthData = {
+        previousFollowerCount: bookmarkGrowthData[growthKey].previousFollowerCount,
+        growthPercentage: bookmarkGrowthData[growthKey].growthPercentage
+      };
+    }
+
     if (needsEnrichment) {
+      // OPTIMIZATION: Show modal first with basic data, then enrich in background
+      setSelectedAnalysis(analysisData);
+      setIsModalOpen(true);
+      
       try {
-        // Fetch complete analysis data from database using client
+        // Fetch complete analysis data from database using client (background)
         const { data, error } = await supabase
           .from('creator_discovery_enriched')
           .select('*')
@@ -357,7 +360,7 @@ export default function BookmarksPage() {
           .single();
         
         if (!error && data) {
-          analysisData = {
+          const enrichedAnalysisData = {
             profile: {
               username: data.username || bookmark.username,
               platform: data.platform as 'instagram' | 'tiktok',
@@ -398,14 +401,21 @@ export default function BookmarksPage() {
             growthData: data.growth_percentage !== null ? {
               previousFollowerCount: data.previous_follower_count || 0,
               growthPercentage: data.growth_percentage || 0,
+            } : bookmarkGrowthData[growthKey] ? {
+              previousFollowerCount: bookmarkGrowthData[growthKey].previousFollowerCount,
+              growthPercentage: bookmarkGrowthData[growthKey].growthPercentage
             } : undefined,
             lastAnalyzed: data.last_analysis_date || actualAnalysisDate,
             cached: true
           };
+          
+          // Update the modal with enriched data
+          setSelectedAnalysis(enrichedAnalysisData);
         }
       } catch (error) {
         console.error('Error enriching analysis from database:', error);
       }
+      return; // Early return since we already opened the modal
     }
 
     setSelectedAnalysis(analysisData);

@@ -31,9 +31,85 @@ export interface DatabaseBookmark {
 export class DatabaseBookmarkService {
   
   /**
-   * Get all bookmarks for a user from the database
+   * Get all bookmarks for a user from the database with optimized query
    */
   static async getUserBookmarks(userId: string): Promise<DatabaseBookmark[]> {
+    try {
+      // OPTIMIZATION: Use direct join instead of view for better performance
+      const { data, error } = await supabase
+        .from('user_bookmarks')
+        .select(`
+          bookmark_id:id,
+          user_id,
+          creator_id,
+          comments,
+          bookmarked_at:created_at,
+          bookmark_updated_at:updated_at,
+          creators!inner (
+            username,
+            platform,
+            display_name,
+            bio,
+            profile_image_url,
+            profile_image_base64,
+            is_verified,
+            follower_count,
+            following_count,
+            location,
+            website,
+            engagement_rate,
+            category,
+            ai_creator_score,
+            ai_brand_potential,
+            ai_key_strengths,
+            last_analysis_date
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user bookmarks:', error);
+        // Fallback to view if direct join fails
+        return this.getUserBookmarksFallback(userId);
+      }
+
+      // Transform the nested structure to flat structure
+      return (data || []).map(item => ({
+        bookmark_id: item.bookmark_id,
+        user_id: item.user_id,
+        creator_id: item.creator_id,
+        comments: item.comments,
+        bookmarked_at: item.bookmarked_at,
+        bookmark_updated_at: item.bookmark_updated_at,
+        username: item.creators.username,
+        platform: item.creators.platform,
+        display_name: item.creators.display_name,
+        bio: item.creators.bio,
+        profile_image_url: item.creators.profile_image_url,
+        profile_image_base64: item.creators.profile_image_base64,
+        is_verified: item.creators.is_verified,
+        follower_count: item.creators.follower_count,
+        following_count: item.creators.following_count,
+        location: item.creators.location,
+        website: item.creators.website,
+        engagement_rate: item.creators.engagement_rate,
+        category: item.creators.category,
+        ai_creator_score: item.creators.ai_creator_score,
+        ai_brand_potential: item.creators.ai_brand_potential,
+        ai_key_strengths: item.creators.ai_key_strengths,
+        last_analysis_date: item.creators.last_analysis_date
+      }));
+    } catch (error) {
+      console.error('Error fetching user bookmarks:', error);
+      return this.getUserBookmarksFallback(userId);
+    }
+  }
+
+  /**
+   * Fallback method using the view (for compatibility)
+   */
+  private static async getUserBookmarksFallback(userId: string): Promise<DatabaseBookmark[]> {
     try {
       const { data, error } = await supabase
         .from('user_bookmarks_with_creators')
@@ -42,13 +118,13 @@ export class DatabaseBookmarkService {
         .order('bookmarked_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching user bookmarks:', error);
+        console.error('Error fetching user bookmarks via fallback:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching user bookmarks:', error);
+      console.error('Error fetching user bookmarks via fallback:', error);
       return [];
     }
   }
