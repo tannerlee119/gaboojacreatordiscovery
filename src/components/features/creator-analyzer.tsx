@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,7 @@ export function CreatorAnalyzer() {
   const { currentAnalysis, setCurrentAnalysis, addToHistory, isLoading, setIsLoading } = useCreator();
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function CreatorAnalyzer() {
     }
   }, [result, username]);
 
-  const handleAnalyze = async (forceRefresh = false) => {
+  const handleAnalyze = useCallback(async (forceRefresh = false) => {
     if (!username.trim()) return;
     
     setIsLoading(true);
@@ -207,8 +209,26 @@ export function CreatorAnalyzer() {
         setIsRefreshing(false);
       }
     }
-  };
+  }, [username, platform, setIsLoading, setCurrentAnalysis, addToHistory, isAuthenticated, user, setResultCache]);
 
+  // Handle URL parameters for auto-analysis (from bookmarks refresh)
+  useEffect(() => {
+    const urlUsername = searchParams.get('username');
+    const urlPlatform = searchParams.get('platform') as Platform;
+    const shouldRefresh = searchParams.get('refresh') === 'true';
+    
+    if (urlUsername && urlPlatform) {
+      setUsername(urlUsername);
+      setPlatform(urlPlatform);
+      
+      // Trigger analysis automatically with force refresh if requested
+      const timer = setTimeout(() => {
+        handleAnalyze(shouldRefresh);
+      }, 100); // Small delay to ensure state is set
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, handleAnalyze]); // Include handleAnalyze in dependencies
 
   // Check bookmark status when result changes
   useEffect(() => {

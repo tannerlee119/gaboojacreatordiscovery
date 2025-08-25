@@ -1,6 +1,25 @@
+'use client';
+
 import { CreatorAnalyzer } from '@/components/features/creator-analyzer';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function AnalyzePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Handle URL parameters for auto-analysis
+  useEffect(() => {
+    const username = searchParams.get('username');
+    const platform = searchParams.get('platform');
+    const shouldRefresh = searchParams.get('refresh') === 'true';
+    
+    if (username && platform) {
+      // Clean up URL parameters after extracting them
+      router.replace('/analyze', { scroll: false });
+    }
+  }, [searchParams, router]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}

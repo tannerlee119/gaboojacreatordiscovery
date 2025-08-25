@@ -423,25 +423,19 @@ export default function BookmarksPage() {
   };
 
   const handleRefreshFromModal = async (username: string, platform: string) => {
-    // Trigger a fresh analysis for the creator (same behavior as discovery modal)
-    const response = await fetch('/api/analyze-creator', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        username, 
-        platform,
-        forceRefresh: true 
-      }),
+    // Redirect to analyze page with refresh parameters
+    const searchParams = new URLSearchParams({
+      username: username,
+      platform: platform,
+      refresh: 'true'
     });
-
-    const data = await response.json();
-    if (data.success) {
-      setSelectedAnalysis(data.data);
-    } else {
-      throw new Error(data.error || 'Failed to refresh analysis');
-    }
+    
+    // Close the modal first
+    setIsModalOpen(false);
+    setSelectedAnalysis(null);
+    
+    // Navigate to analyze page with parameters
+    window.location.href = `/analyze?${searchParams.toString()}`;
   };
 
   const handleGrowthChart = (bookmark: UserBookmark) => {
