@@ -158,6 +158,7 @@ export function CreatorDiscovery() {
 
   // Load persisted state on mount
   const [isStateLoaded, setIsStateLoaded] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
   
   useEffect(() => {
     try {
@@ -191,10 +192,11 @@ export function CreatorDiscovery() {
 
   // Load initial data after state is loaded
   useEffect(() => {
-    if (isStateLoaded) {
+    if (isStateLoaded && !hasInitialLoad) {
+      setHasInitialLoad(true);
       fetchDiscoveryData(currentPage);
     }
-  }, [isStateLoaded, fetchDiscoveryData, currentPage]);
+  }, [isStateLoaded, hasInitialLoad, fetchDiscoveryData, currentPage]);
 
   // Save state whenever it changes (only after state is loaded to avoid overwriting)
   useEffect(() => {
@@ -497,7 +499,7 @@ export function CreatorDiscovery() {
                   {isLoading && (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   )}
-                  {discoveryData && (
+                  {!isLoading && discoveryData && discoveryData.totalCount !== undefined && (
                     <span className="text-sm text-muted-foreground font-normal">
                       {discoveryData.totalCount} creators found
                     </span>
@@ -527,7 +529,7 @@ export function CreatorDiscovery() {
               ) : (
                 <>
                   {/* Top Pagination */}
-                  {discoveryData && discoveryData.totalPages > 1 && (
+                  {!isLoading && discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mb-6">
                       <PaginationComponent 
                         currentPage={currentPage}
@@ -552,7 +554,7 @@ export function CreatorDiscovery() {
                   </div>
 
                   {/* Bottom Pagination */}
-                  {discoveryData && discoveryData.totalPages > 1 && (
+                  {!isLoading && discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mt-6">
                       <PaginationComponent 
                         currentPage={currentPage}
