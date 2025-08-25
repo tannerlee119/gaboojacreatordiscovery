@@ -521,6 +521,11 @@ export function CreatorDiscovery() {
                   <AlertCircle className="h-8 w-8 mr-2" />
                   <span>{error}</span>
                 </div>
+              ) : !discoveryData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Initializing...</span>
+                </div>
               ) : filteredCreators.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p>No creators found matching your criteria.</p>
@@ -529,7 +534,7 @@ export function CreatorDiscovery() {
               ) : (
                 <>
                   {/* Top Pagination */}
-                  {!isLoading && discoveryData && discoveryData.totalPages > 1 && (
+                  {discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mb-6">
                       <PaginationComponent 
                         currentPage={currentPage}
@@ -554,7 +559,7 @@ export function CreatorDiscovery() {
                   </div>
 
                   {/* Bottom Pagination */}
-                  {!isLoading && discoveryData && discoveryData.totalPages > 1 && (
+                  {discoveryData && discoveryData.totalPages > 1 && (
                     <div className="mt-6">
                       <PaginationComponent 
                         currentPage={currentPage}
