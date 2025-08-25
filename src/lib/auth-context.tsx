@@ -22,7 +22,6 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
-  loginAsGuest: () => void;
   logout: () => void;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   updateUser: (updates: Partial<User>) => void;
@@ -94,19 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginAsGuest = () => {
-    const guestUser = {
-      id: 'guest_' + Date.now(),
-      username: 'Guest',
-      loginTime: new Date().toISOString()
-    };
-
-    localStorage.setItem('user', JSON.stringify(guestUser));
-    localStorage.setItem('isAuthenticated', 'true');
-    
-    setUser(guestUser);
-    setIsAuthenticated(true);
-  };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
@@ -187,10 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
     if (!user) return false;
     
-    // Guest users can't change passwords
-    if (user.id.startsWith('guest_')) {
-      return false;
-    }
     
     try {
       const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
@@ -239,7 +221,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated,
       login,
-      loginAsGuest,
       logout,
       register,
       updateUser,

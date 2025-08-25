@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, User, UserX } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
 
 export default function LoginPage() {
@@ -48,11 +48,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGuestLogin = () => {
-    // Continue as guest - redirect to analyze page without authentication
-    console.log('Continuing as guest user');
-    router.push('/analyze');
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -137,26 +132,6 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue as guest
-                </span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30 transition-all duration-200"
-              onClick={handleGuestLogin}
-            >
-              <UserX className="w-4 h-4 mr-2" />
-              Continue as Guest
-            </Button>
           </form>
         </CardContent>
       </Card>
