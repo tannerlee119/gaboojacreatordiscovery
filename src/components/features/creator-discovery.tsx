@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +84,7 @@ interface DiscoveryResponse {
 }
 
 export function CreatorDiscovery() {
+
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
   const { analysisHistory } = useCreator();
@@ -113,7 +114,8 @@ export function CreatorDiscovery() {
   const [currentPage, setCurrentPage] = useState(1);
   const [bookmarkUpdate, setBookmarkUpdate] = useState(0); // Force re-renders when bookmarks change
 
-  // Fetch discovery data with specific filters
+
+  // Fetch discovery data with specific filters  
   const fetchDiscoveryDataWithFilters = useCallback(async (filtersToUse: DiscoveryFilters, page = 1) => {
     setIsLoading(true);
     setError(null);
@@ -158,7 +160,6 @@ export function CreatorDiscovery() {
 
   // Load persisted state on mount
   const [isStateLoaded, setIsStateLoaded] = useState(false);
-  const [hasInitialLoad, setHasInitialLoad] = useState(false);
   
   useEffect(() => {
     try {
@@ -189,14 +190,6 @@ export function CreatorDiscovery() {
   }, []);
 
   // Bookmarks are now loaded from user-specific storage in individual components
-
-  // Load initial data after state is loaded
-  useEffect(() => {
-    if (isStateLoaded && !hasInitialLoad) {
-      setHasInitialLoad(true);
-      fetchDiscoveryData(currentPage);
-    }
-  }, [isStateLoaded, hasInitialLoad, fetchDiscoveryData]);
 
   // Save state whenever it changes (only after state is loaded to avoid overwriting)
   useEffect(() => {
@@ -408,12 +401,21 @@ export function CreatorDiscovery() {
   const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<string, boolean>>({});
 
   const filteredCreators = useMemo(() => {
-    return discoveryData?.creators.filter(creator =>
+    const filtered = discoveryData?.creators.filter(creator =>
       searchTerm === '' || 
       creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       creator.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
-  }, [discoveryData?.creators, searchTerm]);
+    
+    // Auto-load data if none exists and not currently loading
+    if (!discoveryData && !isLoading) {
+      setTimeout(() => {
+        fetchDiscoveryDataWithFilters(filters, currentPage);
+      }, 100);
+    }
+    
+    return filtered;
+  }, [discoveryData?.creators, searchTerm, discoveryData, isLoading, filters, currentPage, fetchDiscoveryDataWithFilters]);
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // bookmarkUpdate is used in dependency arrays to trigger re-renders

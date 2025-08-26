@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
@@ -100,12 +100,15 @@ export default function BookmarksPage() {
   // Load bookmarks on component mount
   useEffect(() => {
     const loadBookmarks = async () => {
+      console.log('Loading bookmarks - isAuthenticated:', isAuthenticated, 'user:', !!user);
       if (isAuthenticated && user) {
         const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
+        console.log('Loaded user bookmarks:', userBookmarks.length);
         setBookmarks(userBookmarks);
       } else {
         // Fallback to global bookmarks for non-authenticated users
         const savedBookmarks = getBookmarkedCreators();
+        console.log('Loaded global bookmarks:', savedBookmarks.length);
         setBookmarks(savedBookmarks.map(bookmark => ({
           ...bookmark,
           userId: 'anonymous',
@@ -126,10 +129,14 @@ export default function BookmarksPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isAuthenticated, user]);
 
-  // Load growth data for bookmarks with caching and batch queries
-  useEffect(() => {
+  // Load growth data for bookmarks - using useMemo to avoid useEffect hydration issues
+  const growthDataLoader = useMemo(() => {
     const loadGrowthData = async () => {
-      if (bookmarks.length === 0) return;
+      console.log('Growth data loading triggered - bookmarks count:', bookmarks.length);
+      if (bookmarks.length === 0) {
+        console.log('No bookmarks found, skipping growth data loading');
+        return;
+      }
       
       // Check localStorage cache first
       const CACHE_KEY = 'gabooja_bookmark_growth_cache';
@@ -140,7 +147,7 @@ export default function BookmarksPage() {
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
           if (Date.now() - timestamp < CACHE_DURATION) {
-            // Use cached data if it's less than 10 minutes old
+            console.log('Using cached growth data');
             setBookmarkGrowthData(data);
             return;
           }
@@ -153,11 +160,10 @@ export default function BookmarksPage() {
       
       try {
         // Calculate growth data same way as discovery page uses creator_analyses table
-        // For each bookmark, calculate growth data using the same logic as discovery API
         for (const bookmark of bookmarks) {
           try {
             // First, get the creator ID from creators table
-            const { data: creators, error: creatorError } = await supabase
+            const { data: creators } = await supabase
               .from('creators')
               .select('id, last_analysis_date')
               .eq('username', bookmark.username)
@@ -165,7 +171,7 @@ export default function BookmarksPage() {
               .limit(1)
               .single();
             
-            if (creatorError || !creators) {
+            if (!creators) {
               continue;
             }
 
@@ -222,10 +228,18 @@ export default function BookmarksPage() {
         console.log('Error caching growth data:', error);
       }
       
+      console.log('\n=== FINAL RESULTS ===');
+      console.log('Growth data map:', growthDataMap);
+      console.log('Total growth entries:', Object.keys(growthDataMap).length);
       setBookmarkGrowthData(growthDataMap);
     };
     
-    loadGrowthData();
+    // Trigger loading after a short delay to avoid blocking render
+    if (bookmarks.length > 0) {
+      setTimeout(loadGrowthData, 100);
+    }
+    
+    return bookmarks.length;
   }, [bookmarks]);
 
   const handleDeleteClick = (bookmark: UserBookmark) => {
