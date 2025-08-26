@@ -66,6 +66,8 @@ export default function BookmarksPage() {
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
   console.log('BookmarksPage - isAuthenticated:', isAuthenticated, 'user:', !!user);
+  console.log('Session details:', session ? 'exists' : 'null');
+  console.log('User details:', user ? { id: user.id, email: user.email } : 'null');
   const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -76,6 +78,11 @@ export default function BookmarksPage() {
       console.log('Bookmark usernames:', bookmarks.map(b => `${b.username}@${b.platform}`));
     }
   }, [bookmarks]);
+  
+  // Debug authentication state changes
+  useEffect(() => {
+    console.log('Auth state changed - isAuthenticated:', isAuthenticated, 'user:', !!user);
+  }, [isAuthenticated, user]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -84,6 +91,94 @@ export default function BookmarksPage() {
   const [showGrowthChart, setShowGrowthChart] = useState(false);
   const [selectedBookmarkForGrowth, setSelectedBookmarkForGrowth] = useState<UserBookmark | null>(null);
   const [bookmarkGrowthData, setBookmarkGrowthData] = useState<Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }>>({});
+  
+  // Manual test function for debugging
+  const testGrowthDataLoading = async () => {
+    console.log('=== MANUAL GROWTH DATA TEST ===');
+    console.log('Current bookmarks:', bookmarks.length);
+    console.log('Is authenticated:', isAuthenticated);
+    console.log('User:', user ? user.id : 'none');
+    
+    if (bookmarks.length > 0) {
+      console.log('Bookmark details:', bookmarks.map(b => ({ username: b.username, platform: b.platform })));
+      
+      // Manually trigger growth data loading
+      console.log('\n=== MANUALLY TRIGGERING GROWTH DATA LOADING ===');
+      
+      const growthDataMap: Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }> = {};
+      
+      for (const bookmark of bookmarks.slice(0, 3)) { // Test first 3 only
+        try {
+          console.log(`\n--- Processing bookmark: ${bookmark.username}@${bookmark.platform} ---`);
+          
+          // First, get the creator ID from creators table
+          const { data: creators, error: creatorError } = await supabase
+            .from('creators')
+            .select('id')
+            .eq('username', bookmark.username)
+            .eq('platform', bookmark.platform)
+            .limit(1)
+            .single();
+          
+          console.log('Creator lookup result:', creators ? `Found ID: ${creators.id}` : 'Not found');
+          if (creatorError) console.log('Creator error:', creatorError);
+          
+          if (!creators) {
+            console.log(`❌ Creator ${bookmark.username}@${bookmark.platform} not found in creators table`);
+            continue;
+          }
+
+          // Get all analyses for this creator
+          const { data: allAnalyses, error: allAnalysesError } = await supabase
+            .from('creator_analyses')
+            .select('follower_count, created_at')
+            .eq('creator_id', creators.id)
+            .order('created_at', { ascending: false })
+            .limit(10); // Get last 10 analyses
+
+          console.log(`Found ${allAnalyses?.length || 0} total analyses`);
+          if (allAnalysesError) console.log('All analyses error:', allAnalysesError);
+
+          // Get current analysis (most recent) and previous analysis (second most recent)
+          const currentAnalysis = allAnalyses && allAnalyses.length >= 1 ? allAnalyses[0] : null;
+          const previousAnalysis = allAnalyses && allAnalyses.length >= 2 ? allAnalyses[1] : null;
+
+          console.log('Current analysis:', currentAnalysis ? `Found: ${currentAnalysis.follower_count} followers` : 'None');
+          console.log('Previous analysis:', previousAnalysis ? `Found: ${previousAnalysis.follower_count} followers` : 'None');
+
+          // Calculate growth data
+          if (currentAnalysis && previousAnalysis) {
+            const currentCount = currentAnalysis.follower_count;
+            const previousCount = previousAnalysis.follower_count;
+            
+            console.log(`Growth calculation: ${previousCount} -> ${currentCount}`);
+            
+            if (currentCount && previousCount && previousCount > 0) {
+              const growthPercentage = ((currentCount - previousCount) / previousCount) * 100;
+              
+              const key = `${bookmark.username}_${bookmark.platform}`;
+              growthDataMap[key] = {
+                previousFollowerCount: previousCount,
+                growthPercentage: Number(growthPercentage.toFixed(2)),
+                lastAnalyzed: currentAnalysis.created_at
+              };
+              console.log(`✅ Added growth data: ${growthPercentage.toFixed(2)}%`);
+            } else {
+              console.log('❌ Invalid follower counts for growth calculation');
+            }
+          } else {
+            console.log('❌ Missing current or previous analysis data');
+          }
+        } catch (error) {
+          console.log(`Error processing ${bookmark.username}@${bookmark.platform}:`, error);
+        }
+      }
+      
+      console.log('\n=== MANUAL TEST RESULTS ===');
+      console.log('Growth data entries found:', Object.keys(growthDataMap).length);
+      console.log('Growth data map:', growthDataMap);
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -110,42 +205,59 @@ export default function BookmarksPage() {
   // Load bookmarks - using useMemo to avoid useEffect hydration issues
   const bookmarkLoader = useMemo(() => {
     const loadBookmarks = async () => {
-      console.log('Loading bookmarks - isAuthenticated:', isAuthenticated, 'user:', !!user);
+      console.log('useMemo bookmark loading triggered - isAuthenticated:', isAuthenticated, 'user:', !!user);
+      
+      // Only run client-side
+      if (typeof window === 'undefined') {
+        console.log('Server-side rendering, skipping bookmark loading');
+        return;
+      }
+      
       if (isAuthenticated && user) {
-        const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
-        console.log('Loaded user bookmarks:', userBookmarks.length);
-        setBookmarks(userBookmarks);
-      } else {
-        // Fallback to global bookmarks for non-authenticated users (client-side only)
-        if (typeof window !== 'undefined') {
-          const savedBookmarks = getBookmarkedCreators();
-          console.log('Loaded global bookmarks:', savedBookmarks.length);
-          setBookmarks(savedBookmarks.map(bookmark => ({
-            ...bookmark,
-            userId: 'anonymous',
-            bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
-          })));
-        } else {
-          console.log('Server-side rendering, skipping localStorage bookmarks');
+        console.log('Loading user-specific bookmarks for user:', user.id);
+        try {
+          const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
+          console.log('Loaded user bookmarks:', userBookmarks.length);
+          setBookmarks(userBookmarks);
+        } catch (error) {
+          console.error('Error loading user bookmarks:', error);
         }
+      } else {
+        console.log('User not authenticated, loading global bookmarks from localStorage');
+        const savedBookmarks = getBookmarkedCreators();
+        console.log('Loaded global bookmarks:', savedBookmarks.length);
+        setBookmarks(savedBookmarks.map(bookmark => ({
+          ...bookmark,
+          userId: 'anonymous',
+          bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
+        })));
       }
       setLoading(false);
     };
 
-    // Trigger loading after a short delay
-    setTimeout(loadBookmarks, 100);
+    // Trigger loading after a short delay to allow auth to load
+    setTimeout(loadBookmarks, 200);
     
-    return `${isAuthenticated}-${!!user}`;
+    return `${isAuthenticated}-${user?.id || 'no-user'}`;
   }, [isAuthenticated, user]);
 
-  // Load growth data for bookmarks - using useMemo to avoid useEffect hydration issues
+  // Load growth data for bookmarks - using useMemo to avoid useEffect hydration issues  
   const growthDataLoader = useMemo(() => {
     const loadGrowthData = async () => {
       console.log('Growth data loading triggered - bookmarks count:', bookmarks.length);
+      
+      // Only run client-side
+      if (typeof window === 'undefined') {
+        console.log('Server-side rendering, skipping growth data loading');
+        return;
+      }
+      
       if (bookmarks.length === 0) {
         console.log('No bookmarks found, skipping growth data loading');
         return;
       }
+      
+      console.log('Starting growth data calculation for bookmarks:', bookmarks.map(b => `${b.username}@${b.platform}`));
       
       // Check localStorage cache first
       const CACHE_KEY = 'gabooja_bookmark_growth_cache';
@@ -171,42 +283,49 @@ export default function BookmarksPage() {
         // Calculate growth data same way as discovery page uses creator_analyses table
         for (const bookmark of bookmarks) {
           try {
+            console.log(`\n--- Processing bookmark: ${bookmark.username}@${bookmark.platform} ---`);
+            
             // First, get the creator ID from creators table
-            const { data: creators } = await supabase
+            const { data: creators, error: creatorError } = await supabase
               .from('creators')
-              .select('id, last_analysis_date')
+              .select('id')
               .eq('username', bookmark.username)
               .eq('platform', bookmark.platform)
               .limit(1)
               .single();
             
+            console.log('Creator lookup result:', creators ? `Found ID: ${creators.id}` : 'Not found');
+            if (creatorError) console.log('Creator error:', creatorError);
+            
             if (!creators) {
+              console.log(`❌ Creator ${bookmark.username}@${bookmark.platform} not found in creators table`);
               continue;
             }
 
-            // Get current analysis
-            const { data: currentAnalysis } = await supabase
+            // Get all analyses for this creator
+            const { data: allAnalyses, error: allAnalysesError } = await supabase
               .from('creator_analyses')
               .select('follower_count, created_at')
               .eq('creator_id', creators.id)
               .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
+              .limit(10); // Get last 10 analyses
 
-            // Get previous analysis for comparison
-            const { data: previousAnalysis } = await supabase
-              .from('creator_analyses')
-              .select('follower_count, created_at')
-              .eq('creator_id', creators.id)
-              .lt('created_at', creators.last_analysis_date || new Date().toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
+            console.log(`Found ${allAnalyses?.length || 0} total analyses`);
+            if (allAnalysesError) console.log('All analyses error:', allAnalysesError);
+
+            // Get current analysis (most recent) and previous analysis (second most recent)
+            const currentAnalysis = allAnalyses && allAnalyses.length >= 1 ? allAnalyses[0] : null;
+            const previousAnalysis = allAnalyses && allAnalyses.length >= 2 ? allAnalyses[1] : null;
+
+            console.log('Current analysis:', currentAnalysis ? `Found: ${currentAnalysis.follower_count} followers` : 'None');
+            console.log('Previous analysis:', previousAnalysis ? `Found: ${previousAnalysis.follower_count} followers` : 'None');
 
             // Calculate growth data
             if (currentAnalysis && previousAnalysis) {
               const currentCount = currentAnalysis.follower_count;
               const previousCount = previousAnalysis.follower_count;
+              
+              console.log(`Growth calculation: ${previousCount} -> ${currentCount}`);
               
               if (currentCount && previousCount && previousCount > 0) {
                 const growthPercentage = ((currentCount - previousCount) / previousCount) * 100;
@@ -215,12 +334,17 @@ export default function BookmarksPage() {
                 growthDataMap[key] = {
                   previousFollowerCount: previousCount,
                   growthPercentage: Number(growthPercentage.toFixed(2)),
-                  lastAnalyzed: creators.last_analysis_date || currentAnalysis.created_at
+                  lastAnalyzed: currentAnalysis.created_at
                 };
+                console.log(`✅ Added growth data: ${growthPercentage.toFixed(2)}%`);
+              } else {
+                console.log('❌ Invalid follower counts for growth calculation');
               }
+            } else {
+              console.log('❌ Missing current or previous analysis data');
             }
           } catch (error) {
-            // Skip creators with calculation errors
+            console.log(`Error processing ${bookmark.username}@${bookmark.platform}:`, error);
           }
         }
       } catch (error) {
@@ -249,7 +373,7 @@ export default function BookmarksPage() {
     }
     
     return bookmarks.length;
-  }, [bookmarks]);
+  }, [bookmarks, bookmarks.length]); // Add bookmarks.length to ensure updates
 
   const handleDeleteClick = (bookmark: UserBookmark) => {
     // Check if user has disabled confirmation modal
@@ -523,6 +647,10 @@ export default function BookmarksPage() {
         <p className="text-muted-foreground">
           Creators you&apos;ve analyzed and saved for future reference
         </p>
+        {/* Debug button - remove this after testing */}
+        <Button onClick={testGrowthDataLoading} variant="outline" size="sm">
+          🐛 Debug Growth Data Loading
+        </Button>
       </div>
 
       {bookmarks.length === 0 ? (
