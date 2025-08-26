@@ -62,10 +62,20 @@ interface AnalysisData {
 }
 
 export default function BookmarksPage() {
+  console.log('BookmarksPage component rendering');
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
+  console.log('BookmarksPage - isAuthenticated:', isAuthenticated, 'user:', !!user);
   const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Debug bookmarks state changes
+  useEffect(() => {
+    console.log('Bookmarks state changed - count:', bookmarks.length);
+    if (bookmarks.length > 0) {
+      console.log('Bookmark usernames:', bookmarks.map(b => `${b.username}@${b.platform}`));
+    }
+  }, [bookmarks]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -97,8 +107,8 @@ export default function BookmarksPage() {
     return colors[category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
   };
 
-  // Load bookmarks on component mount
-  useEffect(() => {
+  // Load bookmarks - using useMemo to avoid useEffect hydration issues
+  const bookmarkLoader = useMemo(() => {
     const loadBookmarks = async () => {
       console.log('Loading bookmarks - isAuthenticated:', isAuthenticated, 'user:', !!user);
       if (isAuthenticated && user) {
@@ -106,27 +116,26 @@ export default function BookmarksPage() {
         console.log('Loaded user bookmarks:', userBookmarks.length);
         setBookmarks(userBookmarks);
       } else {
-        // Fallback to global bookmarks for non-authenticated users
-        const savedBookmarks = getBookmarkedCreators();
-        console.log('Loaded global bookmarks:', savedBookmarks.length);
-        setBookmarks(savedBookmarks.map(bookmark => ({
-          ...bookmark,
-          userId: 'anonymous',
-          bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
-        })));
+        // Fallback to global bookmarks for non-authenticated users (client-side only)
+        if (typeof window !== 'undefined') {
+          const savedBookmarks = getBookmarkedCreators();
+          console.log('Loaded global bookmarks:', savedBookmarks.length);
+          setBookmarks(savedBookmarks.map(bookmark => ({
+            ...bookmark,
+            userId: 'anonymous',
+            bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
+          })));
+        } else {
+          console.log('Server-side rendering, skipping localStorage bookmarks');
+        }
       }
       setLoading(false);
     };
 
-    loadBookmarks();
+    // Trigger loading after a short delay
+    setTimeout(loadBookmarks, 100);
     
-    // Listen for storage changes to sync across tabs
-    const handleStorageChange = () => {
-      loadBookmarks();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return `${isAuthenticated}-${!!user}`;
   }, [isAuthenticated, user]);
 
   // Load growth data for bookmarks - using useMemo to avoid useEffect hydration issues
