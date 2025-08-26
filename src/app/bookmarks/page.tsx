@@ -152,33 +152,60 @@ export default function BookmarksPage() {
       const growthDataMap: Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }> = {};
       
       try {
-        // OPTIMIZATION: Batch query all bookmarks at once instead of individual queries
-        const bookmarkIdentifiers = bookmarks.map(b => `(username='${b.username.replace("'", "''")}' AND platform='${b.platform}')`).join(' OR ');
-        
-        if (bookmarkIdentifiers) {
-          const { data, error } = await supabase
-            .from('creator_discovery_enriched')
-            .select('username, platform, growth_percentage, previous_follower_count, last_analysis_date')
-            .or(bookmarkIdentifiers)
-            .order('last_analysis_date', { ascending: false });
-          
-          if (!error && data) {
-            // Group by username/platform and take the most recent analysis
-            const seenCreators = new Set<string>();
+        // Calculate growth data same way as discovery page uses creator_analyses table
+        // For each bookmark, calculate growth data using the same logic as discovery API
+        for (const bookmark of bookmarks) {
+          try {
+            // First, get the creator ID from creators table
+            const { data: creators, error: creatorError } = await supabase
+              .from('creators')
+              .select('id, last_analysis_date')
+              .eq('username', bookmark.username)
+              .eq('platform', bookmark.platform)
+              .limit(1)
+              .single();
             
-            data.forEach(item => {
-              const key = `${item.username}_${item.platform}`;
-              if (!seenCreators.has(key) && item.growth_percentage !== null) {
-                seenCreators.add(key);
+            if (creatorError || !creators) {
+              continue;
+            }
+
+            // Get current analysis
+            const { data: currentAnalysis } = await supabase
+              .from('creator_analyses')
+              .select('follower_count, created_at')
+              .eq('creator_id', creators.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            // Get previous analysis for comparison
+            const { data: previousAnalysis } = await supabase
+              .from('creator_analyses')
+              .select('follower_count, created_at')
+              .eq('creator_id', creators.id)
+              .lt('created_at', creators.last_analysis_date || new Date().toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            // Calculate growth data
+            if (currentAnalysis && previousAnalysis) {
+              const currentCount = currentAnalysis.follower_count;
+              const previousCount = previousAnalysis.follower_count;
+              
+              if (currentCount && previousCount && previousCount > 0) {
+                const growthPercentage = ((currentCount - previousCount) / previousCount) * 100;
+                
+                const key = `${bookmark.username}_${bookmark.platform}`;
                 growthDataMap[key] = {
-                  previousFollowerCount: item.previous_follower_count || 0,
-                  growthPercentage: item.growth_percentage || 0,
-                  lastAnalyzed: item.last_analysis_date || bookmarks.find(b => b.username === item.username && b.platform === item.platform)?.bookmarkedAt || new Date().toISOString()
+                  previousFollowerCount: previousCount,
+                  growthPercentage: Number(growthPercentage.toFixed(2)),
+                  lastAnalyzed: creators.last_analysis_date || currentAnalysis.created_at
                 };
               }
-            });
-          } else {
-            console.log('Error fetching batch growth data:', error);
+            }
+          } catch (error) {
+            // Skip creators with calculation errors
           }
         }
       } catch (error) {
@@ -559,21 +586,30 @@ export default function BookmarksPage() {
                     {(() => {
                       const key = `${bookmark.username}_${bookmark.platform}`;
                       const growthData = bookmarkGrowthData[key];
-                      return growthData && (
-                        <button
-                          onClick={() => handleGrowthChart(bookmark)}
-                          className={`text-xs px-1.5 py-0.5 rounded-full mt-1 inline-block cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all duration-200 ${
-                            growthData.growthPercentage > 0
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
-                              : growthData.growthPercentage < 0
-                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
-                              : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
-                          }`}
-                          title="Click to view growth chart"
-                        >
-                          {growthData.growthPercentage > 0 ? '+' : ''}
-                          {growthData.growthPercentage.toFixed(1)}%
-                        </button>
+                      return growthData ? (
+                        <div className="mt-1">
+                          <button
+                            onClick={() => handleGrowthChart(bookmark)}
+                            className={`text-xs px-2 py-1 rounded-full inline-flex items-center gap-1 cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all duration-200 ${
+                              growthData.growthPercentage > 0
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
+                                : growthData.growthPercentage < 0
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
+                            }`}
+                            title={`Click to view growth chart • Previous: ${formatNumber(growthData.previousFollowerCount)}`}
+                          >
+                            {growthData.growthPercentage > 0 ? '📈' : growthData.growthPercentage < 0 ? '📉' : '➖'}
+                            <span>
+                              {growthData.growthPercentage > 0 ? '+' : ''}
+                              {growthData.growthPercentage.toFixed(1)}%
+                            </span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          No growth data
+                        </div>
                       );
                     })()}
                   </div>
@@ -584,6 +620,48 @@ export default function BookmarksPage() {
                     <div className="text-xs text-muted-foreground">Following</div>
                   </div>
                 </div>
+
+                {/* Growth Trend Analysis Section */}
+                {(() => {
+                  const key = `${bookmark.username}_${bookmark.platform}`;
+                  const growthData = bookmarkGrowthData[key];
+                  return growthData && (
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border border-blue-200 dark:border-blue-800">
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
+                        📊 Growth Trend Analysis
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              growthData.growthPercentage > 0
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : growthData.growthPercentage < 0
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                            }`}>
+                              {growthData.growthPercentage > 0 ? '🚀' : growthData.growthPercentage < 0 ? '📉' : '➖'}
+                              {growthData.growthPercentage > 0 ? '+' : ''}{growthData.growthPercentage.toFixed(1)}%
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              vs. {formatNumber(growthData.previousFollowerCount)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            Last analyzed: {new Date(growthData.lastAnalyzed).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleGrowthChart(bookmark)}
+                          className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors duration-200 flex items-center gap-1"
+                          title="View detailed growth chart"
+                        >
+                          📈 View Chart
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* AI Analysis Score if available */}
                 {bookmark.aiAnalysis && (
