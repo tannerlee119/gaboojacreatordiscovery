@@ -177,10 +177,39 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
     }
   };
 
-  const handleCategoryChange = (newCategory: CreatorCategory) => {
+  const handleCategoryChange = async (newCategory: CreatorCategory) => {
     setCurrentCategory(newCategory);
-    // You could add API call here to save the category change to database
     console.log(`Category changed from ${currentCategory} to ${newCategory} for @${analysisData.profile.username}`);
+    
+    try {
+      // Update category in database
+      const response = await fetch('/api/update-creator-category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: analysisData.profile.username,
+          platform: analysisData.profile.platform,
+          category: newCategory
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('Failed to update category:', result.error);
+        // Revert the local state change if API call failed
+        setCurrentCategory(currentCategory);
+        return;
+      }
+      
+      console.log('Category updated successfully:', result.message);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      // Revert the local state change if API call failed
+      setCurrentCategory(currentCategory);
+    }
   };
 
   const handleRefresh = async () => {
