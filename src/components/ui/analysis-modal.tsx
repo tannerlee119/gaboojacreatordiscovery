@@ -205,6 +205,50 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
       }
       
       console.log('Category updated successfully:', result.message);
+      
+      // Update bookmark cache if this creator is bookmarked
+      if (isAuthenticated && user) {
+        // Update user-specific bookmarks
+        try {
+          await UserBookmarksService.updateCreatorCategory(
+            user.id,
+            analysisData.profile.username,
+            analysisData.profile.platform as 'instagram' | 'tiktok',
+            newCategory
+          );
+        } catch (error) {
+          console.log('Note: Could not update bookmark cache (this is okay if creator is not bookmarked)');
+        }
+      } else {
+        // Update localStorage bookmarks for non-authenticated users
+        try {
+          const bookmarks = JSON.parse(localStorage.getItem('gabooja_bookmarked_creators') || '[]');
+          const updatedBookmarks = bookmarks.map((bookmark: any) => {
+            if (bookmark.username === analysisData.profile.username && 
+                bookmark.platform === analysisData.profile.platform) {
+              return {
+                ...bookmark,
+                aiAnalysis: {
+                  ...bookmark.aiAnalysis,
+                  category: newCategory
+                }
+              };
+            }
+            return bookmark;
+          });
+          localStorage.setItem('gabooja_bookmarked_creators', JSON.stringify(updatedBookmarks));
+        } catch (error) {
+          console.log('Note: Could not update localStorage bookmark cache');
+        }
+      }
+      
+      // Trigger bookmark page refresh by updating a cache key
+      try {
+        localStorage.setItem('gabooja_category_update_timestamp', Date.now().toString());
+      } catch (error) {
+        console.log('Note: Could not set refresh trigger');
+      }
+      
     } catch (error) {
       console.error('Error updating category:', error);
       // Revert the local state change if API call failed

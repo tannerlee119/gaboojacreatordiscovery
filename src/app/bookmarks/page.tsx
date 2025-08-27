@@ -92,6 +92,7 @@ export default function BookmarksPage() {
   const [selectedBookmarkForGrowth, setSelectedBookmarkForGrowth] = useState<UserBookmark | null>(null);
   const [bookmarkGrowthData, setBookmarkGrowthData] = useState<Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }>>({});
   const [isLoadingGrowthData, setIsLoadingGrowthData] = useState(false);
+  const [categoryUpdateTimestamp, setCategoryUpdateTimestamp] = useState<number>(0);
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -272,6 +273,51 @@ export default function BookmarksPage() {
       loadGrowthData();
     }
   }, [bookmarks]);
+
+  // Monitor for category updates and refresh bookmarks when needed
+  useEffect(() => {
+    const checkForCategoryUpdates = () => {
+      if (typeof window === 'undefined') return;
+      
+      try {
+        const timestamp = localStorage.getItem('gabooja_category_update_timestamp');
+        if (timestamp) {
+          const updateTime = parseInt(timestamp);
+          if (updateTime > categoryUpdateTimestamp) {
+            console.log('Category update detected, refreshing bookmarks...');
+            setCategoryUpdateTimestamp(updateTime);
+            
+            // Refresh bookmarks to get updated categories
+            const refreshBookmarks = async () => {
+              if (isAuthenticated && user) {
+                const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
+                setBookmarks(userBookmarks);
+              } else if (isAuthenticated === false) {
+                const savedBookmarks = getBookmarkedCreators();
+                setBookmarks(savedBookmarks.map(bookmark => ({
+                  ...bookmark,
+                  userId: 'anonymous',
+                  bookmarkedAt: bookmark.bookmarkedAt || new Date().toISOString()
+                })));
+              }
+            };
+            
+            refreshBookmarks();
+          }
+        }
+      } catch (error) {
+        console.log('Error checking for category updates:', error);
+      }
+    };
+    
+    // Check for updates every 2 seconds when page is visible
+    const interval = setInterval(checkForCategoryUpdates, 2000);
+    
+    // Also check immediately when component mounts
+    checkForCategoryUpdates();
+    
+    return () => clearInterval(interval);
+  }, [categoryUpdateTimestamp, isAuthenticated, user]);
 
   const handleDeleteClick = (bookmark: UserBookmark) => {
     // Check if user has disabled confirmation modal

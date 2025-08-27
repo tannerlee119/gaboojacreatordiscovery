@@ -221,6 +221,37 @@ export class UserBookmarksService {
     }
   }
 
+  static async updateCreatorCategory(userId: string, username: string, platform: 'instagram' | 'tiktok', category: string): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    
+    // Note: Database will be updated via the API endpoint, so we only need to update localStorage cache
+    try {
+      const bookmarks = await this.getUserBookmarks(userId);
+      const bookmarkIndex = bookmarks.findIndex(
+        bookmark => bookmark.username === username && bookmark.platform === platform
+      );
+      
+      if (bookmarkIndex >= 0) {
+        bookmarks[bookmarkIndex] = {
+          ...bookmarks[bookmarkIndex],
+          aiAnalysis: {
+            ...bookmarks[bookmarkIndex].aiAnalysis,
+            category
+          }
+        };
+        
+        const key = this.getStorageKey(userId, 'bookmarks');
+        localStorage.setItem(key, JSON.stringify(bookmarks));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error updating creator category in bookmark cache:', error);
+      return false;
+    }
+  }
+
   static async updateUserBookmark(userId: string, updatedBookmark: UserBookmark): Promise<boolean> {
     if (typeof window === 'undefined') return false;
     
