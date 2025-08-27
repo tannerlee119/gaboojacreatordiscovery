@@ -415,7 +415,7 @@ export function CreatorDiscovery() {
     }
     
     return filtered;
-  }, [discoveryData?.creators, searchTerm, discoveryData, isLoading, filters, currentPage, fetchDiscoveryDataWithFilters]);
+  }, [searchTerm, discoveryData, isLoading, filters, currentPage, fetchDiscoveryDataWithFilters]);
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // bookmarkUpdate is used in dependency arrays to trigger re-renders
@@ -521,7 +521,7 @@ export function CreatorDiscovery() {
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerm ? (
                     <>
-                      <p>No creators found matching "{searchTerm}" on this page.</p>
+                      <p>No creators found matching &quot;{searchTerm}&quot; on this page.</p>
                       <p className="text-sm mt-2">Try searching on other pages or adjusting your search term.</p>
                     </>
                   ) : (
@@ -550,7 +550,7 @@ export function CreatorDiscovery() {
                     <div className="text-center py-12 text-muted-foreground">
                       {searchTerm ? (
                         <>
-                          <p>No creators found matching "{searchTerm}" on this page.</p>
+                          <p>No creators found matching &quot;{searchTerm}&quot; on this page.</p>
                           <p className="text-sm mt-2">Try searching on other pages or adjusting your search term.</p>
                         </>
                       ) : (

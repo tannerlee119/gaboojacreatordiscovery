@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
-import { CreatorCategory } from '@/lib/types';
 
 // Validation schema for category update
 const updateCategorySchema = z.object({

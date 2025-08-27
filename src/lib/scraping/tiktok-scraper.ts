@@ -27,7 +27,6 @@ class TikTokScraper extends PlaywrightBaseScraper {
     }
 
     try {
-      const totalStartTime = Date.now();
       console.log(`🔍 Starting TikTok analysis for: ${username} at ${new Date().toISOString()}`);
       
       // Initialize browser with Sparticuz chromium if available

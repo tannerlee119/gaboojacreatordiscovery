@@ -5,6 +5,9 @@
     },
     "src/app/api/discover-creators/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/update-creator-category/route.ts": {
+      "maxDuration": 10
     }
   },
   "build": {

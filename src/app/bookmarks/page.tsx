@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
@@ -383,10 +383,10 @@ export default function BookmarksPage() {
   const handleViewAnalysis = async (bookmark: UserBookmark) => {
     // OPTIMIZATION: Use cached analysis date if available from growth data load
     const key = `${bookmark.username}_${bookmark.platform}`;
-    let actualAnalysisDate = bookmarkGrowthData[key]?.lastAnalyzed || bookmark.bookmarkedAt;
+    const actualAnalysisDate = bookmarkGrowthData[key]?.lastAnalyzed || bookmark.bookmarkedAt;
     
     // Convert bookmark data to complete analysis format - ensure ALL fields are populated
-    let analysisData: AnalysisData = {
+    const analysisData: AnalysisData = {
       profile: {
         username: bookmark.username,
         platform: bookmark.platform as 'instagram' | 'tiktok',

@@ -12,7 +12,8 @@ export default function AnalyzePage() {
   useEffect(() => {
     const username = searchParams.get('username');
     const platform = searchParams.get('platform');
-    const shouldRefresh = searchParams.get('refresh') === 'true';
+    // TODO: Implement refresh functionality
+    // const shouldRefresh = searchParams.get('refresh') === 'true';
     
     if (username && platform) {
       // Clean up URL parameters after extracting them

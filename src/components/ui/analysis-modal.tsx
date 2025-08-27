@@ -216,20 +216,20 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
             analysisData.profile.platform as 'instagram' | 'tiktok',
             newCategory
           );
-        } catch (error) {
-          console.log('Note: Could not update bookmark cache (this is okay if creator is not bookmarked)');
+        } catch (error: unknown) {
+          console.log('Note: Could not update bookmark cache (this is okay if creator is not bookmarked)', error);
         }
       } else {
         // Update localStorage bookmarks for non-authenticated users
         try {
           const bookmarks = JSON.parse(localStorage.getItem('gabooja_bookmarked_creators') || '[]');
-          const updatedBookmarks = bookmarks.map((bookmark: any) => {
+          const updatedBookmarks = bookmarks.map((bookmark: Record<string, unknown>) => {
             if (bookmark.username === analysisData.profile.username && 
                 bookmark.platform === analysisData.profile.platform) {
               return {
                 ...bookmark,
                 aiAnalysis: {
-                  ...bookmark.aiAnalysis,
+                  ...(bookmark.aiAnalysis as Record<string, unknown> || {}),
                   category: newCategory
                 }
               };
@@ -237,16 +237,16 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
             return bookmark;
           });
           localStorage.setItem('gabooja_bookmarked_creators', JSON.stringify(updatedBookmarks));
-        } catch (error) {
-          console.log('Note: Could not update localStorage bookmark cache');
+        } catch (error: unknown) {
+          console.log('Note: Could not update localStorage bookmark cache', error);
         }
       }
       
       // Trigger bookmark page refresh by updating a cache key
       try {
         localStorage.setItem('gabooja_category_update_timestamp', Date.now().toString());
-      } catch (error) {
-        console.log('Note: Could not set refresh trigger');
+      } catch (error: unknown) {
+        console.log('Note: Could not set refresh trigger', error);
       }
       
     } catch (error) {
