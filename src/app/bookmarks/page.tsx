@@ -67,7 +67,7 @@ export default function BookmarksPage() {
   const isAuthenticated = !!session;
   console.log('BookmarksPage - isAuthenticated:', isAuthenticated, 'user:', !!user);
   console.log('Session details:', session ? 'exists' : 'null');
-  console.log('User details:', user ? { id: user.id, email: user.email } : 'null');
+  console.log('User details:', user ? { id: user.id } : 'null');
   const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
   

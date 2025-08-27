@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 interface User {
   id: string;
   username: string;
-  email?: string;
   loginTime: string;
   createdAt?: string;
 }
@@ -13,7 +12,6 @@ interface User {
 interface StoredUser {
   id: string;
   username: string;
-  email?: string;
   password: string; // Stored password (in production this would be hashed)
   createdAt: string;
 }
@@ -23,7 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
   updateUser: (updates: Partial<User>) => void;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 }
@@ -74,7 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData: User = {
         id: foundUser.id,
         username: foundUser.username,
-        email: foundUser.email,
         loginTime: new Date().toISOString(),
         createdAt: foundUser.createdAt
       };
@@ -94,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
 
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = async (username: string, password: string): Promise<boolean> => {
     try {
       // Get existing users
       const users: StoredUser[] = JSON.parse(localStorage.getItem('users') || '[]');
@@ -109,7 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newStoredUser: StoredUser = {
         id: Date.now().toString(),
         username,
-        email,
         password, // In production, this would be hashed
         createdAt: new Date().toISOString()
       };
@@ -122,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData: User = {
         id: newStoredUser.id,
         username: newStoredUser.username,
-        email: newStoredUser.email,
         loginTime: new Date().toISOString(),
         createdAt: newStoredUser.createdAt
       };
@@ -157,8 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Only update allowed fields, preserve password
         users[userIndex] = {
           ...users[userIndex],
-          username: updatedUser.username,
-          email: updatedUser.email
+          username: updatedUser.username
         };
         localStorage.setItem('users', JSON.stringify(users));
       }
