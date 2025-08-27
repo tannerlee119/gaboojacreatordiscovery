@@ -73,30 +73,33 @@ export class DatabaseBookmarkService {
       }
 
       // Transform the nested structure to flat structure
-      return (data || []).map(item => ({
-        bookmark_id: item.bookmark_id,
-        user_id: item.user_id,
-        creator_id: item.creator_id,
-        comments: item.comments,
-        bookmarked_at: item.bookmarked_at,
-        bookmark_updated_at: item.bookmark_updated_at,
-        username: item.creators.username,
-        platform: item.creators.platform,
-        display_name: item.creators.display_name,
-        bio: item.creators.bio,
-        profile_image_url: item.creators.profile_image_url,
-        profile_image_base64: item.creators.profile_image_base64,
-        is_verified: item.creators.is_verified,
-        follower_count: item.creators.follower_count,
-        following_count: item.creators.following_count,
-        location: item.creators.location,
-        website: item.creators.website,
-        engagement_rate: item.creators.engagement_rate,
-        category: item.creators.category,
-        ai_creator_score: item.creators.ai_creator_score,
-        ai_brand_potential: item.creators.ai_brand_potential,
-        ai_key_strengths: item.creators.ai_key_strengths
-      }));
+      return (data || []).map(item => {
+        const creator = Array.isArray(item.creators) ? item.creators[0] : item.creators;
+        return {
+          bookmark_id: item.bookmark_id,
+          user_id: item.user_id,
+          creator_id: item.creator_id,
+          comments: item.comments,
+          bookmarked_at: item.bookmarked_at,
+          bookmark_updated_at: item.bookmark_updated_at,
+          username: creator?.username,
+          platform: creator?.platform,
+          display_name: creator?.display_name,
+          bio: creator?.bio,
+          profile_image_url: creator?.profile_image_url,
+          profile_image_base64: creator?.profile_image_base64,
+          is_verified: creator?.is_verified,
+          follower_count: creator?.follower_count,
+          following_count: creator?.following_count,
+          location: creator?.location,
+          website: creator?.website,
+          engagement_rate: creator?.engagement_rate,
+          category: creator?.category,
+          ai_creator_score: creator?.ai_creator_score,
+          ai_brand_potential: creator?.ai_brand_potential,
+          ai_key_strengths: creator?.ai_key_strengths
+        };
+      });
     } catch (error) {
       console.error('Error fetching user bookmarks:', error);
       return this.getUserBookmarksFallback(userId);
