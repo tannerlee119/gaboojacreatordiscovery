@@ -25,7 +25,6 @@ export interface DatabaseBookmark {
   ai_creator_score?: string;
   ai_brand_potential?: string;
   ai_key_strengths?: string;
-  last_analysis_date?: string;
 }
 
 export class DatabaseBookmarkService {
@@ -61,8 +60,7 @@ export class DatabaseBookmarkService {
             category,
             ai_creator_score,
             ai_brand_potential,
-            ai_key_strengths,
-            last_analysis_date
+            ai_key_strengths
           )
         `)
         .eq('user_id', userId)
@@ -97,8 +95,7 @@ export class DatabaseBookmarkService {
         category: item.creators.category,
         ai_creator_score: item.creators.ai_creator_score,
         ai_brand_potential: item.creators.ai_brand_potential,
-        ai_key_strengths: item.creators.ai_key_strengths,
-        last_analysis_date: item.creators.last_analysis_date
+        ai_key_strengths: item.creators.ai_key_strengths
       }));
     } catch (error) {
       console.error('Error fetching user bookmarks:', error);
