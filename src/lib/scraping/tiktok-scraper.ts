@@ -461,9 +461,9 @@ class TikTokScraper extends PlaywrightBaseScraper {
 
       // Override permissions API to avoid detection
       const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => (
+      window.navigator.permissions.query = (parameters: PermissionDescriptor) => (
         parameters.name === 'notifications' ?
-          Promise.resolve({ state: Notification.permission }) :
+          Promise.resolve({ state: Notification.permission } as PermissionStatus) :
           originalQuery(parameters)
       );
 
