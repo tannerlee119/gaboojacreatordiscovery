@@ -2,9 +2,9 @@
 
 import { CreatorAnalyzer } from '@/components/features/creator-analyzer';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
-export default function AnalyzePage() {
+function AnalyzePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -37,5 +37,22 @@ export default function AnalyzePage() {
       {/* Main Analyzer Component */}
       <CreatorAnalyzer />
     </div>
+  );
+}
+
+export default function AnalyzePage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-12 gabooja-hero-bg rounded-2xl py-16 px-8">
+        <h1 className="text-4xl md:text-6xl font-bold gabooja-gradient mb-6">
+          Gabooja Creator Discovery
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          Loading...
+        </p>
+      </div>
+    </div>}>
+      <AnalyzePageContent />
+    </Suspense>
   );
 } 
