@@ -468,9 +468,9 @@ class TikTokScraper extends PlaywrightBaseScraper {
       );
 
       // Remove playwright-specific properties
-      delete window.__playwright;
-      delete window.__pw_manual;
-      delete window.__PW_inspect;
+      delete (window as Record<string, unknown>)['__playwright'];
+      delete (window as Record<string, unknown>)['__pw_manual'];
+      delete (window as Record<string, unknown>)['__PW_inspect'];
     });
 
     console.log('✅ TikTok stealth setup completed');
