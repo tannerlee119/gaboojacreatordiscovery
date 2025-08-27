@@ -702,7 +702,7 @@ export default function BookmarksPage() {
                         </div>
                         <button
                           onClick={() => handleGrowthChart(bookmark)}
-                          className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors duration-200 flex items-center gap-1"
+                          className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors duration-200 flex items-center gap-1 cursor-pointer"
                           title="View detailed growth chart"
                         >
                           📈 View Chart
