@@ -235,6 +235,14 @@ export class UserBookmarksService {
         bookmarks[bookmarkIndex] = {
           ...bookmarks[bookmarkIndex],
           aiAnalysis: {
+            creator_score: '',
+            brand_potential: '',
+            key_strengths: '',
+            engagement_quality: '',
+            content_style: '',
+            audience_demographics: '',
+            collaboration_potential: '',
+            overall_assessment: '',
             ...bookmarks[bookmarkIndex].aiAnalysis,
             category
           }

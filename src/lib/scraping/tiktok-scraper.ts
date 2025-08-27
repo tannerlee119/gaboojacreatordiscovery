@@ -468,9 +468,9 @@ class TikTokScraper extends PlaywrightBaseScraper {
       );
 
       // Remove playwright-specific properties
-      delete (window as Record<string, unknown>)['__playwright'];
-      delete (window as Record<string, unknown>)['__pw_manual'];
-      delete (window as Record<string, unknown>)['__PW_inspect'];
+      delete (window as unknown as Record<string, unknown>)['__playwright'];
+      delete (window as unknown as Record<string, unknown>)['__pw_manual'];
+      delete (window as unknown as Record<string, unknown>)['__PW_inspect'];
     });
 
     console.log('✅ TikTok stealth setup completed');
@@ -682,8 +682,9 @@ class TikTokScraper extends PlaywrightBaseScraper {
           // Try to trigger any lazy loading
           const images = document.querySelectorAll('img[data-src], img[loading="lazy"]');
           images.forEach(img => {
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
+            const htmlImg = img as HTMLImageElement;
+            if (htmlImg.dataset.src) {
+              htmlImg.src = htmlImg.dataset.src;
             }
           });
         });
