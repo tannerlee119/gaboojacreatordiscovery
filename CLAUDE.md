@@ -38,6 +38,18 @@ Ensure these environment variables are configured in `.env.local`:
 - `TIKTOK_COOKIES_JSON` - TikTok session cookies as JSON array (optional)
 - `NODE_ENV` - Set to 'development' for local development
 
+### Testing & Quality Commands
+```bash
+# Run TypeScript type checking
+npx tsc --noEmit
+
+# Check build without starting server
+npm run build
+
+# Test specific API endpoints
+curl "http://localhost:3000/api/discover-creators?platform=all"
+```
+
 ## Core Architecture
 
 ### Technology Stack
@@ -450,3 +462,33 @@ copy(JSON.stringify(document.cookie.split(';').map(c => {
 - **Video Count Error Fix**: Removed video count requirements from TikTok validation since video counts aren't available from profile screenshots
 - **Enhanced Posts Loading**: Improved TikTok scraper with multiple strategies for loading videos, better error handling for "Something went wrong" scenarios
 - **Authentication Guidance**: Enhanced logging to explain when TikTok cookies are needed for full video access
+
+## Important Development Guidelines
+
+### Code Quality & Standards
+- **TypeScript**: Strict mode enabled - all code must be properly typed
+- **ESLint**: Follow Next.js standards with custom rules for unused variables  
+- **Components**: Use Shadcn/ui components consistently - avoid creating custom UI primitives
+- **API Routes**: Always include proper error handling, rate limiting, and input validation
+- **Database**: Use Supabase RPC functions for complex queries, direct table operations for simple CRUD
+
+### Critical Development Practices
+- **Environment Variables**: Never commit secrets - validate all required env vars on startup
+- **Instagram Cookies**: Monitor for "Invalid follower count: 0" errors indicating expired cookies
+- **Platform Parity**: When adding features, ensure both Instagram and TikTok are supported
+- **Data Quality**: Always validate and normalize scraped data before storage
+- **Error Handling**: Provide user-friendly messages while logging technical details internally
+
+### Quick Development Reference
+```bash
+# Before making changes
+npm run lint                    # Check code quality
+npx tsc --noEmit               # Verify TypeScript types  
+npm run build                  # Ensure build succeeds
+
+# Test API endpoints directly
+curl "http://localhost:3000/api/discover-creators?platform=all"
+
+# Debug database issues  
+npm run cleanup-db             # Preview database cleanup
+```
