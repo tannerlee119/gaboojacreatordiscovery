@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { DiscoveryCache } from '@/lib/cache/discovery-cache';
 
 // Validation schema for category update
 const updateCategorySchema = z.object({
@@ -44,6 +45,15 @@ export async function POST(request: NextRequest) {
         { error: 'Creator not found' },
         { status: 404 }
       );
+    }
+
+    // Invalidate cache when creator category is updated
+    try {
+      await DiscoveryCache.invalidateCreatorCache(data.id);
+      console.log(`🧹 Cache invalidated for creator category update: ${username}`);
+    } catch (cacheError) {
+      console.error('⚠️ Failed to invalidate cache after category update:', cacheError);
+      // Don't fail the request if cache invalidation fails
     }
     
     console.log(`Successfully updated category for @${username} to ${category}`);

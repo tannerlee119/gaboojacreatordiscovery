@@ -8,6 +8,7 @@ import { createServerClient } from '@/lib/supabase';
 import { analyzeCreatorRequestSchema, InputSanitizer } from '@/lib/validation/schemas';
 import { apiRateLimiter, getClientIdentifier } from '@/lib/security/rate-limiter';
 import { setCorsHeaders, handleCorsPreFlight } from '@/lib/security/cors';
+import { DiscoveryCache } from '@/lib/cache/discovery-cache';
 import { ZodError } from 'zod';
 
 // Helper function to safely parse large numbers
@@ -382,6 +383,15 @@ export async function POST(request: NextRequest) {
       if (saveResult.success) {
         analysisId = saveResult.analysisId;
         console.log(`✅ Analysis saved to Supabase with ID: ${analysisId}`);
+        
+        // Invalidate related caches when new creator data is saved
+        try {
+          await DiscoveryCache.invalidateCreatorCache(saveResult.analysisId || '');
+          console.log(`🧹 Cache invalidated for creator: ${analysisData.profile.username}`);
+        } catch (cacheError) {
+          console.error('⚠️ Failed to invalidate cache:', cacheError);
+          // Don't fail the request if cache invalidation fails
+        }
       } else {
         console.error('❌ Failed to save analysis:', saveResult.error);
       }
