@@ -55,13 +55,6 @@ async function calculateAndCacheBatchGrowthData(creators: DatabaseCreator[]) {
   try {
     const creatorIds = creators.map(c => c.id);
     
-    // Get all latest analyses in one query
-    const { data: latestAnalyses } = await supabase
-      .from('creator_analyses')
-      .select('creator_id, follower_count, created_at')
-      .in('creator_id', creatorIds)
-      .order('created_at', { ascending: false });
-    
     // Get all previous analyses in one query
     const { data: allAnalyses } = await supabase
       .from('creator_analyses')
