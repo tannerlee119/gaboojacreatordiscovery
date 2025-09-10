@@ -203,6 +203,11 @@ function mapDatabaseCreatorToDiscoveryCreator(dbCreator: DatabaseCreator) {
   };
 }
 
+// Add runtime configuration for Vercel optimization
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // 30 second timeout for discovery queries
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
@@ -231,6 +236,7 @@ export async function GET(request: NextRequest) {
       response.headers.set('X-Cache', 'HIT');
       response.headers.set('X-Response-Time', `${totalTime}ms`);
       response.headers.set('X-Data-Source', 'Redis');
+      response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
       
       return response;
     }
@@ -362,15 +368,30 @@ export async function GET(request: NextRequest) {
     // Identify creators that need growth data calculation
     const creatorsNeedingGrowthData = (creators || []).filter((_, index) => !cachedGrowthData[index]);
     
-    // Batch calculate growth data for uncached creators
+    // Batch calculate growth data for uncached creators (with timeout for Vercel)
     if (creatorsNeedingGrowthData.length > 0) {
-      await calculateAndCacheBatchGrowthData(creatorsNeedingGrowthData);
-      
-      // Refresh cache data for these creators
-      for (let i = 0; i < creators!.length; i++) {
-        if (!cachedGrowthData[i]) {
-          cachedGrowthData[i] = await DiscoveryCache.getCreatorGrowthData(creators![i].id);
+      const growthCalculationStart = Date.now();
+      try {
+        // Set timeout to prevent slow responses on Vercel
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Growth calculation timeout')), 10000)
+        );
+        
+        await Promise.race([
+          calculateAndCacheBatchGrowthData(creatorsNeedingGrowthData),
+          timeoutPromise
+        ]);
+        
+        // Refresh cache data for these creators
+        for (let i = 0; i < creators!.length; i++) {
+          if (!cachedGrowthData[i]) {
+            cachedGrowthData[i] = await DiscoveryCache.getCreatorGrowthData(creators![i].id);
+          }
         }
+      } catch (error) {
+        const growthTime = Date.now() - growthCalculationStart;
+        console.log(`⚠️ Growth calculation skipped after ${growthTime}ms for performance:`, error instanceof Error ? error.message : 'unknown error');
+        // Continue without growth data for better performance on Vercel
       }
     }
 
@@ -415,6 +436,7 @@ export async function GET(request: NextRequest) {
     response.headers.set('X-Response-Time', `${totalTime}ms`);
     response.headers.set('X-Data-Source', 'Database');
     response.headers.set('X-Creators-Count', mappedCreators.length.toString());
+    response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
 
     return response;
 

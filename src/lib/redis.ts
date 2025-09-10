@@ -8,17 +8,18 @@ const redisConfig = {
   password: process.env.REDIS_PASSWORD,
   db: parseInt(process.env.REDIS_DB || '0'),
   
-  // Connection options
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
+  // Connection options optimized for Vercel serverless
+  maxRetriesPerRequest: 2, // Reduce retries for faster failures
+  retryDelayOnFailover: 50, // Faster retry
   lazyConnect: true,
   
-  // Keep connections alive
-  keepAlive: 30000,
+  // Shorter timeouts for serverless environment
+  connectTimeout: 5000, // 5 seconds
+  commandTimeout: 3000, // 3 seconds
   
-  // Timeouts
-  connectTimeout: 10000,
-  commandTimeout: 5000,
+  // Serverless optimizations
+  enableReadyCheck: false,
+  maxmemoryPolicy: 'allkeys-lru',
 };
 
 // Create Redis client instance
