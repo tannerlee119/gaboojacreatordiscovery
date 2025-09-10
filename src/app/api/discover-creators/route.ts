@@ -48,6 +48,72 @@ interface DatabaseCreator {
   growth_percentage?: number;
 }
 
+// Batched helper function to calculate growth data for multiple creators efficiently
+async function calculateAndCacheBatchGrowthData(creators: DatabaseCreator[]) {
+  if (creators.length === 0) return;
+  
+  try {
+    const creatorIds = creators.map(c => c.id);
+    
+    // Get all latest analyses in one query
+    const { data: latestAnalyses } = await supabase
+      .from('creator_analyses')
+      .select('creator_id, follower_count, created_at')
+      .in('creator_id', creatorIds)
+      .order('created_at', { ascending: false });
+    
+    // Get all previous analyses in one query
+    const { data: allAnalyses } = await supabase
+      .from('creator_analyses')
+      .select('creator_id, follower_count, created_at')
+      .in('creator_id', creatorIds)
+      .order('creator_id', { ascending: true })
+      .order('created_at', { ascending: false });
+    
+    // Process each creator's growth data
+    for (const creator of creators) {
+      const creatorAnalyses = allAnalyses?.filter(a => a.creator_id === creator.id) || [];
+      const latestAnalysis = creatorAnalyses[0];
+      const previousAnalysis = creatorAnalyses[1]; // Second most recent
+      
+      let currentFollowerCount = creator.follower_count;
+      if (latestAnalysis && latestAnalysis.created_at > (creator.last_analysis_date || '')) {
+        currentFollowerCount = latestAnalysis.follower_count;
+      }
+      
+      let growthData: CreatorGrowthData = {
+        current_follower_count: currentFollowerCount,
+        previous_follower_count: undefined,
+        growth_percentage: undefined
+      };
+
+      if (previousAnalysis && previousAnalysis.follower_count) {
+        const currentCount = currentFollowerCount || 0;
+        const previousCount = previousAnalysis.follower_count || 0;
+        const growthPercentage = previousCount > 0 
+          ? ((currentCount - previousCount) / previousCount) * 100 
+          : 0;
+        
+        growthData = {
+          current_follower_count: currentCount,
+          previous_follower_count: previousCount,
+          growth_percentage: Math.round(growthPercentage * 100) / 100
+        };
+      }
+      
+      // Cache the calculated growth data
+      await DiscoveryCache.cacheCreatorGrowthData(creator.id, growthData);
+    }
+    
+    console.log(`📈 Batch calculated growth data for ${creators.length} creators`);
+  } catch (error) {
+    console.error('Batch growth data calculation error:', error);
+    
+    // Fallback to individual calculations if batch fails
+    await Promise.all(creators.map(creator => calculateAndCacheGrowthData(creator)));
+  }
+}
+
 // Helper function to calculate and cache growth data
 async function calculateAndCacheGrowthData(creator: DatabaseCreator) {
   try {
@@ -218,10 +284,10 @@ export async function GET(request: NextRequest) {
     let count = await DiscoveryCache.getCachedFilterCount(filters);
     
     if (count === null) {
-      // Get total count for pagination (before applying limit/offset) if not cached
+      // Get total count for pagination using same query structure as main query
       let countQuery = supabase
         .from('creator_discovery')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true });
 
       // Apply same filters to count query
       if (filters.platform !== 'all') {
@@ -244,8 +310,36 @@ export async function GET(request: NextRequest) {
         countQuery = countQuery.eq('is_verified', filters.verified);
       }
 
-      const { count: dbCount } = await countQuery;
-      count = dbCount || 0;
+      const { count: dbCount, error: countError } = await countQuery;
+      
+      if (countError) {
+        console.error('Count query error:', countError);
+        // Fallback: use the main query without limits to get count
+        let fallbackQuery = supabase.from('creator_discovery').select('id');
+        
+        // Apply same filters
+        if (filters.platform !== 'all') {
+          fallbackQuery = fallbackQuery.eq('platform', filters.platform);
+        }
+        if (filters.category && filters.category.length > 0) {
+          fallbackQuery = fallbackQuery.in('category', filters.category);
+        }
+        if (filters.minFollowers > 0) {
+          fallbackQuery = fallbackQuery.gte('follower_count', filters.minFollowers);
+        }
+        if (filters.maxFollowers < 10000000) {
+          fallbackQuery = fallbackQuery.lte('follower_count', filters.maxFollowers);
+        }
+        if (filters.verified !== undefined) {
+          fallbackQuery = fallbackQuery.eq('is_verified', filters.verified);
+        }
+        
+        const { data: fallbackData } = await fallbackQuery;
+        count = fallbackData?.length || 0;
+        console.log(`📊 Using fallback count: ${count}`);
+      } else {
+        count = dbCount || 0;
+      }
       
       // Cache the count for future requests
       await DiscoveryCache.cacheFilterCount(filters, count);
@@ -266,24 +360,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get growth data efficiently using Redis cache
-    const creatorsWithGrowth = await Promise.all((creators || []).map(async (creator) => {
-      // Try to get cached growth data first
-      let growthData = await DiscoveryCache.getCreatorGrowthData(creator.id);
+    // Get growth data efficiently using Redis cache and batched queries
+    const creatorIds = (creators || []).map(c => c.id);
+    const cachedGrowthData = await Promise.all(
+      creatorIds.map(id => DiscoveryCache.getCreatorGrowthData(id))
+    );
+    
+    // Identify creators that need growth data calculation
+    const creatorsNeedingGrowthData = (creators || []).filter((_, index) => !cachedGrowthData[index]);
+    
+    // Batch calculate growth data for uncached creators
+    if (creatorsNeedingGrowthData.length > 0) {
+      await calculateAndCacheBatchGrowthData(creatorsNeedingGrowthData);
       
-      if (!growthData) {
-        // Cache miss - calculate growth data and cache it
-        growthData = await calculateAndCacheGrowthData(creator);
+      // Refresh cache data for these creators
+      for (let i = 0; i < creators!.length; i++) {
+        if (!cachedGrowthData[i]) {
+          cachedGrowthData[i] = await DiscoveryCache.getCreatorGrowthData(creators![i].id);
+        }
       }
-      
+    }
+
+    // Apply growth data to creators
+    const creatorsWithGrowth = (creators || []).map((creator, index) => {
+      const growthData = cachedGrowthData[index];
       return {
         ...creator,
-        // Use cached or calculated growth data
         follower_count: growthData?.current_follower_count || creator.follower_count,
         previous_follower_count: growthData?.previous_follower_count,
         growth_percentage: growthData?.growth_percentage
       };
-    }));
+    });
 
     // Map database results to frontend interface
     const mappedCreators = creatorsWithGrowth.map(mapDatabaseCreatorToDiscoveryCreator);
