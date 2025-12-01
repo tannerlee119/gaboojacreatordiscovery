@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useCreator } from '@/lib/creator-context';
 import { formatNumber } from '@/lib/utils';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
@@ -15,7 +16,7 @@ import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import { addBookmark, removeBookmark, isBookmarked, updateBookmarkComments } from '@/lib/bookmarks';
 import { UserBookmarksService } from '@/lib/user-bookmarks';
 import { useSupabaseAuth } from '@/lib/supabase-auth-context';
-import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Loader2, AlertCircle, ChevronDown, ChevronRight, X } from 'lucide-react';
 
 // Storage keys for state persistence
 const DISCOVERY_STATE_KEY = 'gabooja-discovery-state-v3'; // Incremented to clear old invalid data and fix TikTok display
@@ -88,6 +89,7 @@ export function CreatorDiscovery() {
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
   const { analysisHistory } = useCreator();
+  const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -113,6 +115,44 @@ export function CreatorDiscovery() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [bookmarkUpdate, setBookmarkUpdate] = useState(0); // Force re-renders when bookmarks change
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const [isPending, startTransition] = useTransition();
+  const isBusy = isLoading || isPending;
+  const skeletonPlaceholders = useMemo(() => Array.from({ length: 6 }), []);
+
+  const getActiveFilterCount = useCallback((filterSet: DiscoveryFilters) => {
+    let count = 0;
+    if (filterSet.platform !== 'all') count++;
+    if (filterSet.category.length > 0) count++;
+    if (filterSet.minFollowers > 0 || filterSet.maxFollowers < 10000000) count++;
+    if (filterSet.verified !== undefined) count++;
+    if (filterSet.sortBy !== 'followers-desc') count++;
+    return count;
+  }, []);
+
+  const activeFilterCount = useMemo(
+    () => getActiveFilterCount(filters),
+    [filters, getActiveFilterCount]
+  );
+
+  const renderSkeletonGrid = useCallback(() => (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+      {skeletonPlaceholders.map((_, index) => (
+        <div
+          key={`discovery-skeleton-${index}`}
+          className="rounded-2xl border border-border/40 bg-muted/30 p-4 animate-pulse space-y-4"
+        >
+          <div className="h-4 w-1/3 bg-muted-foreground/20 rounded" />
+          <div className="h-3 w-1/2 bg-muted-foreground/15 rounded" />
+          <div className="h-20 w-full bg-muted-foreground/10 rounded" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-8 bg-muted-foreground/10 rounded" />
+            <div className="h-8 bg-muted-foreground/10 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  ), [skeletonPlaceholders]);
 
 
   // Fetch discovery data with specific filters  
@@ -160,6 +200,7 @@ export function CreatorDiscovery() {
 
   // Load persisted state on mount
   const [isStateLoaded, setIsStateLoaded] = useState(false);
+  const hasBootstrapped = useRef(false);
   
   useEffect(() => {
     try {
@@ -216,6 +257,15 @@ export function CreatorDiscovery() {
     }
   }, [isRecentAnalysesCollapsed]);
 
+  useEffect(() => {
+    if (!isStateLoaded || hasBootstrapped.current || discoveryData || isLoading) {
+      return;
+    }
+
+    hasBootstrapped.current = true;
+    fetchDiscoveryDataWithFilters(filters, currentPage);
+  }, [isStateLoaded, discoveryData, isLoading, filters, currentPage, fetchDiscoveryDataWithFilters]);
+
   const handleFiltersChange = (newFilters: DiscoveryFilters) => {
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
@@ -224,7 +274,9 @@ export function CreatorDiscovery() {
   const handleApplyFilters = (filtersToApply?: DiscoveryFilters) => {
     // If specific filters are provided, use those; otherwise use current filters
     const activeFilters = filtersToApply || filters;
-    fetchDiscoveryDataWithFilters(activeFilters, 1);
+    startTransition(() => {
+      fetchDiscoveryDataWithFilters(activeFilters, 1);
+    });
   };
 
   const handleBookmarkCreator = async (creator: DiscoveryCreator) => {
@@ -314,16 +366,16 @@ export function CreatorDiscovery() {
   };
 
   const handlePageChange = (page: number) => {
-    // Scroll to top of the results section
-    const resultsSection = document.querySelector('[data-results-section]');
-    if (resultsSection) {
-      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = resultsSectionRef.current;
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
-      // Fallback - scroll to top of page
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    
-    fetchDiscoveryData(page);
+
+    startTransition(() => {
+      fetchDiscoveryData(page);
+    });
   };
 
   const handleRefreshFromModal = async (username: string, platform: string) => {
@@ -401,21 +453,24 @@ export function CreatorDiscovery() {
   const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<string, boolean>>({});
 
   const filteredCreators = useMemo(() => {
-    const filtered = discoveryData?.creators.filter(creator =>
-      searchTerm === '' || 
-      creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creator.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
-    
-    // Auto-load data if none exists and not currently loading
-    if (!discoveryData && !isLoading) {
-      setTimeout(() => {
-        fetchDiscoveryDataWithFilters(filters, currentPage);
-      }, 100);
+    if (!discoveryData) {
+      return [];
     }
-    
-    return filtered;
-  }, [searchTerm, discoveryData, isLoading, filters, currentPage, fetchDiscoveryDataWithFilters]);
+
+    const loweredSearch = deferredSearchTerm.trim().toLowerCase();
+
+    if (!loweredSearch) {
+      return discoveryData.creators;
+    }
+
+    return discoveryData.creators.filter((creator) => {
+      const usernameMatch = creator.username.toLowerCase().includes(loweredSearch);
+      const displayNameMatch = creator.displayName?.toLowerCase().includes(loweredSearch);
+      return usernameMatch || displayNameMatch;
+    });
+  }, [deferredSearchTerm, discoveryData]);
+  const visibleCreatorCount = filteredCreators.length;
+  const totalCreatorCount = discoveryData?.totalCount ?? visibleCreatorCount;
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // bookmarkUpdate is used in dependency arrays to trigger re-renders
@@ -426,30 +481,35 @@ export function CreatorDiscovery() {
   // Load bookmark statuses when creators change
   const updateBookmarkStatuses = useCallback(async () => {
     if (!filteredCreators.length) return;
-    
-    const statuses: Record<string, boolean> = {};
-    
-    if (isAuthenticated && user) {
-      // Load from database for authenticated users
-      for (const creator of filteredCreators) {
+
+    const statusEntries = await Promise.all(
+      filteredCreators.map(async (creator) => {
         const key = `${creator.username}_${creator.platform}`;
-        statuses[key] = await UserBookmarksService.isUserBookmarked(user.id, creator.username, creator.platform);
-      }
-    } else {
-      // Load from localStorage for non-authenticated users
-      for (const creator of filteredCreators) {
-        const key = `${creator.username}_${creator.platform}`;
-        statuses[key] = isBookmarked(creator.platform, creator.username);
-      }
-    }
-    
-    setBookmarkStatuses(statuses);
+
+        if (isAuthenticated && user) {
+          const isSaved = await UserBookmarksService.isUserBookmarked(
+            user.id,
+            creator.username,
+            creator.platform
+          );
+          return [key, isSaved] as const;
+        }
+
+        return [key, isBookmarked(creator.platform, creator.username)] as const;
+      })
+    );
+
+    setBookmarkStatuses(Object.fromEntries(statusEntries));
   }, [filteredCreators, isAuthenticated, user]);
 
   // Update bookmark statuses when creators or bookmark state changes
   useEffect(() => {
     updateBookmarkStatuses();
   }, [updateBookmarkStatuses, bookmarkUpdate]);
+
+  const shouldShowInitialLoader = isBusy && !discoveryData;
+  const shouldShowSkeletonGrid = isBusy && !!discoveryData;
+  const showEmptyState = !shouldShowSkeletonGrid && discoveryData && filteredCreators.length === 0;
 
   return (
     <div className="space-y-6">
@@ -462,16 +522,63 @@ export function CreatorDiscovery() {
               placeholder="Search creators by username or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
 
+      <div className="flex flex-wrap items-center gap-3 justify-between rounded-2xl border border-border/60 bg-card/60 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Active filters</span>
+          <Badge variant="secondary" className="px-2 py-0.5 text-xs font-semibold">
+            {activeFilterCount}
+          </Badge>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Showing{' '}
+          <span className="font-semibold text-foreground">{visibleCreatorCount}</span>
+          {typeof discoveryData?.totalCount === 'number' && (
+            <>
+              <span className="mx-1 text-muted-foreground">/</span>
+              <span className="font-semibold text-foreground">{discoveryData.totalCount}</span>
+            </>
+          )}{' '}
+          creators
+        </div>
+        <div className="flex items-center gap-2">
+          {isBusy ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Refreshing
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleApplyFilters(filters)}
+              className="text-xs cursor-pointer hover:bg-primary/10 hover:text-foreground hover:border-primary/30"
+            >
+              Sync results
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filters Sidebar - Full width on mobile, sidebar on desktop */}
-        <div className="lg:col-span-1 order-first">
+        <div className="lg:col-span-1 order-first lg:sticky lg:top-28 h-fit">
           <DiscoveryFiltersComponent
             filters={filters}
             onFiltersChange={handleFiltersChange}
@@ -481,16 +588,20 @@ export function CreatorDiscovery() {
         </div>
 
         {/* Discovery Results */}
-        <div className="lg:col-span-3 order-last" data-results-section>
+        <div
+          className="lg:col-span-3 order-last"
+          data-results-section
+          ref={resultsSectionRef}
+        >
           <Card className="gabooja-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Discover Creators</span>
                 <div className="flex items-center gap-2">
-                  {isLoading && (
+                  {isBusy && (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   )}
-                  {!isLoading && discoveryData && discoveryData.totalCount !== undefined && (
+                  {!isBusy && discoveryData && discoveryData.totalCount !== undefined && (
                     <span className="text-sm text-muted-foreground font-normal">
                       {discoveryData.totalCount} creators found
                     </span>
@@ -502,7 +613,7 @@ export function CreatorDiscovery() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {shouldShowInitialLoader ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Loading creators...</span>
@@ -517,7 +628,7 @@ export function CreatorDiscovery() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Initializing...</span>
                 </div>
-              ) : discoveryData && filteredCreators.length === 0 ? (
+              ) : showEmptyState ? (
                 <div className="text-center py-12 text-muted-foreground">
                   {searchTerm ? (
                     <>
@@ -545,21 +656,9 @@ export function CreatorDiscovery() {
                     </div>
                   )}
                   
-                  {/* Creator Grid or Empty State */}
-                  {filteredCreators.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      {searchTerm ? (
-                        <>
-                          <p>No creators found matching &quot;{searchTerm}&quot; on this page.</p>
-                          <p className="text-sm mt-2">Try searching on other pages or adjusting your search term.</p>
-                        </>
-                      ) : (
-                        <>
-                          <p>No creators found on this page.</p>
-                          <p className="text-sm mt-2">Try navigating to other pages or adjusting your filters.</p>
-                        </>
-                      )}
-                    </div>
+                  {/* Creator Grid */}
+                  {shouldShowSkeletonGrid ? (
+                    renderSkeletonGrid()
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
                       {filteredCreators.map((creator) => (
