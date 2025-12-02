@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { getBookmarkedCreators, removeBookmark, updateBookmarkComments } from '@/lib/bookmarks';
 import { formatNumber } from '@/lib/utils';
-import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3 } from 'lucide-react';
+import { Trash2, ExternalLink, Link, Eye, MessageSquare, Edit3, X } from 'lucide-react';
 import { AnalysisModal } from '@/components/ui/analysis-modal';
 import { BookmarkCommentModal } from '@/components/ui/bookmark-comment-modal';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
@@ -62,27 +63,10 @@ interface AnalysisData {
 }
 
 export default function BookmarksPage() {
-  console.log('BookmarksPage component rendering');
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
-  console.log('BookmarksPage - isAuthenticated:', isAuthenticated, 'user:', !!user);
-  console.log('Session details:', session ? 'exists' : 'null');
-  console.log('User details:', user ? { id: user.id } : 'null');
   const [bookmarks, setBookmarks] = useState<UserBookmark[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Debug bookmarks state changes
-  useEffect(() => {
-    console.log('Bookmarks state changed - count:', bookmarks.length);
-    if (bookmarks.length > 0) {
-      console.log('Bookmark usernames:', bookmarks.map(b => `${b.username}@${b.platform}`));
-    }
-  }, [bookmarks]);
-  
-  // Debug authentication state changes
-  useEffect(() => {
-    console.log('Auth state changed - isAuthenticated:', isAuthenticated, 'user:', !!user);
-  }, [isAuthenticated, user]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -93,6 +77,65 @@ export default function BookmarksPage() {
   const [bookmarkGrowthData, setBookmarkGrowthData] = useState<Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }>>({});
   const [isLoadingGrowthData, setIsLoadingGrowthData] = useState(false);
   const [categoryUpdateTimestamp, setCategoryUpdateTimestamp] = useState<number>(0);
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'tiktok'>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'followers' | 'growth'>('recent');
+  const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm.trim().toLowerCase());
+  const filteredBookmarks = useMemo(() => {
+    let list = [...bookmarks];
+
+    if (platformFilter !== 'all') {
+      list = list.filter((bookmark) => bookmark.platform === platformFilter);
+    }
+
+    if (deferredSearchTerm) {
+      list = list.filter(
+        (bookmark) =>
+          bookmark.username.toLowerCase().includes(deferredSearchTerm) ||
+          bookmark.displayName?.toLowerCase().includes(deferredSearchTerm)
+      );
+    }
+
+    const getGrowthValue = (bookmark: UserBookmark) =>
+      bookmarkGrowthData[`${bookmark.username}_${bookmark.platform}`]?.growthPercentage ?? Number.NEGATIVE_INFINITY;
+
+    switch (sortBy) {
+      case 'followers':
+        list.sort((a, b) => b.followerCount - a.followerCount);
+        break;
+      case 'growth':
+        list.sort((a, b) => getGrowthValue(b) - getGrowthValue(a));
+        break;
+      default:
+        list.sort(
+          (a, b) =>
+            new Date(b.bookmarkedAt).getTime() - new Date(a.bookmarkedAt).getTime()
+        );
+    }
+
+    return list;
+  }, [bookmarks, platformFilter, deferredSearchTerm, sortBy, bookmarkGrowthData]);
+  const filteredCount = filteredBookmarks.length;
+  const totalFollowers = useMemo(
+    () => bookmarks.reduce((sum, bookmark) => sum + (bookmark.followerCount || 0), 0),
+    [bookmarks]
+  );
+  const averageFollowers = bookmarks.length ? totalFollowers / bookmarks.length : 0;
+  const verifiedCount = useMemo(
+    () => bookmarks.filter((bookmark) => bookmark.isVerified).length,
+    [bookmarks]
+  );
+  const averageGrowth = useMemo(() => {
+    const values = filteredBookmarks
+      .map((bookmark) => bookmarkGrowthData[`${bookmark.username}_${bookmark.platform}`]?.growthPercentage)
+      .filter((value): value is number => typeof value === 'number');
+    if (!values.length) {
+      return 0;
+    }
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }, [filteredBookmarks, bookmarkGrowthData]);
+  const formatGrowthValue = (value: number) =>
+    `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -119,11 +162,8 @@ export default function BookmarksPage() {
   // Load bookmarks - using useEffect with proper dependency management
   useEffect(() => {
     const loadBookmarks = async () => {
-      console.log('Loading bookmarks - isAuthenticated:', isAuthenticated, 'user:', !!user);
-      
       // Only run client-side and after auth state is determined
       if (typeof window === 'undefined') {
-        console.log('Server-side rendering, skipping bookmark loading');
         return;
       }
       
@@ -131,15 +171,10 @@ export default function BookmarksPage() {
       
       try {
         if (isAuthenticated && user) {
-          console.log('Loading user-specific bookmarks for user:', user.id);
           const userBookmarks = await UserBookmarksService.getUserBookmarks(user.id);
-          console.log('Loaded user bookmarks:', userBookmarks.length);
           setBookmarks(userBookmarks);
         } else if (isAuthenticated === false) {
-          // Only load localStorage when we know user is not authenticated
-          console.log('User not authenticated, loading global bookmarks from localStorage');
           const savedBookmarks = getBookmarkedCreators();
-          console.log('Loaded global bookmarks:', savedBookmarks.length);
           setBookmarks(savedBookmarks.map(bookmark => ({
             ...bookmark,
             userId: 'anonymous',
@@ -168,7 +203,6 @@ export default function BookmarksPage() {
       }
       
       setIsLoadingGrowthData(true);
-      console.log('Loading growth data for', bookmarks.length, 'bookmarks');
       
       // Check localStorage cache first
       const CACHE_KEY = 'gabooja_bookmark_growth_cache';
@@ -179,14 +213,13 @@ export default function BookmarksPage() {
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
           if (Date.now() - timestamp < CACHE_DURATION) {
-            console.log('Using cached growth data');
             setBookmarkGrowthData(data);
             setIsLoadingGrowthData(false);
             return;
           }
         }
       } catch (error) {
-        console.log('Error loading cached growth data:', error);
+        console.error('Error loading cached growth data:', error);
       }
       
       const growthDataMap: Record<string, { previousFollowerCount: number; growthPercentage: number; lastAnalyzed: string }> = {};
@@ -241,7 +274,7 @@ export default function BookmarksPage() {
                 };
               }
             } catch (error) {
-              console.log(`Error processing ${bookmark.username}@${bookmark.platform}:`, error);
+              console.error(`Error processing ${bookmark.username}@${bookmark.platform}:`, error);
             }
           }));
           
@@ -251,7 +284,7 @@ export default function BookmarksPage() {
           }
         }
       } catch (error) {
-        console.log('Error in batch growth data fetch:', error);
+        console.error('Error in batch growth data fetch:', error);
       }
       
       // Cache the final results
@@ -261,10 +294,9 @@ export default function BookmarksPage() {
           timestamp: Date.now()
         }));
       } catch (error) {
-        console.log('Error caching growth data:', error);
+        console.error('Error caching growth data:', error);
       }
       
-      console.log('Growth data loading complete:', Object.keys(growthDataMap).length, 'entries');
       setIsLoadingGrowthData(false);
     };
     
@@ -284,7 +316,6 @@ export default function BookmarksPage() {
         if (timestamp) {
           const updateTime = parseInt(timestamp);
           if (updateTime > categoryUpdateTimestamp) {
-            console.log('Category update detected, refreshing bookmarks...');
             setCategoryUpdateTimestamp(updateTime);
             
             // Refresh bookmarks to get updated categories
@@ -593,6 +624,89 @@ export default function BookmarksPage() {
         </p>
       </div>
 
+      <Card className="gabooja-card">
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-6">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total saved</p>
+            <p className="text-2xl font-semibold">{bookmarks.length}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg followers</p>
+            <p className="text-2xl font-semibold">{formatNumber(Math.round(averageFollowers))}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Verified creators</p>
+            <p className="text-2xl font-semibold">{verifiedCount}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg growth*</p>
+            <p className="text-2xl font-semibold">
+              {averageGrowth === 0 && filteredCount === 0 ? '—' : formatGrowthValue(averageGrowth)}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">*Based on creators with growth data</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {bookmarks.length > 0 && (
+        <Card className="gabooja-card">
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'All platforms', value: 'all' },
+                { label: 'Instagram', value: 'instagram' },
+                { label: 'TikTok', value: 'tiktok' },
+              ].map((option) => (
+                <Button
+                  key={option.value}
+                  variant={platformFilter === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPlatformFilter(option.value as 'all' | 'instagram' | 'tiktok')}
+                  className="text-xs"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                Sort by
+                <select
+                  className="rounded-lg border border-border bg-transparent px-2 py-1 text-sm"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value as 'recent' | 'followers' | 'growth')}
+                >
+                  <option value="recent">Recently saved</option>
+                  <option value="followers">Followers (desc)</option>
+                  <option value="growth">Growth momentum</option>
+                </select>
+              </div>
+              <div className="relative flex-1 min-w-[200px]">
+                <Input
+                  placeholder="Search by username or name"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="pr-10"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground ml-auto">
+                Showing {filteredCount} of {bookmarks.length}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {bookmarks.length === 0 ? (
         <Card className="gabooja-card">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -604,9 +718,16 @@ export default function BookmarksPage() {
             </p>
           </CardContent>
         </Card>
+      ) : filteredCount === 0 ? (
+        <Card className="gabooja-card">
+          <CardContent className="py-10 text-center text-muted-foreground">
+            <p>No creators match your current filters.</p>
+            <p className="text-sm mt-2">Try adjusting the platform filter or clearing the search.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bookmarks.map((bookmark) => (
+          {filteredBookmarks.map((bookmark) => (
             <Card key={bookmark.id} className="gabooja-card">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">

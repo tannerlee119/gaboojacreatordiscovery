@@ -470,7 +470,6 @@ export function CreatorDiscovery() {
     });
   }, [deferredSearchTerm, discoveryData]);
   const visibleCreatorCount = filteredCreators.length;
-  const totalCreatorCount = discoveryData?.totalCount ?? visibleCreatorCount;
 
   const isCreatorBookmarked = (creator: DiscoveryCreator) => {
     // bookmarkUpdate is used in dependency arrays to trigger re-renders

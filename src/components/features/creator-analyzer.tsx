@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useDeferredValue, useTransition, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import { GrowthChartModal } from '@/components/features/growth-chart-modal';
 import { CreatorMatchingModal } from '@/components/features/creator-matching-modal';
 import { CreatorCategory } from '@/lib/types';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Link, Bookmark, BookmarkCheck, RefreshCw, TrendingUp, Users, Loader2 } from 'lucide-react';
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -104,11 +104,19 @@ function hasDataQuality(result: AnalysisResult): result is AnalysisResult & { da
 }
 
 export function CreatorAnalyzer() {
-  const { currentAnalysis, setCurrentAnalysis, addToHistory, isLoading, setIsLoading } = useCreator();
+  const {
+    currentAnalysis,
+    setCurrentAnalysis,
+    addToHistory,
+    analysisHistory,
+    isLoading,
+    setIsLoading,
+  } = useCreator();
   const { user, session } = useSupabaseAuth();
   const isAuthenticated = !!session;
   const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
+  const deferredUsername = useDeferredValue(username);
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [error, setError] = useState<string | null>(null);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
@@ -119,11 +127,44 @@ export function CreatorAnalyzer() {
   const [showCreatorMatching, setShowCreatorMatching] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string>('other');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statusStep, setStatusStep] = useState<'idle' | 'scraping' | 'ai' | 'complete'>('idle');
+  const [statusMessage, setStatusMessage] = useState('Ready to analyze');
+  const [isPending, startTransition] = useTransition();
+  const busyAnalyzing = isLoading || isPending;
   
   // Cache for storing last results per platform
   const [resultCache, setResultCache] = useState<{
     [key in Platform]?: AnalysisResult
   }>({});
+  const statusRank = useMemo(
+    () => ({
+      idle: 0,
+      scraping: 1,
+      ai: 2,
+      complete: 3,
+    }),
+    []
+  );
+  const progressSteps = useMemo(
+    () => [
+      {
+        id: 'scraping',
+        title: 'Scraping profile',
+        description: 'Collecting public metrics via Playwright',
+      },
+      {
+        id: 'ai',
+        title: 'AI insights',
+        description: 'Summarizing content with GPT-4o mini',
+      },
+      {
+        id: 'complete',
+        title: 'Report ready',
+        description: 'Bookmark or refresh as needed',
+      },
+    ],
+    []
+  );
 
   // Use current analysis from context
   const result = currentAnalysis;
@@ -136,7 +177,7 @@ export function CreatorAnalyzer() {
     }
   }, [result, username]);
 
-  const handleAnalyze = useCallback(async (forceRefresh = false) => {
+  const executeAnalysis = useCallback(async (forceRefresh = false) => {
     if (!username.trim()) return;
     
     setIsLoading(true);
@@ -147,6 +188,8 @@ export function CreatorAnalyzer() {
     if (!forceRefresh) {
       setCurrentAnalysis(null);
     }
+    setStatusStep('scraping');
+    setStatusMessage(forceRefresh ? 'Refreshing live metrics...' : 'Launching browser & gathering profile data...');
     
     try {
       
@@ -164,6 +207,8 @@ export function CreatorAnalyzer() {
         body: JSON.stringify(requestBody),
       });
 
+      setStatusStep('ai');
+      setStatusMessage('Synthesizing AI insights...');
       const data = await response.json();
       
       if (!data.success) {
@@ -189,6 +234,12 @@ export function CreatorAnalyzer() {
         ...prev,
         [platform]: newResult
       }));
+      setStatusStep('complete');
+      setStatusMessage('Report ready');
+      setTimeout(() => {
+        setStatusStep('idle');
+        setStatusMessage('Ready to analyze');
+      }, 1500);
       
       
     } catch (error) {
@@ -203,6 +254,8 @@ export function CreatorAnalyzer() {
       } else {
         setError(errorMessage);
       }
+      setStatusStep('idle');
+      setStatusMessage('Unable to analyze. Please try again.');
     } finally {
       setIsLoading(false);
       if (forceRefresh) {
@@ -210,6 +263,12 @@ export function CreatorAnalyzer() {
       }
     }
   }, [username, platform, setIsLoading, setCurrentAnalysis, addToHistory, isAuthenticated, user, setResultCache]);
+
+  const handleAnalyze = useCallback((forceRefresh = false) => {
+    startTransition(() => {
+      void executeAnalysis(forceRefresh);
+    });
+  }, [executeAnalysis]);
 
   // Handle URL parameters for auto-analysis (from bookmarks refresh)
   useEffect(() => {
@@ -351,14 +410,23 @@ export function CreatorAnalyzer() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <Input
-                placeholder="Enter username (without @)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                disabled={isLoading}
-              />
+            <div className="md:col-span-2 space-y-2">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <Input
+                  placeholder="username (without @)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+                  disabled={busyAnalyzing}
+                  className="pl-8"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {deferredUsername
+                  ? `Analyzing @${deferredUsername} on ${platform}.`
+                  : 'Type a public Instagram or TikTok username.'}
+              </p>
             </div>
             <div className="flex gap-2">
               {platforms.map((p) => (
@@ -368,39 +436,102 @@ export function CreatorAnalyzer() {
                   size="sm"
                   onClick={() => handlePlatformChange(p.value)}
                   className={`flex-1 text-xs transition-all duration-200 ${
-                    platform === p.value 
-                      ? '' // No hover effects for selected platform
+                    platform === p.value
+                      ? ''
                       : 'hover:bg-primary/10 hover:text-foreground hover:border-primary/30'
                   }`}
-                  disabled={isLoading}
+                  disabled={busyAnalyzing}
                 >
                   {p.label}
                 </Button>
               ))}
             </div>
           </div>
-          
-          <Button 
+
+          <Button
             onClick={() => handleAnalyze()}
-            disabled={!username.trim() || isLoading}
+            disabled={!username.trim() || busyAnalyzing}
             size="lg"
             className="w-full cursor-pointer hover:bg-primary/90 transition-colors duration-200 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Analyzing... (This may take 30-60 seconds)' : 'Analyze Creator'}
+            {busyAnalyzing ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Analyzing... (30-60s)
+              </span>
+            ) : (
+              'Analyze Creator'
+            )}
           </Button>
 
-          {isLoading && (
-            <div className="text-center space-y-2">
-              <div className="animate-pulse text-muted-foreground">
-                🤖 Launching browser and taking screenshot...
-              </div>
-              <div className="text-sm text-muted-foreground">
-                We&apos;re using Playwright to scrape the profile and OpenAI to analyze the content
-              </div>
-            </div>
-          )}
+          <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3 flex items-center gap-3 text-sm text-muted-foreground">
+            {busyAnalyzing ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+            )}
+            <span>{statusMessage}</span>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {progressSteps.map((step) => {
+              const rank = statusRank[step.id as keyof typeof statusRank];
+              const isActive = statusRank[statusStep] >= rank && statusStep !== 'idle';
+              return (
+                <div
+                  key={step.id}
+                  className={`rounded-2xl border px-4 py-3 text-sm transition-colors ${
+                    isActive
+                      ? 'border-primary/60 bg-primary/5 text-foreground'
+                      : 'border-border/60 text-muted-foreground'
+                  }`}
+                >
+                  <div className="font-medium flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+                    {step.title}
+                  </div>
+                  <p className="mt-1 text-xs">{step.description}</p>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
+
+      {analysisHistory.length > 0 && (
+        <Card className="gabooja-card">
+          <CardHeader>
+            <CardTitle className="text-base">Recent runs</CardTitle>
+            <CardDescription>Re-load a previous analysis in one click</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {analysisHistory.slice(0, 3).map((entry) => (
+              <div
+                key={`${entry.profile.username}-${entry.profile.platform}`}
+                className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2 text-sm"
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">@{entry.profile.username}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{entry.profile.platform}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs hover:bg-primary/10 hover:text-foreground hover:border-primary/30"
+                  onClick={() => {
+                    setUsername(entry.profile.username);
+                    setPlatform(entry.profile.platform);
+                    handleAnalyze();
+                  }}
+                  disabled={busyAnalyzing}
+                >
+                  Re-run
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Card className="border-destructive bg-destructive/10">
