@@ -762,8 +762,8 @@ export function CreatorAnalyzer() {
                    <TabsContent value="overview" className="space-y-6">
                      <div className="grid md:grid-cols-2 gap-6 items-stretch">
                        {/* Creator Score */}
-                       <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-[#241804] via-[#160e02] to-[#0c0902] border border-[#fcdd09]/30 shadow-inner shadow-black/30">
-                         <div className="text-xs uppercase tracking-[0.35em] text-primary mb-3">Creator Score</div>
+                      <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-[#241804] via-[#160e02] to-[#0c0902] border border-[#fcdd09]/30 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
+                        <div className="text-sm font-semibold tracking-[0.2em] text-primary mb-3">Creator Score</div>
                          <div className="text-4xl font-bold text-primary mb-2">
                            {(() => {
                              const scoreText = result.profile.aiAnalysis.creator_score;
@@ -775,8 +775,8 @@ export function CreatorAnalyzer() {
                        </div>
                        
                        {/* Category */}
-                       <div className="text-center p-6 rounded-2xl bg-card border border-border">
-                         <div className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-3">Category</div>
+                      <div className="text-center p-6 rounded-2xl bg-card border border-border">
+                        <div className="text-sm font-semibold tracking-[0.2em] text-muted-foreground mb-3">Category</div>
                          <CategoryEditor
                            currentCategory={currentCategory}
                            onCategoryChange={handleCategoryChange}
