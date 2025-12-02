@@ -731,10 +731,10 @@ export function CreatorDiscovery() {
                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             analysis.profile.platform === 'instagram' 
-                              ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                              ? 'bg-[#ff5c8f] text-white'
                               : analysis.profile.platform === 'tiktok'
-                              ? 'bg-black text-white dark:bg-white dark:text-black'
-                              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                              ? 'bg-secondary text-foreground'
+                              : 'bg-muted text-muted-foreground'
                           }`}>
                             {analysis.profile.platform}
                           </span>

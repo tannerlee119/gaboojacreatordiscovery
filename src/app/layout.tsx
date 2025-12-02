@@ -26,14 +26,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-background text-foreground">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
         <SupabaseAuthProvider>
           <CreatorProvider>
             <ConditionalNavbar />
-            <main>{children}</main>
+            <main className="min-h-screen bg-background text-foreground">
+              {children}
+            </main>
           </CreatorProvider>
         </SupabaseAuthProvider>
       </body>

@@ -561,15 +561,15 @@ export function CreatorAnalyzer() {
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         result.profile.platform === 'instagram' 
-                          ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
-                          : result.profile.platform === 'tiktok'
-                          ? 'bg-black text-white dark:bg-white dark:text-black'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                          ? 'bg-[#ff5c8f] text-white'
+                      : result.profile.platform === 'tiktok'
+                      ? 'bg-secondary text-foreground'
+                      : 'bg-muted text-muted-foreground'
                       }`}>
                         {result.profile.platform}
                       </span>
                       {result.lastAnalyzed && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground">
                           📊 Analyzed {(() => {
                             const analysisAge = Date.now() - new Date(result.lastAnalyzed).getTime();
                             const ageInDays = Math.floor(analysisAge / (1000 * 60 * 60 * 24));
@@ -678,7 +678,7 @@ export function CreatorAnalyzer() {
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                           : result.growthData.growthPercentage < 0
                           ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                        : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {result.growthData.growthPercentage > 0 ? '+' : ''}
@@ -998,19 +998,19 @@ export function CreatorAnalyzer() {
                          
                          {/* Quality Breakdown */}
                          <div className="grid md:grid-cols-3 gap-3 text-sm">
-                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                  <div className="text-center p-3 rounded bg-card border border-border">
                              <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                                {result.dataQuality.breakdown.completeness}
                              </div>
                              <div className="text-xs text-muted-foreground">Completeness</div>
                            </div>
-                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                  <div className="text-center p-3 rounded bg-card border border-border">
                              <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
                                {result.dataQuality.breakdown.consistency}
                              </div>
                              <div className="text-xs text-muted-foreground">Consistency</div>
                            </div>
-                           <div className="text-center p-3 rounded bg-white dark:bg-gray-800/50 border">
+                  <div className="text-center p-3 rounded bg-card border border-border">
                              <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
                                {result.dataQuality.breakdown.reliability}
                              </div>

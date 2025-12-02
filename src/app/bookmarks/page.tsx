@@ -156,7 +156,7 @@ export default function BookmarksPage() {
       family: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
       lifestyle: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
     };
-    return colors[category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+    return colors[category] || 'bg-muted text-muted-foreground';
   };
 
   // Load bookmarks - using useEffect with proper dependency management
@@ -744,10 +744,10 @@ export default function BookmarksPage() {
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           bookmark.platform === 'instagram' 
-                            ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                            ? 'bg-[#ff5c8f] text-white'
                             : bookmark.platform === 'tiktok'
-                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                            ? 'bg-secondary text-foreground'
+                            : 'bg-muted text-muted-foreground'
                         }`}>
                           {bookmark.platform}
                         </span>
@@ -804,10 +804,10 @@ export default function BookmarksPage() {
                             onClick={() => handleGrowthChart(bookmark)}
                             className={`text-xs px-2 py-1 rounded-full inline-flex items-center gap-1 cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all duration-200 ${
                               growthData.growthPercentage > 0
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
+                                ? 'bg-green-200/20 text-green-300 hover:ring-green-400/30'
                                 : growthData.growthPercentage < 0
-                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
-                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
+                                ? 'bg-red-200/20 text-red-300 hover:ring-red-400/30'
+                                : 'bg-muted text-muted-foreground hover:ring-muted/40'
                             }`}
                             title={`Click to view growth chart • Previous: ${formatNumber(growthData.previousFollowerCount)}`}
                           >
@@ -842,8 +842,8 @@ export default function BookmarksPage() {
                   const key = `${bookmark.username}_${bookmark.platform}`;
                   const growthData = bookmarkGrowthData[key];
                   return growthData && (
-                    <div className="p-3 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border border-blue-200 dark:border-blue-800">
-                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
+                    <div className="p-3 rounded-lg border border-border bg-gradient-to-r from-[#0f0f0f] to-[#151515]">
+                      <div className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
                         📊 Growth Trend Analysis
                       </div>
                       <div className="flex items-center justify-between">
@@ -851,10 +851,10 @@ export default function BookmarksPage() {
                           <div className="flex items-center gap-2">
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                               growthData.growthPercentage > 0
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                ? 'bg-green-200/20 text-green-300'
                                 : growthData.growthPercentage < 0
-                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                                ? 'bg-red-200/20 text-red-300'
+                                : 'bg-muted text-muted-foreground'
                             }`}>
                               {growthData.growthPercentage > 0 ? '🚀' : growthData.growthPercentage < 0 ? '📉' : '➖'}
                               {growthData.growthPercentage > 0 ? '+' : ''}{growthData.growthPercentage.toFixed(1)}%
@@ -863,13 +863,13 @@ export default function BookmarksPage() {
                               vs. {formatNumber(growthData.previousFollowerCount)}
                             </span>
                           </div>
-                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          <div className="text-xs text-muted-foreground mt-1">
                             Last analyzed: {new Date(growthData.lastAnalyzed).toLocaleDateString()}
                           </div>
                         </div>
                         <button
                           onClick={() => handleGrowthChart(bookmark)}
-                          className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors duration-200 flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-full transition-colors duration-200 flex items-center gap-1 cursor-pointer"
                           title="View detailed growth chart"
                         >
                           📈 View Chart

@@ -106,7 +106,7 @@ export function DiscoveryCreatorCard({
       family: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
       lifestyle: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
     };
-    return colors[category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+    return colors[category] || 'bg-muted text-muted-foreground';
   };
 
   const getAiScoreColor = (score: string) => {
@@ -151,8 +151,8 @@ export function DiscoveryCreatorCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
               creator.platform === 'instagram' 
-                ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
-                : 'bg-black text-white dark:bg-white dark:text-black'
+                ? 'bg-[#ff5c8f] text-white'
+                : 'bg-secondary text-foreground'
             }`}>
               {creator.platform}
             </span>
@@ -181,7 +181,7 @@ export function DiscoveryCreatorCard({
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:ring-green-300 dark:hover:ring-green-600'
                       : creator.growthData.growthPercentage < 0
                       ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:ring-red-300 dark:hover:ring-red-600'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 hover:ring-gray-300 dark:hover:ring-gray-600'
+                      : 'bg-muted text-muted-foreground hover:ring-muted/50'
                   }`}
                   title="Click to view growth chart"
                 >

@@ -31,15 +31,15 @@ export function GrowthChart({ isOpen, onClose, growthData, username, platform }:
   const followerChange = currentFollowerCount - previousFollowerCount;
   
   const getTrendIcon = () => {
-    if (isGrowth) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (isDecline) return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4 text-gray-500" />;
+    if (isGrowth) return <TrendingUp className="h-4 w-4 text-green-400" />;
+    if (isDecline) return <TrendingDown className="h-4 w-4 text-red-400" />;
+    return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
   const getTrendColor = () => {
-    if (isGrowth) return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800';
-    if (isDecline) return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800';
-    return 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-950/20 dark:border-gray-800';
+    if (isGrowth) return 'text-green-400 bg-green-200/10 border-green-500/30';
+    if (isDecline) return 'text-red-400 bg-red-200/10 border-red-500/30';
+    return 'text-muted-foreground bg-muted border-border';
   };
 
   const getChangeText = () => {
@@ -87,7 +87,7 @@ export function GrowthChart({ isOpen, onClose, growthData, username, platform }:
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-600">
+                <div className="text-2xl font-bold text-muted-foreground">
                   {formatNumber(previousFollowerCount)}
                 </div>
                 <div className="text-sm text-muted-foreground">followers</div>
@@ -102,7 +102,7 @@ export function GrowthChart({ isOpen, onClose, growthData, username, platform }:
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${isGrowth ? 'text-green-600' : isDecline ? 'text-red-600' : 'text-gray-600'}`}>
+                <div className={`text-2xl font-bold ${isGrowth ? 'text-green-400' : isDecline ? 'text-red-400' : 'text-muted-foreground'}`}>
                   {formatNumber(currentFollowerCount)}
                 </div>
                 <div className="text-sm text-muted-foreground">followers</div>
@@ -119,12 +119,12 @@ export function GrowthChart({ isOpen, onClose, growthData, username, platform }:
               <div className="space-y-4">
                 {/* Progress bar */}
                 <div className="relative">
-                  <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                  <div className="w-full bg-muted rounded-full h-3">
                     <div 
                       className={`h-3 rounded-full transition-all duration-500 ${
-                        isGrowth ? 'bg-green-500' : 
-                        isDecline ? 'bg-red-500' : 
-                        'bg-gray-500'
+                        isGrowth ? 'bg-green-400' : 
+                        isDecline ? 'bg-red-400' : 
+                        'bg-muted-foreground'
                       }`}
                       style={{
                         width: `${Math.min(Math.abs(growthPercentage) * 2, 100)}%`

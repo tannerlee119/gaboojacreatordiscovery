@@ -284,10 +284,10 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   analysisData.profile.platform === 'instagram' 
-                    ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                    ? 'bg-[#ff5c8f] text-white'
                     : analysisData.profile.platform === 'tiktok'
-                    ? 'bg-black text-white dark:bg-white dark:text-black'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    ? 'bg-secondary text-foreground'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {analysisData.profile.platform}
                 </span>
@@ -391,10 +391,10 @@ export function AnalysisModal({ isOpen, onClose, analysisData, onRefresh }: Anal
                       onClick={() => setShowGrowthChart(true)}
                       className={`text-xs px-2 py-1 rounded-full mt-1 transition-colors hover:opacity-80 cursor-pointer ${
                         analysisData.growthData.growthPercentage > 0
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          ? 'bg-green-200/20 text-green-300'
                           : analysisData.growthData.growthPercentage < 0
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                          ? 'bg-red-200/20 text-red-300'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {analysisData.growthData.growthPercentage > 0 ? '+' : ''}

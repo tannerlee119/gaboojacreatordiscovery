@@ -229,7 +229,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
             Growth Analysis
           </DialogTitle>
           
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
+        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <span className="font-medium">
               {creator.displayName || creator.username}
             </span>
@@ -244,7 +244,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading growth data...</span>
+              <span className="ml-3 text-muted-foreground">Loading growth data...</span>
             </div>
           )}
 
@@ -269,7 +269,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
           {growthData && (
             <>
               {/* Growth Summary */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6">
+              <div className="rounded-lg border border-border bg-gradient-to-r from-[#0f0f0f] to-[#151515] p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-2">
@@ -285,7 +285,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
                       {growthData.totalGrowth.percentage >= 0 ? '+' : ''}
                       {growthData.totalGrowth.percentage.toFixed(1)}%
                     </div>
-                    <div className="text-sm text-gray-600">Total Growth</div>
+                    <div className="text-sm text-muted-foreground">Total Growth</div>
                   </div>
                   
                   <div className="text-center">
@@ -296,7 +296,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
                       {growthData.totalGrowth.absolute >= 0 ? '+' : ''}
                       {formatNumber(growthData.totalGrowth.absolute)}
                     </div>
-                    <div className="text-sm text-gray-600">Followers</div>
+                    <div className="text-sm text-muted-foreground">Followers</div>
                   </div>
                   
                   <div className="text-center">
@@ -306,7 +306,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
                     <div className="text-2xl font-bold text-purple-600">
                       {growthData.dataPoints.length}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       Analyses {growthData.totalGrowth.timespan}
                     </div>
                   </div>
@@ -314,12 +314,12 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
               </div>
 
               {/* Chart */}
-              <div className="bg-white rounded-lg border p-4">
+              <div className="bg-card rounded-lg border border-border p-4">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-foreground">
                     Follower Growth Over Time
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Tracking follower count across {growthData.dataPoints.length} analyses
                   </p>
                 </div>
@@ -332,12 +332,12 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
               </div>
 
               {/* Data Points List */}
-              <div className="bg-white rounded-lg border">
+              <div className="bg-card rounded-lg border border-border">
                 <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-foreground">
                     Analysis History
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Chronological list of all analyses
                   </p>
                 </div>
@@ -349,10 +349,10 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
                       className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-foreground">
                           {format(new Date(point.timestamp), 'MMM d, yyyy h:mm a')}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(point.timestamp), { addSuffix: true })}
                         </div>
                       </div>
@@ -368,7 +368,7 @@ export function GrowthChartModal({ creator, isOpen, onClose }: GrowthChartModalP
                             {point.growthFromPrevious >= 0 ? '+' : ''}
                             {point.growthFromPrevious.toFixed(1)}%
                             {point.daysSincePrevious > 0 && (
-                              <span className="text-gray-500 ml-2">
+                            <span className="text-muted-foreground ml-2">
                                 ({point.daysSincePrevious}d)
                               </span>
                             )}

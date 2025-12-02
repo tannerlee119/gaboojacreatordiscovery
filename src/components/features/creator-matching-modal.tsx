@@ -93,7 +93,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
   const getPlatformColor = (platform: string) => {
     return platform === 'instagram' 
       ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
-      : 'bg-black text-white dark:bg-white dark:text-black';
+      : 'bg-secondary text-foreground';
   };
 
   const getProfileUrl = (username: string, platform: string) => {
@@ -110,7 +110,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
             Cross-Platform Creator Matching
           </DialogTitle>
           
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <span className="font-medium">
               Finding matches for {creator.displayName || creator.username}
             </span>
@@ -125,7 +125,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Analyzing potential matches...</span>
+              <span className="ml-3 text-muted-foreground">Analyzing potential matches...</span>
             </div>
           )}
 
@@ -216,26 +216,26 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
               )}
 
               {/* All Potential Matches */}
-              <div className="bg-white rounded-lg border">
+            <div className="bg-card rounded-lg border border-border">
                 <div className="p-4 border-b">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                       All Potential Matches
                     </h3>
                     <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
                         {matchingData.potentialMatches.length} matches found
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Ranked by matching confidence across multiple signals
                   </p>
                 </div>
 
                 {matchingData.potentialMatches.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
+                  <div className="p-8 text-center text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium">No potential matches found</p>
                     <p className="text-sm mt-1">
@@ -256,10 +256,10 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
                             </div>
                             
                             <div>
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-foreground">
                                 {match.displayName}
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-muted-foreground">
                                 @{match.username}
                               </div>
                               <Badge className={`mt-1 text-xs ${getPlatformColor(match.platform)}`}>
@@ -287,7 +287,7 @@ export function CreatorMatchingModal({ creator, isOpen, onClose }: CreatorMatchi
 
                         {match.matchingFactors.length > 0 && (
                           <div className="mt-3">
-                            <div className="text-xs font-medium text-gray-700 mb-2">
+                            <div className="text-xs font-medium text-muted-foreground mb-2">
                               Why this might be the same person:
                             </div>
                             <div className="flex flex-wrap gap-1">
