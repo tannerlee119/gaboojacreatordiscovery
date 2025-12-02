@@ -285,7 +285,7 @@ export function DiscoveryFilters({ filters, onFiltersChange, onApplyFilters, isL
           >
             {isLoading ? (
               <>
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary-foreground mr-2"></div>
                 Applying...
               </>
             ) : (

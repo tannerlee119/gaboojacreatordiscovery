@@ -556,12 +556,12 @@ export function CreatorDiscovery() {
           creators
         </div>
         <div className="flex items-center gap-2">
-          {isBusy ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Refreshing
-            </div>
-          ) : (
+            {isBusy ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                Refreshing
+              </div>
+            ) : (
             <Button
               variant="ghost"
               size="sm"
@@ -598,7 +598,7 @@ export function CreatorDiscovery() {
                 <span>Discover Creators</span>
                 <div className="flex items-center gap-2">
                   {isBusy && (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   )}
                   {!isBusy && discoveryData && discoveryData.totalCount !== undefined && (
                     <span className="text-sm text-muted-foreground font-normal">
@@ -614,7 +614,7 @@ export function CreatorDiscovery() {
             <CardContent>
               {shouldShowInitialLoader ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <span className="ml-2 text-muted-foreground">Loading creators...</span>
                 </div>
               ) : error ? (
@@ -624,7 +624,7 @@ export function CreatorDiscovery() {
                 </div>
               ) : !discoveryData ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <span className="ml-2 text-muted-foreground">Initializing...</span>
                 </div>
               ) : showEmptyState ? (
