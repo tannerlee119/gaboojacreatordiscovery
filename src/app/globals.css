@@ -66,7 +66,7 @@
 
   --border: #272727;
   --input: #272727;
-  --ring: rgba(255, 118, 100, 0.7);
+  --ring: rgba(252, 221, 9, 0.75);
 
   --card: #0f0f0f;
   --card-foreground: #f7f7f7;
@@ -175,6 +175,6 @@
 }
 
 :focus-visible {
-  outline: 2px solid rgba(255, 118, 100, 0.85);
+  outline: 2px solid rgba(252, 221, 9, 0.9);
   outline-offset: 3px;
 }

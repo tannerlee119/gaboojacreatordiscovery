@@ -80,13 +80,13 @@ export function Navbar() {
               className={cn(
                 "text-base font-medium transition-all duration-200 px-4 py-2 rounded-full relative cursor-pointer",
                 pathname === item.href
-                  ? "text-foreground bg-primary/8 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-primary/4"
+                  ? "text-foreground bg-[#fcdd09]/10 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               {item.name}
               {pathname === item.href && (
-                <div className="absolute inset-x-0 -bottom-3 h-0.5 bg-primary rounded-full" />
+                <div className="absolute inset-x-0 -bottom-3 h-0.5 bg-[#fcdd09] rounded-full" />
               )}
             </Link>
           ))}
