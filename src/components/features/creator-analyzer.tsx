@@ -762,21 +762,21 @@ export function CreatorAnalyzer() {
                    <TabsContent value="overview" className="space-y-6">
                      <div className="grid md:grid-cols-2 gap-6 items-stretch">
                        {/* Creator Score */}
-                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
-                         <div className="text-med font-medium gabooja-accent mb-2">Creator Score</div>
-                         <div className="text-4xl font-bold gabooja-accent mb-2">
+                       <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-[#241804] via-[#160e02] to-[#0c0902] border border-[#fcdd09]/30 shadow-inner shadow-black/30">
+                         <div className="text-xs uppercase tracking-[0.35em] text-primary mb-3">Creator Score</div>
+                         <div className="text-4xl font-bold text-primary mb-2">
                            {(() => {
                              const scoreText = result.profile.aiAnalysis.creator_score;
                              const scoreMatch = scoreText.match(/^(\d+(?:\.\d+)?(?:\/\d+)?)/);
                              return scoreMatch ? scoreMatch[1] : scoreText;
                            })()}
                          </div>
-                         <div className="text-xs text-muted-foreground">Overall Rating</div>
+                         <div className="text-xs text-muted-foreground tracking-wide">Overall Rating</div>
                        </div>
                        
                        {/* Category */}
-                       <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <div className="text-med font-medium gabooja-accent mb-2">Category</div>
+                       <div className="text-center p-6 rounded-2xl bg-card border border-border">
+                         <div className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-3">Category</div>
                          <CategoryEditor
                            currentCategory={currentCategory}
                            onCategoryChange={handleCategoryChange}
@@ -786,8 +786,8 @@ export function CreatorAnalyzer() {
                      </div>
                      
                      {/* Score Explanation */}
-                     <div className="p-6 rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30 border border-slate-200 dark:border-slate-700">
-                       <h4 className="font-semibold gabooja-accent mb-3 flex items-center gap-2">
+                     <div className="p-6 rounded-2xl bg-secondary border border-border">
+                       <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                          <span>💡</span>
                          Analysis Summary
                        </h4>
@@ -803,38 +803,38 @@ export function CreatorAnalyzer() {
                    
                    <TabsContent value="metrics" className="space-y-6">
                      <div className="grid md:grid-cols-3 gap-6">
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
+                       <div className="p-6 rounded-2xl bg-card border border-border">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-3 text-xl">
                            🎯 Brand Potential
                          </h4>
-                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
+                         <p className="text-2xl font-bold text-primary mb-2">
                            {result.profile.aiAnalysis.brand_potential}
                          </p>
-                         <p className="text-xs text-blue-600 dark:text-blue-400">
+                         <p className="text-xs text-muted-foreground">
                            Potential for brand partnerships and collaborations
                          </p>
                        </div>
                        
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
+                       <div className="p-6 rounded-2xl bg-card border border-border">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-3 text-xl">
                            💬 Engagement Quality
                          </h4>
-                         <p className="text-2xl font-bold text-green-700 dark:text-green-300 mb-2">
+                         <p className="text-2xl font-bold text-primary mb-2">
                            {result.profile.aiAnalysis.engagement_quality}
                          </p>
-                         <p className="text-xs text-green-600 dark:text-green-400">
+                         <p className="text-xs text-muted-foreground">
                            Quality and authenticity of audience interactions
                          </p>
                        </div>
                        
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-3 text-2xl">
+                       <div className="p-6 rounded-2xl bg-card border border-border">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-3 text-xl">
                            🤝 Collaboration Potential
                          </h4>
-                         <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
+                         <p className="text-2xl font-bold text-primary mb-2">
                            {result.profile.aiAnalysis.collaboration_potential}
                          </p>
-                         <p className="text-xs text-purple-600 dark:text-purple-400">
+                         <p className="text-xs text-muted-foreground">
                            Likelihood of successful partnerships
                          </p>
                        </div>
@@ -843,22 +843,22 @@ export function CreatorAnalyzer() {
                    
                    <TabsContent value="content" className="space-y-6">
                      <div className="grid md:grid-cols-2 gap-6">
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20 border border-rose-200 dark:border-rose-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                       <div className="p-6 rounded-2xl bg-card border border-border">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4 text-lg">
                            🎭 Content Style
                          </h4>
                          <p className="text-base leading-relaxed">{result.profile.aiAnalysis.content_style}</p>
                        </div>
                        
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                       <div className="p-6 rounded-2xl bg-card border border-border">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4 text-lg">
                            💪 Key Strengths
                          </h4>
                          <p className="text-base leading-relaxed">{result.profile.aiAnalysis.key_strengths}</p>
                        </div>
                        
-                       <div className="p-6 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-indigo-200 dark:border-indigo-800 md:col-span-2">
-                         <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-4 text-lg">
+                       <div className="p-6 rounded-2xl bg-card border border-border md:col-span-2">
+                         <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4 text-lg">
                            👥 Audience Demographics
                          </h4>
                          <p className="text-base leading-relaxed">{result.profile.aiAnalysis.audience_demographics}</p>
@@ -867,11 +867,11 @@ export function CreatorAnalyzer() {
                    </TabsContent>
                    
                    <TabsContent value="assessment" className="space-y-6">
-                     <div className="p-8 rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30 border border-slate-200 dark:border-slate-700">
-                       <h4 className="font-semibold gabooja-accent flex items-center gap-2 mb-6 text-xl">
+                     <div className="p-8 rounded-2xl bg-secondary border border-border">
+                       <h4 className="font-semibold text-foreground flex items-center gap-2 mb-6 text-xl">
                          📝 Overall Assessment
                        </h4>
-                       <p className="text-lg leading-relaxed">{result.profile.aiAnalysis.overall_assessment}</p>
+                       <p className="text-lg leading-relaxed text-muted-foreground">{result.profile.aiAnalysis.overall_assessment}</p>
                      </div>
                    </TabsContent>
                  </Tabs>
@@ -945,8 +945,8 @@ export function CreatorAnalyzer() {
 
                    {/* AI Metrics */}
                    {hasAiMetrics(result) && (
-                     <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                       <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                     <div className="p-4 rounded-2xl bg-secondary border border-border">
+                       <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                          🤖 AI Analysis Metrics
                        </h4>
                        <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -968,8 +968,8 @@ export function CreatorAnalyzer() {
 
                    {/* Data Quality Metrics */}
                    {hasDataQuality(result) && (
-                     <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                       <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+                     <div className="p-4 rounded-2xl bg-secondary border border-border">
+                       <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                          🔍 Data Quality Analysis
                        </h4>
                        
