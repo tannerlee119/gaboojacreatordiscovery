@@ -20,14 +20,17 @@ ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 # Copy package files first to leverage Docker layer caching
 COPY package*.json ./
 
-# Install production dependencies
-RUN npm ci --only=production
+# Install all dependencies (dev deps needed for the build)
+RUN npm ci
 
 # Copy the rest of the source code
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Remove development dependencies to slim down the final image
+RUN npm prune --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
