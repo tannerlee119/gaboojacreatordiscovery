@@ -1,5 +1,13 @@
-# Use Node.js 18 Alpine for smaller image size
-FROM node:18-alpine
+# Use Node.js 20 Alpine for better Playwright/Supabase support
+FROM node:20-alpine
+
+# Build args for public env vars that Next.js needs at compile time
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Expose them to the build so `next build` can inline the correct values
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
 
 # Set working directory inside the container
 WORKDIR /app
